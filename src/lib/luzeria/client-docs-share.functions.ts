@@ -27,6 +27,8 @@ export const getOrCreateDocsShareToken = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Apenas admins podem compartilhar roteiros/planejamento.");
+    const { assertNotHouse } = await import("./house.functions");
+    await assertNotHouse(context.supabase, context.orgId, "Na House a aprovação é do gestor, dentro do app — não há link de aprovação.");
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const { data: existing } = await (context.supabase as any)
       .from("client_docs_share_tokens").select("token, revoked_at")

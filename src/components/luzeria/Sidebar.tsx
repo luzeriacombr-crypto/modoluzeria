@@ -17,6 +17,7 @@ import { requestConfirm, requestPrompt } from "@/lib/luzeria/confirm-store";
 import { reportAppError } from "@/lib/error-reporting";
 import { toast } from "sonner";
 import { hasSetorPermission, hasPermission, type Client } from "@/lib/luzeria/types";
+import { isHouse, term } from "@/lib/luzeria/house";
 import { useLogoOpticalBox, applyManualAdjust } from "@/lib/luzeria/logo-optical-center";
 import { useLogoPreview } from "@/lib/luzeria/logo-preview-store";
 
@@ -120,7 +121,17 @@ export function Sidebar({
     return clients.filter((c) => !term || c.name.toLowerCase().includes(term));
   }, [clients, search]);
 
+  const house = isHouse(me);
   const grouped = useMemo(() => {
+    // House: sem categorias nem pasta de avulsos — uma lista só de marcas.
+    if (house) {
+      // Principal primeiro, arquivadas por último (ainda aparecem pra poder desarquivar).
+      const list = [...filtered]
+        .sort((a, b) => Number(!!a.archived) - Number(!!b.archived)
+          || Number(b.id === me?.houseClientId) - Number(a.id === me?.houseClientId)
+          || a.name.localeCompare(b.name));
+      return [["Marcas", list] as const] as Array<readonly [string, Client[]]>;
+    }
     const byCat = new Map<string, Client[]>();
     for (const c of filtered) {
       const cat = c.category || "Social Media";
@@ -143,7 +154,7 @@ export function Sidebar({
     const customNames = new Set(customCategories.map((c) => c.name));
     const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k) && !customNames.has(k));
     return [...known, ...customKnown, ...extras] as Array<readonly [string, Client[]]>;
-  }, [filtered, customCategories]);
+  }, [filtered, customCategories, house, me?.houseClientId]);
 
   const allCategories = useMemo(() => {
     const set = new Set<string>(CATEGORY_ORDER);
@@ -173,6 +184,10 @@ export function Sidebar({
   const navLabels = me?.navLabels ?? {};
   const navOrder = me?.navOrder ?? {};
   const navLabel = (id: string, fallback: string) => navLabels[id] || fallback;
+  // House com uma marca só: "Marca" vira link direto, sem lista.
+  const houseBrands = house ? clients.filter((c) => !c.archived && c.category !== "Ex-clientes") : [];
+  const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;
+  const clientesLabel = navLabel("clientes", singleBrandId ? term(me, "Cliente") : term(me, "Clientes"));
   function orderSection<T extends { id: string; label: string; node: React.ReactNode }>(sectionKey: string, items: T[]): T[] {
     const order = navOrder[sectionKey];
     if (!order || order.length === 0) return items;
@@ -233,9 +248,9 @@ export function Sidebar({
       <div className={collapsed ? "px-2 pt-4 pb-3 flex-1 overflow-y-auto space-y-1.5 flex flex-col items-center" : "px-3 pt-4 pb-3 flex-1 overflow-y-auto space-y-0.5"}>
         {(() => {
           const clienteItems = orderSection("cliente", [
-            ...(isAdmin ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
-            ...(canJourney ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
-            ...(isAdmin && canFinanceiro ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
+            ...(isAdmin && !disabled.has("client_overview") ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
+            ...(canJourney && !disabled.has("journey") ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
+            ...(isAdmin && canFinanceiro && !disabled.has("margin") ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
           ]);
 
           // Afiliados e Revenda saíram do menu: as três entradas abriam a
@@ -251,11 +266,15 @@ export function Sidebar({
             // financeiro da agência (entradas/saídas e orçamentos).
             ...(isMaster ? [
               { id: "cobranca", label: navLabel("cobranca", "Meu plano"), node: <NavSubButton key="cobranca" label={navLabel("cobranca", "Meu plano")} active={configTabActive("cobranca")} onClick={() => goToConfigTab("cobranca")} /> },
-              { id: "indicacoes", label: navLabel("indicacoes", "Indique e ganhe"), node: <NavSubButton key="indicacoes" label={navLabel("indicacoes", "Indique e ganhe")} active={configTabActive("indicacoes")} onClick={() => goToConfigTab("indicacoes")} /> },
+              ...(!disabled.has("referrals") ? [{ id: "indicacoes", label: navLabel("indicacoes", "Indique e ganhe"), node: <NavSubButton key="indicacoes" label={navLabel("indicacoes", "Indique e ganhe")} active={configTabActive("indicacoes")} onClick={() => goToConfigTab("indicacoes")} /> }] : []),
             ] : []),
+            // Toggle "Financeiro" em Configurações → Geral esconde o
+            // financeiro da agência; Meu plano continua pro master.
+            ...(!disabled.has("financeiro") ? [
             { id: "pagamentos", label: navLabel("pagamentos", "Entradas e saídas"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Entradas e saídas")} active={financeTabActive("entradas")} onClick={() => goToFinance("entradas")} /> },
             { id: "resultado", label: navLabel("resultado", "Resultado do mês"), node: <NavSubButton key="resultado" label={navLabel("resultado", "Resultado do mês")} active={financeTabActive("resultado")} onClick={() => goToFinance("resultado")} /> },
             { id: "orcamentos", label: navLabel("orcamentos", "Orçamentos"), node: <NavSubButton key="orcamentos" label={navLabel("orcamentos", "Orçamentos")} active={financeTabActive("orcamentos")} onClick={() => goToFinance("orcamentos")} /> },
+            ] : []),
           ]) : [];
 
           const equipeItems = orderSection("equipe", [
@@ -274,7 +293,18 @@ export function Sidebar({
               <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
                 active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
             ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button", onClick: () => navigate({ to: "/admin" }) } },
-            { id: "clientes", label: navLabel("clientes", "Clientes"), meta: { icon: <Users size={17} />, label: navLabel("clientes", "Clientes"), active: clientsActive, kind: "flyout" }, node: (
+            singleBrandId ? { id: "clientes", label: clientesLabel, meta: { icon: <Users size={17} />, label: clientesLabel, active: clientsActive, kind: "button" as const, onClick: () => navigate({ to: "/cliente/$clientId", params: { clientId: singleBrandId } }) }, node: (
+              <div key="clientes" className="relative">
+                <NavButton icon={<Users size={15} />} label={clientesLabel} active={clientsActive}
+                  onClick={() => navigate({ to: "/cliente/$clientId", params: { clientId: singleBrandId } })} />
+                {isMaster && (
+                  <button onClick={() => onCreateClient()} title="Adicionar outra marca"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5">
+                    <Plus size={13} />
+                  </button>
+                )}
+              </div>
+            ) } : { id: "clientes", label: clientesLabel, meta: { icon: <Users size={17} />, label: clientesLabel, active: clientsActive, kind: "flyout" }, node: (
               <div key="clientes">
                 <button
                   onClick={() => setClientsOpen((o) => !o)}
@@ -287,16 +317,16 @@ export function Sidebar({
                   {clientsActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
                   <span className="flex items-center gap-2.5 min-w-0">
                     <Users size={15} className={clientsActive ? "text-[rgb(var(--lz-brand-rgb))] shrink-0" : "text-white/60 shrink-0"} />
-                    <span className="truncate">{navLabel("clientes", "Clientes")}</span>
+                    <span className="truncate">{clientesLabel}</span>
                   </span>
                   <span className="flex items-center gap-0.5 shrink-0">
-                    {isAdmin && (
+                    {isAdmin && (!house || isMaster) && (
                       <span
                         role="button"
                         tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); onCreateClient(); }}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); onCreateClient(); } }}
-                        title="Novo cliente"
+                        title={term(me, "novoCliente")}
                         className="p-1 rounded text-white/40 hover:text-[rgb(var(--lz-brand-rgb))] hover:bg-white/5"
                       >
                         <Plus size={13} />
@@ -313,6 +343,7 @@ export function Sidebar({
                       onCreateClient={onCreateClient} onCreateCategory={handleCreateCategory} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
                       error={clientsError}
+                      house={house}
                     />
                   </div>
                 )}
@@ -343,7 +374,7 @@ export function Sidebar({
                 <NavButton icon={<Trash2 size={15} />} label={navLabel("lixeira", "Lixeira")} active={pathname === "/lixeira"} onClick={() => navigate({ to: "/lixeira" })} />
               </div>
             ) }] : []),
-            ...((isAdmin || canJourney || canFinanceiro) ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem"), kind: "flyout" as const }, node: (
+            ...(clienteItems.length > 0 ? [{ id: "cliente", label: navLabel("cliente", "Visão Geral"), meta: { icon: <IdCard size={17} />, label: navLabel("cliente", "Visão Geral"), active: configTabActive("cliente") || configTabActive("journey") || configTabActive("margem"), kind: "flyout" as const }, node: (
               <div key="cliente" data-tour="nav-cliente">
                 <NavGroup icon={<IdCard size={15} />} label={navLabel("cliente", "Visão Geral")}
                   active={configTabActive("cliente") || configTabActive("journey") || configTabActive("margem")}>
@@ -351,7 +382,7 @@ export function Sidebar({
                 </NavGroup>
               </div>
             ) }] : []),
-            ...(canFinanceiro ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("indicacoes") || pathname === "/financeiro", kind: "flyout" as const }, node: (
+            ...(financeiroItems.length > 0 ? [{ id: "financeiro", label: navLabel("financeiro", "Financeiro"), meta: { icon: <Wallet size={17} />, label: navLabel("financeiro", "Financeiro"), active: configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("indicacoes") || pathname === "/financeiro", kind: "flyout" as const }, node: (
               <div key="financeiro" data-tour="nav-financeiro">
                 <NavGroup icon={<Wallet size={15} />} label={navLabel("financeiro", "Financeiro")}
                   active={configTabActive("cobranca") || configTabActive("afiliados") || configTabActive("revenda") || configTabActive("indicacoes") || pathname === "/financeiro"}>
@@ -419,6 +450,7 @@ export function Sidebar({
                       onCreateClient={onCreateClient} onCreateCategory={handleCreateCategory} onOpenCustomFields={onOpenCustomFields}
                       loading={clientsLoading}
                       error={clientsError}
+                      house={house}
                     />
                   ) : (
                     <div className="px-1 space-y-0.5">{groupItemsById[openFlyout]}</div>
@@ -580,13 +612,27 @@ function SidebarFlyout({ anchor, title, children, panelRef }: {
 /** Busca + grupos por categoria + lista de clientes — conteúdo compartilhado
  * entre o modo expandido (inline, sob o botão "Clientes") e o painel
  * flutuante do modo reduzido. */
-function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onCreateCategory, onOpenCustomFields, loading, error }: {
+function ClientesListBody({ search, setSearch, grouped, filtered, isAdmin, allCategories, pathname, onCreateClient, onCreateCategory, onOpenCustomFields, loading, error, house }: {
   search: string; setSearch: (v: string) => void;
   grouped: Array<readonly [string, Client[]]>; filtered: Client[];
   isAdmin: boolean; allCategories: string[]; pathname: string;
   onCreateClient: (category?: string) => void; onCreateCategory: () => void; onOpenCustomFields: (c: Client) => void;
-  loading?: boolean; error?: boolean;
+  loading?: boolean; error?: boolean; house?: boolean;
 }) {
+  // House: lista simples de marcas, sem pasta/categoria.
+  if (house) {
+    const list = grouped[0]?.[1] ?? [];
+    return (
+      <div className="space-y-0.5">
+        {list.map((c) => (
+          <ClientRow key={c.id} client={c} active={pathname === `/cliente/${c.id}`}
+            onOpenCustomFields={() => onOpenCustomFields(c)} canManage={isAdmin} categories={allCategories} />
+        ))}
+        {loading && list.length === 0 && <div className="px-3 py-2 text-xs text-white/30">Carregando…</div>}
+        {error && <div className="text-xs text-center mt-3 px-3" style={{ color: "#E76F51" }}>Não consegui carregar as marcas.</div>}
+      </div>
+    );
+  }
   return (
     <>
       <div className="px-1 pb-2">

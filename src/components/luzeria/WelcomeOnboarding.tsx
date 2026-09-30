@@ -33,7 +33,9 @@ export function WelcomeOnboarding({ me }: { me: Profile }) {
   // Importar clientes do ClickUp/Trello é uma ação de admin (o backend já
   // rejeita pra quem não é master/setor) — membro comum nem deveria ver a
   // tela, então pula direto pra finalizar o onboarding.
-  const canImportClients = me.role === "master" || me.role === "setor";
+  // House não importa clientes — a marca já nasce criada, e o dono segue
+  // pro onboarding próprio da House (HouseOnboarding) logo depois deste.
+  const canImportClients = (me.role === "master" || me.role === "setor") && me.accountType !== "house";
 
   function goToImportStep(saveCustomization: boolean) {
     const next = canImportClients ? () => setStep("import") : completeOnboarding;

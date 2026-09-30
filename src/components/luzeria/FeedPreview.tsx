@@ -15,6 +15,7 @@ type FeedItem = ContentItem & { _key: string };
 
 export function FeedPreview({ month, client }: { month: MonthData; client: Client }) {
   const me = useMe().data;
+  const approvalLinkHidden = (me?.disabledFeatures ?? []).includes("approval_link");
   const isAdmin = me?.role === "master" || me?.role === "setor";
   const isMobile = useIsMobile();
   const isChronological = month.feedOrderMode === "cronologica";
@@ -117,9 +118,10 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
-              <ActiveMonthToggle clientId={client.id} monthId={month.id} />
+              {!approvalLinkHidden && <ActiveMonthToggle clientId={client.id} monthId={month.id} />}
               {cells.items.length > 0 && <DownloadAllButton items={cells.items} zipName={`${client.name} - ${month.key}.zip`} />}
-              <ShareButton clientId={client.id} monthId={month.id} />
+              {/* House: aprovação é do gestor, dentro do app — sem link público. */}
+              {!approvalLinkHidden && <ShareButton clientId={client.id} monthId={month.id} />}
             </div>
           )}
         </div>

@@ -73,7 +73,9 @@ export const getPublicPlans = createServerFn({ method: "GET" })
     const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
     const { data, error } = await supabase.from("plans").select("*").order("sort_order");
     if (error) throw new Error(error.message);
-    return (data ?? []).map((p: any) => ({
+    // Planos House nunca aparecem no site nem no cadastro público — a
+    // House nasce só por convite (/house/criar) ou pelo painel da Luzeria.
+    return (data ?? []).filter((p: any) => (p.account_type ?? "agency") !== "house").map((p: any) => ({
       id: p.id as string,
       name: p.name as string,
       priceCents: p.price_cents as number | null,
@@ -82,6 +84,13 @@ export const getPublicPlans = createServerFn({ method: "GET" })
       sortOrder: p.sort_order as number,
     }));
   });
+
+/** Planos House só nascem por convite — nunca pelo cadastro público.
+ * Consulta à parte e tolerante: account_type chega numa migration. */
+async function isHousePlan(supabaseAdmin: any, planId: string) {
+  const { data, error } = await supabaseAdmin.from("plans").select("account_type").eq("id", planId).maybeSingle();
+  return !error && data?.account_type === "house";
+}
 
 export const TRIAL_DAYS = 30;
 
@@ -123,7 +132,7 @@ export const publicSignup = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabaseAdmin
       .from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
-    if (!plan) throw new Error("Plano não encontrado.");
+    if (!plan || await isHousePlan(supabaseAdmin, plan.id)) throw new Error("Plano não encontrado.");
     if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente pra contratar.");
 
     // Check email_role_assignments (the table whose primary key this would
@@ -341,7 +350,7 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabaseAdmin
       .from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
-    if (!plan) throw new Error("Plano não encontrado.");
+    if (!plan || await isHousePlan(supabaseAdmin, plan.id)) throw new Error("Plano não encontrado.");
     if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente pra contratar.");
 
     const { data: existingAssignment } = await supabaseAdmin

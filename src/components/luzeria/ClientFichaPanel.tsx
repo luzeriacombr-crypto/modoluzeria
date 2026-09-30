@@ -23,6 +23,7 @@ import { getInstagramConnectionStatus, getInstagramConnectUrl, disconnectInstagr
 import { getFacebookConnectionStatus, getFacebookConnectUrl, disconnectFacebook } from "@/lib/luzeria/facebook.functions";
 import { TikTokConnectSection } from "./TikTokSections";
 import { LinkedInConnectSection } from "./LinkedInSections";
+import { term } from "@/lib/luzeria/house";
 import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
 function formatHours(h: number | null) {
@@ -43,6 +44,7 @@ export function ClientFichaPanel() {
   const { fichaClientId, openFicha } = useUI();
   const { data: clients = [] } = useQuery(clientsQO());
   const client = clients.find((c) => c.id === fichaClientId);
+  const me = useMe().data;
 
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -79,7 +81,7 @@ export function ClientFichaPanel() {
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--lz-accent-ink)" }}>
-                  Ficha do cliente
+                  Ficha {term(me, "doCliente")}
                 </div>
                 <h2 className="text-[20px] font-bold text-foreground truncate">{client.name}</h2>
                 <div className="text-[11px] text-foreground/40">{client.category}</div>
@@ -172,9 +174,11 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 
       {/* Resumo: etapa do projeto + métricas */}
       <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-[1.25fr_1fr]">
-        <FichaCard label="Etapa do projeto">
-          <ClientStageSection clientId={clientId} isAdmin={isAdmin} />
-        </FichaCard>
+        {!(me?.disabledFeatures ?? []).includes("journey") && (
+          <FichaCard label="Etapa do projeto">
+            <ClientStageSection clientId={clientId} isAdmin={isAdmin} />
+          </FichaCard>
+        )}
         <FichaCard label="Métricas">
           <div className="grid grid-cols-2 gap-2">
             <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
@@ -242,7 +246,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
           />
         </FichaCard>
         <FichaCard label="Configuração do cliente" wide>
-          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
+          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </FichaCard>
         {isAdmin && (
           <FichaCard label="Stories">

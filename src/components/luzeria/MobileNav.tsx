@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { glassCardStyle } from "@/lib/luzeria/utils";
 import { hasSetorPermission, hasPermission } from "@/lib/luzeria/types";
 import { DEFAULT_NAV_LABELS } from "./Sidebar";
+import { isHouse, term } from "@/lib/luzeria/house";
 
 const CATEGORY_ORDER = ["Social Media", "Pack Digital", "Avulsos", "Ex-clientes"] as const;
 const CATEGORY_COLOR: Record<string, string> = {
@@ -48,6 +49,13 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
   }
 
   const isClientPath = pathname.startsWith("/cliente/");
+  const house = isHouse(me);
+  const canCreateClient = isAdmin && (!house || isMaster);
+  // House com uma marca só: o botão da barra inferior vai direto pra ela.
+  const houseBrands = house ? clients.filter((c) => !c.archived) : [];
+  const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;
+  const showClientSection = !disabledFeatures.has("client_overview") || (canJourney && !disabledFeatures.has("journey")) || (canFinanceiro && !disabledFeatures.has("margin"));
+  const showFinanceSection = canFinanceiro && (isMaster || !disabledFeatures.has("financeiro"));
   const tab = showClients ? "clients" : showMenu ? "menu" : "home";
 
   function closeAllSheets() {
@@ -80,10 +88,11 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
     for (const arr of byCat.values()) {
       arr.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
     }
+    if (house) return [[term(me, "Clientes"), activeClients] as const] as Array<readonly [string, typeof activeClients]>;
     const known = CATEGORY_ORDER.filter((k) => byCat.has(k)).map((k) => [k, byCat.get(k)!] as const);
     const extras = [...byCat.entries()].filter(([k]) => !(CATEGORY_ORDER as readonly string[]).includes(k));
     return [...known, ...extras] as Array<readonly [string, typeof activeClients]>;
-  }, [activeClients]);
+  }, [activeClients, house]);
 
   if (!isMobile) return null;
 
@@ -93,13 +102,13 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
         <div className="fixed inset-0 z-40 bg-background pt-14 pb-20 flex flex-col">
           <div className="px-5 py-4 border-b border-border bg-background shrink-0">
             <div className="flex items-end justify-between">
-              <h2 className="text-lg font-bold text-foreground">Clientes</h2>
+              <h2 className="text-lg font-bold text-foreground">{term(me, "Clientes")}</h2>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-foreground/40">{activeClients.length}</span>
-                {isAdmin && onCreateClient && (
+                {canCreateClient && onCreateClient && (
                   <button
                     onClick={() => { onCreateClient(); closeAllSheets(); }}
-                    aria-label="Novo cliente"
+                    aria-label={term(me, "novoCliente")}
                     className="h-11 w-11 -mr-2 flex items-center justify-center rounded-full text-[var(--lz-accent-ink)] active:scale-95 transition-transform"
                     style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.14)" }}
                   >
@@ -113,7 +122,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
               <input
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
-                placeholder="Buscar cliente..."
+                placeholder={`Buscar ${term(me, "cliente")}...`}
                 className="bg-transparent text-sm flex-1 min-w-0 outline-none text-foreground placeholder:text-foreground/30"
               />
             </div>
@@ -125,15 +134,15 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
             {!clientsLoading && activeClients.length === 0 && (
               <div className="py-10 text-center">
                 <p className="text-xs text-foreground/40">
-                  {clientSearch.trim() ? "Nenhum cliente encontrado." : "Nenhum cliente ainda."}
+                  {clientSearch.trim() ? `Nenhum${house ? "a" : ""} ${term(me, "cliente")} encontrad${house ? "a" : "o"}.` : `Nenhum${house ? "a" : ""} ${term(me, "cliente")} ainda.`}
                 </p>
-                {!clientSearch.trim() && isAdmin && onCreateClient && (
+                {!clientSearch.trim() && canCreateClient && onCreateClient && (
                   <button
                     onClick={() => { onCreateClient(); closeAllSheets(); }}
                     className="mt-3 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md text-xs font-bold"
                     style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                   >
-                    <Plus size={14} /> Criar o primeiro cliente
+                    <Plus size={14} /> {house ? "Criar a primeira marca" : "Criar o primeiro cliente"}
                   </button>
                 )}
               </div>
@@ -232,22 +241,26 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
               />
             )}
 
-            {(isAdmin || canJourney || canFinanceiro) && (
+            {(isAdmin || canJourney || canFinanceiro) && showClientSection && (
               <>
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("cliente", DEFAULT_NAV_LABELS.cliente)}</p>
-                {isAdmin && <MenuLink icon={<IdCard size={17} />} label={navLabel("cliente-overview", DEFAULT_NAV_LABELS["cliente-overview"])} onClick={() => goToConfigTab("cliente")} />}
-                {canJourney && <MenuLink icon={<IdCard size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
-                {isAdmin && canFinanceiro && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
+                {isAdmin && !disabledFeatures.has("client_overview") && <MenuLink icon={<IdCard size={17} />} label={navLabel("cliente-overview", DEFAULT_NAV_LABELS["cliente-overview"])} onClick={() => goToConfigTab("cliente")} />}
+                {canJourney && !disabledFeatures.has("journey") && <MenuLink icon={<IdCard size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
+                {isAdmin && canFinanceiro && !disabledFeatures.has("margin") && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
               </>
             )}
 
-            {canFinanceiro && (
+            {showFinanceSection && (
               <>
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("financeiro", DEFAULT_NAV_LABELS.financeiro)}</p>
                 {isMaster && <MenuLink icon={<Wallet size={17} />} label={navLabel("cobranca", DEFAULT_NAV_LABELS.cobranca)} onClick={() => goToConfigTab("cobranca")} />}
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToFinance("entradas")} />
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("resultado", DEFAULT_NAV_LABELS.resultado)} onClick={() => goToFinance("resultado")} />
-                <MenuLink icon={<Wallet size={17} />} label={navLabel("orcamentos", DEFAULT_NAV_LABELS.orcamentos)} onClick={() => goToFinance("orcamentos")} />
+                {!disabledFeatures.has("financeiro") && (
+                  <>
+                    <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToFinance("entradas")} />
+                    <MenuLink icon={<Wallet size={17} />} label={navLabel("resultado", DEFAULT_NAV_LABELS.resultado)} onClick={() => goToFinance("resultado")} />
+                    <MenuLink icon={<Wallet size={17} />} label={navLabel("orcamentos", DEFAULT_NAV_LABELS.orcamentos)} onClick={() => goToFinance("orcamentos")} />
+                  </>
+                )}
               </>
             )}
 
@@ -285,7 +298,10 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
           onClick={() => { navigate({ to: "/admin" }); closeAllSheets(); }} />
         <NavBtn icon={<Users size={20} />} active={tab === "clients" || (isClientPath && tab === "home")}
           dataTour="mobile-clients-btn"
-          onClick={() => { setShowClients((v) => !v); setShowMenu(false); }} />
+          onClick={() => {
+            if (singleBrandId) { navigate({ to: "/cliente/$clientId", params: { clientId: singleBrandId } }); closeAllSheets(); return; }
+            setShowClients((v) => !v); setShowMenu(false);
+          }} />
         <NavBtn icon={<Menu size={20} />} active={tab === "menu"}
           dataTour="mobile-menu-btn"
           onClick={() => { setShowMenu((v) => !v); setShowClients(false); }} />

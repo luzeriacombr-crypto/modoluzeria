@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Circle, Palette, HardDrive, Instagram, Users, X } from "lucide-react";
 import { setupChecklistQO, useMe } from "@/lib/luzeria/queries";
 import { SmartImportStep } from "./SmartImportStep";
+import { isHouse, term } from "@/lib/luzeria/house";
 
 export function SetupChecklist() {
   const me = useMe().data;
@@ -12,7 +13,9 @@ export function SetupChecklist() {
   const [showImport, setShowImport] = useState(false);
 
   if (me?.role !== "master" || isLoading || !status) return null;
-  const allDone = status.brandingDone && status.driveConnected && status.hasClients;
+  // House já nasce com a marca criada — importar clientes não se aplica.
+  const house = isHouse(me);
+  const allDone = status.brandingDone && status.driveConnected && (house || status.hasClients);
   if (allDone) return null;
 
   function closeImport() {
@@ -25,7 +28,7 @@ export function SetupChecklist() {
       done: status.brandingDone,
       icon: <Palette size={16} />,
       title: "Personalize a plataforma",
-      desc: "Coloque a logo e as cores da sua agência.",
+      desc: `Coloque a logo e as cores ${term(me, "daAgencia")}.`,
       action: (
         <Link to="/configuracoes" search={{ tab: "general" }}
           className="text-xs font-bold px-3 py-1.5 rounded-md whitespace-nowrap transition"
@@ -47,7 +50,7 @@ export function SetupChecklist() {
         </Link>
       ),
     },
-    {
+    ...(house ? [] : [{
       done: status.hasClients,
       icon: <Users size={16} />,
       title: "Traga seus clientes do Trello ou ClickUp",
@@ -59,15 +62,15 @@ export function SetupChecklist() {
           Importar →
         </button>
       ),
-    },
+    }]),
     {
       // Não entra no allDone (linha 15) — é contínuo, dificilmente todo
       // cliente vai ter Instagram conectado o tempo todo.
       done: status.instagramSummary.total > 0 && status.instagramSummary.connected === status.instagramSummary.total,
       icon: <Instagram size={16} />,
-      title: "Conecte o Instagram dos clientes",
+      title: `Conecte o Instagram ${house ? "da marca" : "dos clientes"}`,
       desc: status.instagramSummary.total > 0
-        ? `${status.instagramSummary.connected} de ${status.instagramSummary.total} clientes conectados.`
+        ? `${status.instagramSummary.connected} de ${status.instagramSummary.total} ${term(me, "clientes")} conectad${house ? "as" : "os"}.`
         : "Publique posts, reels e stories direto pelo Modo Criador.",
       action: (
         <Link to="/configuracoes" search={{ tab: "integrations" }}

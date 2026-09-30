@@ -14,6 +14,8 @@ import { getFacebookConnectionStatus, getFacebookItemEngagement } from "@/lib/lu
 import { TikTokPublishPanel } from "./TikTokSections";
 import { LinkedInPublishPanel } from "./LinkedInSections";
 import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { approveItemInternal } from "@/lib/luzeria/house.functions";
+import { isHouse } from "@/lib/luzeria/house";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
 import { FileActionsMenu } from "./FileActionsMenu";
@@ -818,6 +820,21 @@ export function DetailPanel() {
   const isDemoReadOnly = !!me?.demoReadOnly && me?.role !== "master";
   const canApproveFinalize = hasSetorPermission(me, "approve_finalize");
   const canPublishInstagram = hasSetorPermission(me, "instagram_publish");
+  // House: "Aprovação do gestor" — o master aprova aqui dentro, com o mesmo
+  // efeito da aprovação pelo link público (vai pra Agendamento e liga o
+  // "Programar post" se já tiver data).
+  const qcApprove = useQueryClient();
+  const approveInternalFn = useServerFn(approveItemInternal);
+  const approveInternal = useMutation({
+    mutationFn: (itemId: string) => approveInternalFn({ data: { itemId } }),
+    onSuccess: (_r, itemId) => {
+      qcApprove.invalidateQueries({ queryKey: ["month"] });
+      qcApprove.invalidateQueries({ queryKey: ["my-tasks"] });
+      flash(itemId);
+      toast.success("Aprovado!");
+    },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao aprovar"),
+  });
 
   const getInstagramStatus = useServerFn(getInstagramConnectionStatus);
   const instagramStatus = useQuery({
@@ -1312,6 +1329,13 @@ export function DetailPanel() {
                   </div>
                 )}
               </div>
+              {isHouse(me) && me?.role === "master" && item.status === "REVISAO_CLIENTE" && (
+                <button onClick={() => approveInternal.mutate(item.id)} disabled={approveInternal.isPending}
+                  className="mt-2 w-full flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+                  <Check size={15} /> {approveInternal.isPending ? "Aprovando…" : "Aprovar como gestor"}
+                </button>
+              )}
             </ModalSection>
 
             {/* Campanha — só aparece quando o cliente já tem alguma criada,

@@ -8,6 +8,7 @@ import { PRESET_COLORS } from "@/lib/luzeria/utils";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
+import { isHouse, term } from "@/lib/luzeria/house";
 
 export function Modal({ open, onClose, title, children, maxWidthClass = "max-w-md" }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidthClass?: string }) {
   if (!open) return null;
@@ -43,13 +44,16 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
     }
   }, [open]);
   const isAvulso = category === "Avulsos";
+  const house = isHouse(me);
 
   async function handleCreate() {
+    // House: marca além da principal entra na assinatura — avisa antes.
+    if (house && !(await requestConfirm(`Cada marca além da principal soma R$ 79,90/mês à sua assinatura. Adicionar "${name.trim()}"?`))) return;
     let client: { id: string };
     try {
       client = await createClient.mutateAsync({ data: { name: name.trim(), category, color, icon: null } });
     } catch (e: any) {
-      toastFriendlyError(e, "Não consegui criar o cliente. Tenta de novo?");
+      toastFriendlyError(e, `Não consegui criar ${term(me, "oCliente")}. Tenta de novo?`);
       return;
     }
     const patch: Record<string, any> = {};
@@ -60,19 +64,19 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
       await updateClient.mutateAsync({ data: { id: client.id, patch } }).catch(() => {});
     }
     if (Number(storiesPerWeek) === 0 && storiesPerWeek.trim() !== "") {
-      const hide = await requestConfirm(`"${name.trim()}" não tem Stories. Ocultar a aba Stories pra esse cliente?`);
+      const hide = await requestConfirm(`"${name.trim()}" não tem Stories. Ocultar a aba Stories pra ess${house ? "a marca" : "e cliente"}?`);
       if (hide) {
         const base = new Set(me?.disabledFeatures ?? []);
         base.add("stories");
         await updateClient.mutateAsync({ data: { id: client.id, patch: { hidden_tabs: [...base] } } }).catch(() => {});
       }
     }
-    toast.success(`Cliente "${name.trim()}" criado.`);
+    toast.success(`${term(me, "Cliente")} "${name.trim()}" criad${house ? "a" : "o"}.`);
     onClose();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isAvulso ? "Nova demanda avulsa" : "Novo cliente"}>
+    <Modal open={open} onClose={onClose} title={isAvulso ? "Nova demanda avulsa" : term(me, "novoCliente")}>
       <label className="block text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">Nome</label>
       <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
         placeholder={isAvulso ? "Ex: João Silva, Empresa XYZ" : ""}
@@ -100,7 +104,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
             <input type="number" min={0} value={storiesPerWeek} onChange={(e) => setStoriesPerWeek(e.target.value)} placeholder="Stories"
               className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))]" />
           </div>
-          <p className="text-[11px] text-foreground/40 mt-1.5">Vai direto pra ficha do cliente. Deixa em branco se ainda não sabe.</p>
+          <p className="text-[11px] text-foreground/40 mt-1.5">Vai direto pra ficha {term(me, "doCliente")}. Deixa em branco se ainda não sabe.</p>
         </div>
       )}
 

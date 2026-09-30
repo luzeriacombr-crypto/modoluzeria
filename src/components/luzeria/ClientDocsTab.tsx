@@ -4,7 +4,7 @@ import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown, ArrowUpDown, GripVertical } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi } from "@/lib/luzeria/queries";
+import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
@@ -36,6 +36,8 @@ export function ClientDocsTab({
   const { data: clients = [] } = useQuery(clientsQO());
   const clientName = clients.find((c) => c.id === clientId)?.name ?? "Cliente";
   const { upsertClientDoc, deleteClientDoc } = useApi();
+  const me = useMe().data;
+  const approvalLinkHidden = (me?.disabledFeatures ?? []).includes("approval_link");
   const formatWithAI = useServerFn(formatClientDocWithAI);
   const enableAiPlanning = useServerFn(setClientAiPlanningEnabled);
   const qc = useQueryClient();
@@ -263,7 +265,8 @@ export function ClientDocsTab({
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wide text-foreground/35">Documentos salvos</span>
-            <DocsShareButton clientId={clientId} />
+            {/* House: aprovação é do gestor, dentro do app — sem link público. */}
+            {!approvalLinkHidden && <DocsShareButton clientId={clientId} />}
           </div>
           {docs.map((doc) => (
             <DocRow

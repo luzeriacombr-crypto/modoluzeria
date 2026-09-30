@@ -319,7 +319,8 @@ export function MyTasks() {
   const whatsappRemindersEnabled = !disabledFeatures.has("whatsapp_reminders");
   const { data: mentions = [] } = useQuery({ ...myMentionsQO(), enabled: isMeView });
   const { data: weeklyReminders = [] } = useQuery({ ...weeklyClientRemindersQO(), enabled: isAdmin && isMeView && whatsappRemindersEnabled });
-  const canFinanceiro = me?.role === "master" || hasPermission(me, "view_financeiro");
+  // Pagamentos são de clientes da agência — não existem numa House.
+  const canFinanceiro = (me?.role === "master" || hasPermission(me, "view_financeiro")) && !(me?.disabledFeatures ?? []).includes("client_finance");
   const { data: paymentsData } = useQuery({ ...clientPaymentsQO(), enabled: canFinanceiro && isMeView });
   const upcomingPayments = (paymentsData?.clients ?? [])
     .filter((c) => !c.paidThisPeriod)

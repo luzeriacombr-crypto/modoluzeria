@@ -27,19 +27,32 @@ export const AI_PLANNING_FREE_QUOTA = 2;
  * hora de gerar (cobre o caso de downgrade: cliente ficou ligado além da
  * cota nova). `quota: null` = sem teto específico de IA (Pro+). */
 async function getAiPlanningLimitState(supabase: any, orgId: string): Promise<{
-  limited: boolean; quota: number | null; enabledCount: number; hasSubscription: boolean; planId: string;
+  limited: boolean; quota: number | null; enabledCount: number; hasSubscription: boolean; planId: string; houseWithoutAi?: boolean;
 }> {
   const { data: org } = await supabase.from("orgs").select("plan_id, asaas_subscription_id").eq("id", orgId).maybeSingle();
   const hasSubscription = !!org?.asaas_subscription_id;
   const planId = (org?.plan_id as string) ?? "solo";
+  const countEnabled = async () => {
+    const { count } = await supabase.from("clients")
+      .select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("ai_planning_enabled", true);
+    return count ?? 0;
+  };
+  // House: IA é decidida só pelo plano (House + IA libera tudo, inclusive
+  // no teste de 7 dias; House sem IA não libera nenhuma marca).
+  const { data: plan } = await supabase.from("plans").select("*").eq("id", planId).maybeSingle();
+  if ((plan?.account_type ?? "agency") === "house") {
+    if (plan?.features?.ai_planning) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
+    return { limited: true, quota: 0, enabledCount: await countEnabled(), hasSubscription, planId, houseWithoutAi: true };
+  }
   const limited = !hasSubscription || planId === "solo";
   if (!limited) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
-  const { count } = await supabase.from("clients")
-    .select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("ai_planning_enabled", true);
-  return { limited: true, quota: AI_PLANNING_FREE_QUOTA, enabledCount: count ?? 0, hasSubscription, planId };
+  return { limited: true, quota: AI_PLANNING_FREE_QUOTA, enabledCount: await countEnabled(), hasSubscription, planId };
 }
 
-function aiPlanningLimitMessage(hasSubscription: boolean): string {
+const HOUSE_NO_AI_MESSAGE = "O planejamento com IA faz parte do plano House + IA. Troque de plano em Financeiro → Meu plano pra liberar.";
+
+function aiPlanningLimitMessage(hasSubscription: boolean, houseWithoutAi?: boolean): string {
+  if (houseWithoutAi) return HOUSE_NO_AI_MESSAGE;
   return hasSubscription
     ? `No plano Solo, a IA de planejamento fica disponível pra até ${AI_PLANNING_FREE_QUOTA} clientes. Pra liberar em mais clientes, faça upgrade pro plano Pro em Configurações → Cobrança.`
     : `Você atingiu o limite de ${AI_PLANNING_FREE_QUOTA} clientes com IA de planejamento do teste grátis. Pra continuar usando, cadastre uma forma de pagamento em Configurações → Cobrança — seu teste de 30 dias continua ativo, a cobrança só começa depois dele.`;
@@ -261,6 +274,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         throw new Error("Esse cliente ainda não foi ativado pra IA de planejamento — ative na Ficha do Cliente.");
       }
       const st = await getAiPlanningLimitState(context.supabase, context.orgId);
+      if (st.houseWithoutAi) throw new Error(HOUSE_NO_AI_MESSAGE);
       if (st.limited && st.enabledCount > st.quota!) {
         throw new Error(`Sua agência tem mais clientes com IA de planejamento ativada do que o plano atual permite. Desative em algum cliente ou faça upgrade em Configurações → Cobrança pra continuar gerando.`);
       }
@@ -534,7 +548,7 @@ export const setClientAiPlanningEnabled = createServerFn({ method: "POST" })
     if (data.enabled && context.orgId !== LUZERIA_ORG_ID) {
       const st = await getAiPlanningLimitState(context.supabase, context.orgId);
       if (st.limited && st.enabledCount >= st.quota!) {
-        throw new Error(aiPlanningLimitMessage(st.hasSubscription));
+        throw new Error(aiPlanningLimitMessage(st.hasSubscription, st.houseWithoutAi));
       }
     }
 

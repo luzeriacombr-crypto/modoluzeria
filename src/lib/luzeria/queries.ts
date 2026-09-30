@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { toastFriendlyError } from "./friendly-error";
 import { getClientContract } from "./client-contracts.functions";
+import { getHouseSettings } from "./house.functions";
 import { getProductionAudit } from "./production-audit.functions";
 import { getPageActivityReport, getNewUserJourneyReport } from "./page-activity.functions";
 import { listClientBrandAssets } from "./client-brand-assets.functions";
@@ -138,6 +139,8 @@ import {
   createForumPost, createForumReply, moderateForumPost, moderateForumReply,
 } from "./forum.functions";
 export const meQO = () => queryOptions({ queryKey: ["me"], queryFn: () => getMe() });
+export const houseSettingsQO = () =>
+  queryOptions({ queryKey: ["house-settings"], queryFn: () => getHouseSettings() });
 export const instagramActivityQO = () =>
   queryOptions({ queryKey: ["instagram-activity"], queryFn: () => getInstagramActivity() });
 

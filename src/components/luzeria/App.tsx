@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { PanelLeftClose, PanelLeftOpen, ChevronsLeft, ChevronsRight, Settings as SettingsIcon, Video } from "lucide-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { useMe, appSettingsQO } from "@/lib/luzeria/queries";
+import { useMe, appSettingsQO, houseSettingsQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { useTheme } from "@/lib/luzeria/theme-store";
 import { useCallStore } from "@/lib/luzeria/call-store";
@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { identifyForMonitoring } from "@/lib/luzeria/error-monitoring";
 import { PullToRefresh } from "./PullToRefresh";
 import { WelcomeOnboarding } from "./WelcomeOnboarding";
+import { HouseOnboarding } from "./HouseOnboarding";
 import { ClientFichaPanel } from "./ClientFichaPanel";
 import { AIPlanningPreview } from "./AIPlanningPreview";
 import { AiPlanningJobsTray } from "./AiPlanningJobsTray";
@@ -244,6 +245,14 @@ export function App() {
     }
   }, [me.data?.orgLogoUrl, me.data?.orgLogoUrlLight, me.data?.orgName, me.data?.orgColorPrimary, me.data?.orgColorPrimaryLight]);
 
+  // House: onboarding próprio (convidar equipe, metas, Instagram) pro dono,
+  // até ele concluir ou pular. Nunca por cima dos callbacks de OAuth — o
+  // passo de Instagram sai pro Instagram e volta por /oauth/instagram-callback.
+  const houseHidden = new Set(me.data?.disabledFeatures ?? []);
+  const needsHouseSetup = me.data?.accountType === "house" && me.data.role === "master" && !!me.data.onboardedAt;
+  const { data: houseSettings, isLoading: houseSettingsLoading } = useQuery({ ...houseSettingsQO(), enabled: needsHouseSetup });
+  const onOAuthRoute = routeId.includes("/oauth/");
+
   if (dailySplashActive) {
     return (
       <DailySplash
@@ -318,6 +327,11 @@ export function App() {
     return <WelcomeOnboarding me={me.data} />;
   }
 
+  if (needsHouseSetup && !onOAuthRoute) {
+    if (houseSettingsLoading) return <LuzeriaLoader />;
+    if (houseSettings && !houseSettings.onboardingCompletedAt) return <HouseOnboarding me={me.data!} settings={houseSettings} />;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       {/* No celular o aviso nasceria dentro da faixa da barra de navegação
@@ -351,8 +365,8 @@ export function App() {
         <DriveReconnectBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
         <LevelUpCelebration />
         <PageViewTracker />
-        <ReferralAnnouncementBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />
-        <SmartImportBanner isAdmin={me.data?.role === "master" || me.data?.role === "setor"} />
+        <ReferralAnnouncementBanner isAdmin={(me.data?.role === "master" || me.data?.role === "setor") && !houseHidden.has("referrals")} firstPaymentConfirmedAt={me.data?.firstPaymentConfirmedAt} />
+        <SmartImportBanner isAdmin={(me.data?.role === "master" || me.data?.role === "setor") && !houseHidden.has("client_import")} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
           <PullToRefresh containerRef={mainRef}>
             <div key={routeId} className="lz-page-in">

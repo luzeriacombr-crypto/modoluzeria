@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, MessageCircle, Pencil, Check, RefreshCw, Crown, Plus, PartyPopper, Instagram, HardDrive, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronUp, Home, Link2 } from "lucide-react";
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, adminResendWelcomeEmail, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
+import { CreateHouseModal, HouseInviteModal, ConvertToHouseModal } from "@/components/luzeria/HouseAdminModals";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
 import { PlatformCostsPanel } from "@/components/luzeria/PlatformCostsPanel";
@@ -182,8 +183,11 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; hasAsaasSubscription: boolean } | null>(null);
   const [infoTarget, setInfoTarget] = useState<any>(null);
   const [resettingId, setResettingId] = useState<string | null>(null);
-  const [resellerFilter, setResellerFilter] = useState<"all" | "resellers" | "resold">("all");
+  const [resellerFilter, setResellerFilter] = useState<"all" | "resellers" | "resold" | "houses">("all");
   const [creatingReseller, setCreatingReseller] = useState(false);
+  const [creatingHouse, setCreatingHouse] = useState(false);
+  const [houseInviteOpen, setHouseInviteOpen] = useState(false);
+  const [convertTarget, setConvertTarget] = useState<{ id: string; name: string } | null>(null);
   const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
   // Detalhe aberto por toque/clique nos cartões de receita e online (inline, sem balão flutuante).
   const [detail, setDetail] = useState<"receita" | "online" | "realista" | null>(null);
@@ -193,6 +197,7 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
   const filteredOrgs = orgs.filter((o: any) =>
     resellerFilter === "all" ? true :
     resellerFilter === "resellers" ? o.isReseller :
+    resellerFilter === "houses" ? o.accountType === "house" :
     !!o.resellerOrgId
   );
 
@@ -368,6 +373,7 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
               ["all", "Todas"],
               ["resellers", "Revendedoras"],
               ["resold", "Revendidas"],
+              ["houses", "Houses"],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
@@ -384,6 +390,19 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
             style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
           >
             <Plus size={13} /> Nova revenda
+          </button>
+          <button
+            onClick={() => setCreatingHouse(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs text-[#0D0D0D] transition hover:opacity-90"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }}
+          >
+            <Home size={13} /> Criar house
+          </button>
+          <button
+            onClick={() => setHouseInviteOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs border border-foreground/15 text-foreground/80 hover:text-foreground hover:bg-foreground/5 transition"
+          >
+            <Link2 size={13} /> Gerar link de convite
           </button>
         </div>
       </div>
@@ -602,6 +621,12 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
                         {o.resellerOrgName && (
                           <span className="text-[10px] text-foreground/35 shrink-0">via {o.resellerOrgName}</span>
                         )}
+                        {o.accountType === "house" && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
+                            style={{ backgroundColor: "rgba(74,158,255,0.15)", color: "#4A9EFF" }}>
+                            <Home size={10} /> House
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-sm">
@@ -686,6 +711,15 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
                             {resettingId === o.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                           </button>
                         )}
+                        {o.accountType !== "house" && o.id !== LUZERIA_ORG_ID && (
+                          <button
+                            onClick={() => setConvertTarget({ id: o.id, name: o.name })}
+                            title="Converter em house"
+                            className="p-1.5 rounded text-foreground/40 hover:text-[#4A9EFF] hover:bg-foreground/5 transition"
+                          >
+                            <Home size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={() => setDeleteTarget({ id: o.id, name: o.name, hasAsaasSubscription: o.hasAsaasSubscription })}
                           title="Remover agência"
@@ -722,6 +756,9 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
       {creatingReseller && (
         <CreateResellerModal onClose={() => setCreatingReseller(false)} />
       )}
+      {creatingHouse && <CreateHouseModal onClose={() => setCreatingHouse(false)} />}
+      {houseInviteOpen && <HouseInviteModal onClose={() => setHouseInviteOpen(false)} />}
+      {convertTarget && <ConvertToHouseModal org={convertTarget} onClose={() => setConvertTarget(null)} />}
     </div>
   );
 }
@@ -780,7 +817,7 @@ function CreateResellerModal({ onClose }: { onClose: () => void }) {
             <select value={planId} onChange={(e) => setPlanId(e.target.value)}
               className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
               <option value="">Selecione...</option>
-              {plans.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {plans.filter((p: any) => p.accountType !== "house").map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div>
@@ -1096,7 +1133,7 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
                   value={planDraft} onChange={(e) => setPlanDraft(e.target.value)}
                   className="w-full px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm focus:outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition"
                 >
-                  {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.priceCents != null ? formatCents(p.priceCents) : "sob consulta"}</option>)}
+                  {plans.filter((p) => p.accountType === (org.accountType ?? "agency")).map((p) => <option key={p.id} value={p.id}>{p.name} — {p.priceCents != null ? formatCents(p.priceCents) : "sob consulta"}</option>)}
                 </select>
                 <input
                   type="number" min={1} value={collabDraft} onChange={(e) => setCollabDraft(e.target.value)}

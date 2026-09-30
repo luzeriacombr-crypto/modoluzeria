@@ -4,6 +4,7 @@ import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS, BRAND_ADVANCED_COLOR_KEYS } from "./types";
+import { withHouseHiddenFeatures, houseMonthlyCents, HOUSE_EXTRA_BRAND_CENTS_DEFAULT, type AccountType } from "./house";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -200,6 +201,17 @@ export const getMe = createServerFn({ method: "GET" })
         rollover.mode = (ro.month_rollover_mode ?? "criar") as "criar" | "avisar";
       }
     }
+    // Mesmo motivo: tipo de conta (House) chega em migration própria.
+    const house: { accountType: AccountType; houseClientId: string | null } = { accountType: "agency", houseClientId: null };
+    if (orgId) {
+      const { data: at, error: atErr } = await (context.supabase as any)
+        .from("orgs").select("account_type, house_client_id").eq("id", orgId).maybeSingle();
+      if (!atErr && at) {
+        house.accountType = at.account_type === "house" ? "house" : "agency";
+        house.houseClientId = at.house_client_id ?? null;
+      }
+    }
+    const orgDisabledFeatures = ((org as any)?.disabled_features ?? []) as string[];
     return {
       id: profile.id, email: (myEmail as string | null) ?? "", name: profile.name,
       color: profile.color, icon: profile.icon, active: profile.active,
@@ -237,7 +249,10 @@ export const getMe = createServerFn({ method: "GET" })
       orgPhotoWatermarkText: ((org as any)?.photo_watermark_text ?? null) as string | null,
       orgPhotoWatermarkOpacity: ((org as any)?.photo_watermark_opacity ?? 35) as number,
       orgPhotoWatermarkDensity: ((org as any)?.photo_watermark_density ?? "media") as "baixa" | "media" | "alta",
-      disabledFeatures: ((org as any)?.disabled_features ?? []) as string[],
+      disabledFeatures: withHouseHiddenFeatures(orgDisabledFeatures, house.accountType),
+      orgDisabledFeatures,
+      accountType: house.accountType,
+      houseClientId: house.houseClientId,
       demoReadOnly: ((org as any)?.demo_read_only ?? false) as boolean,
       setorPermissions: ((org as any)?.setor_permissions ?? []) as string[],
       membersCanSetEditorFormat: ((org as any)?.members_can_set_editor_format ?? false) as boolean,
@@ -330,7 +345,7 @@ export const updateMyOrg = createServerFn({ method: "POST" })
       photoWatermarkText: z.string().trim().max(60).nullable().optional(),
       photoWatermarkOpacity: z.number().int().min(5).max(90).optional(),
       photoWatermarkDensity: z.enum(["baixa", "media", "alta"]).optional(),
-      disabledFeatures: z.array(z.string().max(40)).max(20).optional(),
+      disabledFeatures: z.array(z.string().max(40)).max(40).optional(),
       membersCanSetEditorFormat: z.boolean().optional(),
       finalizadosSeparateTab: z.boolean().optional(),
       borderRadius: z.number().int().min(0).max(28).optional(),
@@ -425,7 +440,14 @@ export const getPlans = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.from("plans").select("*").order("sort_order");
     if (error) throw new Error(error.message);
-    return (data ?? []).map((p: any) => ({
+    // Agência só vê planos de agência; House só vê os da House. A Luzeria
+    // vê todos (painel de agências troca plano de qualquer tipo de conta).
+    const { data: org } = await (context.supabase as any)
+      .from("orgs").select("account_type").eq("id", context.orgId).maybeSingle();
+    const accountType = org?.account_type === "house" ? "house" : "agency";
+    const seeAll = context.orgId === LUZERIA_ORG_ID;
+    return (data ?? []).filter((p: any) => seeAll || (p.account_type ?? "agency") === accountType).map((p: any) => ({
+      accountType: ((p.account_type ?? "agency") === "house" ? "house" : "agency") as "agency" | "house",
       id: p.id as string,
       name: p.name as string,
       priceCents: p.price_cents as number | null,
@@ -500,10 +522,20 @@ export const getOrgPlanStatus = createServerFn({ method: "GET" })
       clientLimitGraceUntil = null;
     }
 
+    const isHousePlan = ((plan as any)?.account_type ?? "agency") === "house";
+    const extraBrandCents = isHousePlan
+      ? Number((plan as any)?.features?.extra_brand_cents ?? HOUSE_EXTRA_BRAND_CENTS_DEFAULT) : 0;
+    const monthlyCents = plan ? await orgMonthlyPriceCents(context.supabase, context.orgId, plan as any) : null;
+
     return {
       planId,
       planName: (plan as any)?.name ?? "Solo",
       priceCents: (plan as any)?.price_cents ?? null,
+      // House: plano + marcas extras. Agência: igual a priceCents.
+      monthlyCents,
+      isHousePlan,
+      extraBrandCents,
+      extraBrands: isHousePlan ? Math.max(0, (clientsUsed ?? 0) - 1) : 0,
       maxClients,
       maxCollaborators: (org as any)?.max_collaborators_override ?? (plan as any)?.max_collaborators ?? null,
       features: ((plan as any)?.features ?? {}) as Record<string, boolean | string | number | null>,
@@ -748,6 +780,14 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
       resoldTotalByReseller.set(o.reseller_org_id, (resoldTotalByReseller.get(o.reseller_org_id) ?? 0) + cents);
     });
 
+    // Tipo de conta em consulta à parte, tolerante a falha — a coluna chega
+    // numa migration e o deploy do código pode vir antes dela.
+    const accountTypeByOrg = new Map<string, string>();
+    {
+      const { data: atRows, error: atErr } = await (supabaseAdmin as any).from("orgs").select("id, account_type");
+      if (!atErr) (atRows ?? []).forEach((r: any) => accountTypeByOrg.set(r.id, r.account_type));
+    }
+
     return (orgs ?? []).map((o: any) => {
       const plan = planMap.get(o.plan_id);
       const owner = ownerByOrg.get(o.id);
@@ -770,6 +810,7 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         ownerEmail: owner?.email ?? null,
         maxCollaboratorsOverride: (o.max_collaborators_override as number | null) ?? null,
         isReseller: !!o.is_reseller,
+        accountType: (accountTypeByOrg.get(o.id) === "house" ? "house" : "agency") as "agency" | "house",
         resellerOrgId: o.reseller_org_id as string | null,
         resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
         resoldCount: o.is_reseller ? (resoldCountByReseller.get(o.id) ?? 0) : 0,
@@ -977,11 +1018,16 @@ export const adminUpdateOrgPlan = createServerFn({ method: "POST" })
     if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: plan } = await supabaseAdmin.from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
+    const { data: plan } = await supabaseAdmin.from("plans").select("*").eq("id", data.planId).maybeSingle();
     if (!plan) throw new Error("Plano não encontrado.");
 
-    const { data: org } = await supabaseAdmin.from("orgs").select("asaas_subscription_id").eq("id", data.orgId).maybeSingle();
+    const { data: org } = await supabaseAdmin.from("orgs").select("*").eq("id", data.orgId).maybeSingle();
     if (!org) throw new Error("Agência não encontrada.");
+    if (((plan as any).account_type ?? "agency") !== ((org as any).account_type ?? "agency")) {
+      throw new Error((org as any).account_type === "house"
+        ? "Conta House só pode usar os planos House."
+        : "Planos House são só pra contas House — converta a conta antes.");
+    }
 
     const { error } = await supabaseAdmin.from("orgs")
       .update({ plan_id: data.planId, max_collaborators_override: data.maxCollaboratorsOverride ?? null })
@@ -992,13 +1038,14 @@ export const adminUpdateOrgPlan = createServerFn({ method: "POST" })
     const asaasSubscriptionId = (org as any).asaas_subscription_id;
     if (asaasSubscriptionId && plan.price_cents != null) {
       const { updateAsaasSubscriptionValue, getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
+      const valueCents = (await orgMonthlyPriceCents(supabaseAdmin, data.orgId, plan as any))!;
       // O valor novo da assinatura só vale pros PRÓXIMOS ciclos — a fatura
       // já gerada pro vencimento mais próximo (se ainda não paga) precisa
       // ser corrigida à parte, senão a pessoa é cobrada pelo plano antigo
       // uma última vez antes do valor novo entrar em vigor.
-      await updateAsaasSubscriptionValue(asaasSubscriptionId, plan.price_cents, `Modo Criador — Plano ${plan.name}`);
+      await updateAsaasSubscriptionValue(asaasSubscriptionId, valueCents, `Modo Criador — Plano ${plan.name}`);
       const pending = await getNextPendingPayment(asaasSubscriptionId);
-      if (pending) await updateAsaasPaymentValue(pending.id, plan.price_cents);
+      if (pending) await updateAsaasPaymentValue(pending.id, valueCents);
       asaasSynced = true;
     }
     return { ok: true, asaasSynced };
@@ -1203,9 +1250,15 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
       .from("orgs").select("name, tax_id, asaas_customer_id, subscription_status, trial_ends_at").eq("id", context.orgId).maybeSingle();
     if (!org?.tax_id) throw new Error("Preencha o CNPJ/CPF da agência antes de assinar um plano.");
 
-    const { data: plan } = await context.supabase.from("plans").select("id, name, price_cents").eq("id", data.planId).maybeSingle();
+    const { data: plan } = await context.supabase.from("plans").select("*").eq("id", data.planId).maybeSingle();
     if (!plan) throw new Error("Plano não encontrado.");
     if (plan.price_cents == null) throw new Error("Este plano é sob consulta — fale com a gente para contratar.");
+    const { data: typeRow } = await (context.supabase as any)
+      .from("orgs").select("account_type").eq("id", context.orgId).maybeSingle();
+    if (((plan as any).account_type ?? "agency") !== (typeRow?.account_type === "house" ? "house" : "agency")) {
+      throw new Error("Esse plano não está disponível pra sua conta.");
+    }
+    const valueCents = (await orgMonthlyPriceCents(context.supabase, context.orgId, plan as any))!;
 
     const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
 
@@ -1226,7 +1279,7 @@ export const subscribeToPlan = createServerFn({ method: "POST" })
 
     const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
       customerId,
-      valueCents: plan.price_cents,
+      valueCents,
       description: `Modo Criador — Plano ${plan.name}`,
       trialDays,
     });
@@ -1271,8 +1324,9 @@ export const resumeFromPaymentPause = createServerFn({ method: "POST" })
 
     // Teste acabou sem nunca ter assinado — cria a assinatura agora, no
     // plano que a agência já tinha escolhido lá atrás.
-    const { data: plan } = await context.supabase.from("plans").select("id, name, price_cents").eq("id", org.plan_id).maybeSingle();
+    const { data: plan } = await context.supabase.from("plans").select("*").eq("id", org.plan_id).maybeSingle();
     if (!plan || plan.price_cents == null) throw new Error("Fale com a gente pelo chat de ajuda pra reativar sua conta.");
+    const valueCents = (await orgMonthlyPriceCents(context.supabase, profile.org_id, plan as any))!;
 
     const { createAsaasCustomer, createAsaasSubscription } = await import("./asaas.server");
     let customerId = org.asaas_customer_id;
@@ -1281,7 +1335,7 @@ export const resumeFromPaymentPause = createServerFn({ method: "POST" })
       customerId = customer.id;
     }
     const { subscriptionId, invoiceUrl } = await createAsaasSubscription({
-      customerId, valueCents: plan.price_cents, description: `Modo Criador — Plano ${plan.name}`,
+      customerId, valueCents, description: `Modo Criador — Plano ${plan.name}`,
     });
     await context.supabase
       .from("orgs").update({ plan_id: plan.id, asaas_customer_id: customerId, asaas_subscription_id: subscriptionId })
@@ -1360,11 +1414,50 @@ export async function assertClientLimit(supabase: any, orgId: string) {
   }
 }
 
+/** Valor mensal da assinatura. Agência: o preço do plano. House: o plano +
+ * cada marca ativa além da principal (features.extra_brand_cents). `plan`
+ * precisa vir com select("*") pra trazer features/account_type. */
+export async function orgMonthlyPriceCents(
+  supabase: any, orgId: string,
+  plan: { price_cents: number | null; features?: any; account_type?: string | null },
+): Promise<number | null> {
+  if (plan.price_cents == null) return null;
+  if ((plan.account_type ?? "agency") !== "house") return plan.price_cents;
+  const { count } = await supabase.from("clients").select("id", { count: "exact", head: true })
+    .eq("org_id", orgId).eq("archived", false).neq("category", "Ex-clientes");
+  const extra = Number(plan.features?.extra_brand_cents ?? HOUSE_EXTRA_BRAND_CENTS_DEFAULT);
+  return houseMonthlyCents(plan.price_cents, extra, count ?? 0);
+}
+
+/** House: depois de criar/arquivar/excluir uma marca, acerta o valor da
+ * assinatura no Asaas (e da fatura em aberto, igual adminUpdateOrgPlan).
+ * Melhor esforço — nunca derruba a ação que chamou; sem assinatura ainda
+ * (teste grátis), não há nada pra acertar: subscribeToPlan já calcula o
+ * valor com as marcas do momento. */
+export async function syncHouseSubscriptionValue(orgId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: org } = await (supabaseAdmin as any)
+      .from("orgs").select("account_type, plan_id, asaas_subscription_id").eq("id", orgId).maybeSingle();
+    if (org?.account_type !== "house" || !org.asaas_subscription_id) return;
+    const { data: plan } = await supabaseAdmin.from("plans").select("*").eq("id", org.plan_id).maybeSingle();
+    if (!plan) return;
+    const valueCents = await orgMonthlyPriceCents(supabaseAdmin, orgId, plan as any);
+    if (valueCents == null) return;
+    const { updateAsaasSubscriptionValue, getNextPendingPayment, updateAsaasPaymentValue } = await import("./asaas.server");
+    await updateAsaasSubscriptionValue(org.asaas_subscription_id, valueCents, `Modo Criador — Plano ${(plan as any).name}`);
+    const pending = await getNextPendingPayment(org.asaas_subscription_id);
+    if (pending) await updateAsaasPaymentValue(pending.id, valueCents);
+  } catch (e) {
+    console.error("Falha ao sincronizar valor da assinatura House:", e);
+  }
+}
+
 /** Mesma ideia, mas para colaboradores — chamado antes de criar um novo
  * membro da equipe. `max_collaborators_override` permite dar a uma agência
  * específica um limite de vagas diferente do seu plano, sem mudar o plano
  * em si (o limite de clientes continua sempre vindo do plano). */
-async function assertCollaboratorLimit(supabase: any, orgId: string) {
+export async function assertCollaboratorLimit(supabase: any, orgId: string) {
   if (orgId === LUZERIA_ORG_ID) return;
   const { data: org } = await supabase.from("orgs").select("plan_id, max_collaborators_override").eq("id", orgId).maybeSingle();
   const { data: plan } = await supabase.from("plans").select("max_collaborators, name").eq("id", org?.plan_id ?? "solo").maybeSingle();
@@ -1933,6 +2026,13 @@ export const createClient = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
     await assertClientLimit(context.supabase, context.orgId);
+    // House: cada marca nova muda o valor da assinatura — só o dono decide.
+    const { data: typeRow } = await (context.supabase as any)
+      .from("orgs").select("account_type").eq("id", context.orgId).maybeSingle();
+    if (typeRow?.account_type === "house") {
+      const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+      if (!isMaster) throw new Error("Só o gestor (Adm Master) pode adicionar marcas.");
+    }
     const insert: any = { name: data.name, org_id: context.orgId };
     if (data.category) insert.category = data.category;
     if (data.color) insert.color = data.color;
@@ -1959,6 +2059,8 @@ export const createClient = createServerFn({ method: "POST" })
       // Avulsos sem modelo: mês vazio só pra poder receber itens depois.
       await context.supabase.from("months").insert({ client_id: client.id, key, org_id: context.orgId });
     }
+    // House: marca nova além da principal muda o valor da assinatura.
+    await syncHouseSubscriptionValue(context.orgId);
     return { id: client.id };
   });
 
@@ -1976,6 +2078,7 @@ export const updateClient = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase.from("clients").update(patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
+    if ("archived" in patch || "category" in patch) await syncHouseSubscriptionValue(context.orgId);
     return { ok: true };
   });
 
@@ -1983,8 +2086,12 @@ export const deleteClient = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
+    const { data: houseRow } = await (context.supabase as any)
+      .from("orgs").select("house_client_id").eq("id", context.orgId).maybeSingle();
+    if (houseRow?.house_client_id === data.id) throw new Error("A marca principal da House não pode ser excluída.");
     const { error } = await context.supabase.from("clients").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await syncHouseSubscriptionValue(context.orgId);
     return { ok: true };
   });
 

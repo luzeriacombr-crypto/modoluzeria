@@ -10,6 +10,7 @@ import { Avatar } from "./Avatar";
 import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, CUSTOMIZABLE_BUILTIN_STATUS_KEYS, PROTECTED_STATUS_KEYS, type SetorPermissionKey, type Profile, type BrandAdvancedColors } from "@/lib/luzeria/types";
 import { toast } from "sonner";
+import { isHouse, term, HOUSE_HIDDEN_FEATURES } from "@/lib/luzeria/house";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
@@ -91,7 +92,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   // aparece, nem ?tab=afiliados/revenda na URL funciona (cai no padrão).
   // Os componentes continuam intactos, só filtrados daqui — reativar depois
   // é só tirar essa linha.
-  const HIDDEN_TABS: SettingsTab[] = ["afiliados", "revenda"];
+  const HIDDEN_TABS: SettingsTab[] = [
+    "afiliados", "revenda",
+    // House: sem jornada/margem/visão geral de clientes, pagamentos por
+    // cliente nem indicação entre agências.
+    ...(isHouse(me) ? (["indicacoes", "margem", "journey", "cliente", "pagamentos"] as SettingsTab[]) : []),
+  ];
   const allowedTabs: SettingsTab[] = (isMaster ? VALID_TABS : setorAllowedTabs).filter((t) => !HIDDEN_TABS.includes(t));
   // Pedido do Junior: "Plataforma" só existe pra ele (isPlatformAdmin), e é
   // a aba que ele mais usa no dia a dia — clicar na engrenagem sem escolher
@@ -225,7 +231,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           {isMaster && (
             <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
               <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
-              <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />
+              {!isHouse(me) && <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />}
             </div>
           )}
 
@@ -640,7 +646,10 @@ function GeneralSettings() {
   const { data: categoryRows = [] } = useQuery(clientCategoriesQO());
   if (!settings) return <div className="text-foreground/40 text-sm">Carregando…</div>;
   const isMaster = me?.role === "master";
-  const disabledFeatures = me?.disabledFeatures ?? [];
+  // Só o que a própria org desligou — os módulos que a House esconde não
+  // são toggle (não aparecem aqui nem são gravados de volta).
+  const disabledFeatures = (me?.orgDisabledFeatures ?? me?.disabledFeatures ?? [])
+    .filter((k) => (OPTIONAL_FEATURE_KEYS as readonly string[]).includes(k) && !(isHouse(me) && (HOUSE_HIDDEN_FEATURES as readonly string[]).includes(k)));
   const statusCount = CUSTOMIZABLE_BUILTIN_STATUS_KEYS.length + PROTECTED_STATUS_KEYS.length + statusRows.filter((r) => r.isCustom).length;
   const categoryCount = 2 + categoryRows.length;
 
@@ -659,7 +668,7 @@ function GeneralSettings() {
   return (
     <div className="max-w-2xl space-y-3">
       {me?.orgId && (
-        <CollapsibleSection icon={Star} title="Marca da agência" defaultOpen accent
+        <CollapsibleSection icon={Star} title={`Marca ${term(me, "daAgencia")}`} defaultOpen accent
           badge={
             <span className="flex items-center gap-2">
               <span className="flex gap-0.5">
@@ -743,24 +752,28 @@ function GeneralSettings() {
 
       {isMaster && (
         <>
-          <CollapsibleSection icon={FileText} title="Contrato"
-            badge={me?.contractTemplate?.trim() ? "Modelo configurado" : "Nenhum modelo definido"}>
-            <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
-          </CollapsibleSection>
+          {!isHouse(me) && (
+            <CollapsibleSection icon={FileText} title="Contrato"
+              badge={me?.contractTemplate?.trim() ? "Modelo configurado" : "Nenhum modelo definido"}>
+              <ContractTemplateForm template={me?.contractTemplate ?? null} isMaster={isMaster} />
+            </CollapsibleSection>
+          )}
 
           <CollapsibleSection icon={CheckCircle2} title="Status" badge={`${statusCount} configurados`}>
             <ContentStatusesSection />
           </CollapsibleSection>
 
-          <CollapsibleSection icon={Tags} title="Categorias de clientes" badge={`${categoryCount} categorias`}>
-            <ClientCategoriesSection />
-          </CollapsibleSection>
+          {!isHouse(me) && (
+            <CollapsibleSection icon={Tags} title="Categorias de clientes" badge={`${categoryCount} categorias`}>
+              <ClientCategoriesSection />
+            </CollapsibleSection>
+          )}
         </>
       )}
 
       <CollapsibleSection icon={LayoutGrid} title="Recursos" defaultOpen accent
         badge={disabledFeatures.length > 0 ? `${disabledFeatures.length} desativado${disabledFeatures.length > 1 ? "s" : ""}` : "Tudo ativado"}>
-        <FeatureTogglesSection disabledFeatures={disabledFeatures} />
+        <FeatureTogglesSection disabledFeatures={disabledFeatures} hiddenKeys={isHouse(me) ? HOUSE_HIDDEN_FEATURES : []} />
       </CollapsibleSection>
 
       <CollapsibleSection icon={HelpCircle} title="Ajuda" badge="Tour guiado">
@@ -784,7 +797,7 @@ function GeneralSettings() {
   );
 }
 
-function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[] }) {
+function FeatureTogglesSection({ disabledFeatures, hiddenKeys }: { disabledFeatures: string[]; hiddenKeys: readonly string[] }) {
   const { updateMyOrg } = useApi();
   const disabledSet = new Set(disabledFeatures);
 
@@ -799,7 +812,7 @@ function FeatureTogglesSection({ disabledFeatures }: { disabledFeatures: string[
 
   return (
     <div className="bg-card rounded-lg divide-y divide-white/[0.06]">
-      {OPTIONAL_FEATURE_KEYS.map((key) => {
+      {OPTIONAL_FEATURE_KEYS.filter((key) => !hiddenKeys.includes(key)).map((key) => {
         const meta = OPTIONAL_FEATURE_LABEL[key];
         const visible = !disabledSet.has(key);
         return (
@@ -1325,8 +1338,10 @@ function PlanCardSection() {
 
   const clientsPct = status.maxClients ? Math.min(100, Math.round((status.clientsUsed / status.maxClients) * 100)) : 0;
   const collabPct = status.maxCollaborators ? Math.min(100, Math.round((status.collaboratorsUsed / status.maxCollaborators) * 100)) : 0;
-  const priceLabel = status.priceCents != null
-    ? `R$ ${(status.priceCents / 100).toFixed(2).replace(".", ",")}/mês`
+  const me = useMe().data;
+  const monthly = status.monthlyCents ?? status.priceCents;
+  const priceLabel = monthly != null
+    ? `R$ ${(monthly / 100).toFixed(2).replace(".", ",")}/mês`
     : "Sob consulta";
   const trialDaysLeft = status.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(status.trialEndsAt).getTime() - Date.now()) / 86_400_000))
@@ -1347,6 +1362,11 @@ function PlanCardSection() {
             <div className="min-w-0">
               <div className="text-lg font-bold text-foreground truncate">{status.planName}</div>
               <div className="text-[11px] text-foreground/50">{priceLabel}</div>
+              {status.isHousePlan && status.extraBrands > 0 && (
+                <div className="text-[11px] text-foreground/40">
+                  Inclui {status.extraBrands} marca{status.extraBrands > 1 ? "s" : ""} adiciona{status.extraBrands > 1 ? "is" : "l"} × {formatBRL(status.extraBrandCents)}
+                </div>
+              )}
             </div>
           </div>
           {status.subscriptionStatus === "trialing" && trialDaysLeft !== null ? (
@@ -1362,7 +1382,7 @@ function PlanCardSection() {
           ) : null}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <UsageTile icon={<Users size={15} />} label="Clientes ativos" used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
+          <UsageTile icon={<Users size={15} />} label={`${term(me, "Clientes")} ativ${isHouse(me) ? "as" : "os"}`} used={status.clientsUsed} max={status.maxClients} pct={clientsPct} />
           <UsageTile icon={<UserCog size={15} />} label="Colaboradores" used={status.collaboratorsUsed} max={status.maxCollaborators} pct={collabPct} />
         </div>
       </div>
@@ -1394,6 +1414,10 @@ function UsageTile({ icon, label, used, max, pct }: { icon: React.ReactNode; lab
   );
 }
 
+function formatBRL(cents: number) {
+  return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+}
+
 /** "Cobrança" — CNPJ/CPF e upgrade de plano. */
 function BillingSection() {
   const { data: status, isLoading } = useQuery(orgPlanStatusQO());
@@ -1410,6 +1434,8 @@ function BillingSection() {
   useEffect(() => { if (status?.taxId) setTaxId(status.taxId); }, [status?.taxId]);
 
   if (isLoading || !status) return null;
+  // A Luzeria recebe todos os planos (painel de agências); aqui só os do tipo da conta.
+  const shownPlans = (plans ?? []).filter((p) => p.accountType === (status.isHousePlan ? "house" : "agency"));
 
   function saveTaxId() {
     const digits = taxId.replace(/\D/g, "");
@@ -1498,7 +1524,7 @@ function BillingSection() {
             <FileDigit size={16} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-1.5">CNPJ ou CPF da agência</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/40 mb-1.5">CNPJ ou CPF {isHouse(me) ? "da empresa" : "da agência"}</div>
             <div className="flex gap-2">
               <input value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={18} className="lz-input"
                 placeholder="Somente números — necessário pra assinar um plano" />
@@ -1512,13 +1538,17 @@ function BillingSection() {
 
         <div className="pt-3 border-t border-foreground/6">
           <div className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-1">
-            <Rocket size={14} style={{ color: "var(--lz-accent-ink)" }} /> Quer fazer upgrade?
+            <Rocket size={14} style={{ color: "var(--lz-accent-ink)" }} /> {status.isHousePlan ? "Planos da House" : "Quer fazer upgrade?"}
           </div>
-          <p className="text-[11px] text-foreground/40 mb-3">Mais espaço pra clientes e colaboradores, sempre que sua agência crescer.</p>
+          <p className="text-[11px] text-foreground/40 mb-3">
+            {status.isHousePlan
+              ? `Cada marca além da principal soma ${formatBRL(status.extraBrandCents)}/mês à assinatura.`
+              : "Mais espaço pra clientes e colaboradores, sempre que sua agência crescer."}
+          </p>
           <div className="space-y-2">
-            {(plans ?? []).map((plan, i) => {
+            {shownPlans.map((plan, i) => {
               const isCurrent = plan.id === status.planId && status.hasAsaasSubscription;
-              const TierIcon = i === 0 ? Zap : i === plans!.length - 1 ? Crown : Rocket;
+              const TierIcon = i === 0 ? Zap : i === shownPlans.length - 1 ? Crown : Rocket;
               return (
                 <div key={plan.id} className="flex items-center gap-3 rounded-lg px-3.5 py-3 transition-colors"
                   style={isCurrent
@@ -1539,7 +1569,11 @@ function BillingSection() {
                     <div className="text-[11px] text-foreground/50 flex items-center gap-1 flex-wrap">
                       {plan.priceCents != null ? `R$ ${(plan.priceCents / 100).toFixed(2).replace(".", ",")}/mês` : "Sob consulta"}
                       <span className="text-foreground/25">·</span>
-                      <Users size={11} className="inline" /> até {plan.maxClients} clientes
+                      {status.isHousePlan ? (
+                        <>{plan.features?.ai_planning ? "com planejamento por IA" : "sem IA"}</>
+                      ) : (
+                        <><Users size={11} className="inline" /> até {plan.maxClients} clientes</>
+                      )}
                       <span className="text-foreground/25">·</span>
                       <UserCog size={11} className="inline" /> até {plan.maxCollaborators}
                     </div>

@@ -383,6 +383,14 @@ export interface Profile {
    * — keys from OPTIONAL_FEATURE_KEYS. Hides the corresponding UI without
    * touching any underlying data. */
   disabledFeatures?: string[];
+  /** Só o que a própria org desligou (orgs.disabled_features), sem os
+   * módulos que o tipo de conta esconde — usado pela tela de toggles, que
+   * grava a lista de volta e não pode gravar os escondidos da house. */
+  orgDisabledFeatures?: string[];
+  /** 'house' = agência interna de uma empresa (ver src/lib/luzeria/house.ts). */
+  accountType?: "agency" | "house";
+  /** Marca principal da house (orgs.house_client_id). */
+  houseClientId?: string | null;
   /** Agência marcada como demo somente-leitura (orgs.demo_read_only) — hoje
    * usado só na Views Agência, a demo pública. Master fica isento (ver
    * assertNotDemoReadOnly em require-active.ts). */
@@ -559,7 +567,7 @@ export function hasPermission(
 
 export const OPTIONAL_FEATURE_KEYS = [
   "formats", "whatsapp_reminders", "rotina", "calendar", "stories", "instagram", "drive", "daily_verse", "video_call", "google_calendar", "forum", "reference_library", "sales_pipeline",
-  "posts", "reels", "mais", "feed", "photo_selection", "contract", "agency_levels",
+  "posts", "reels", "mais", "feed", "photo_selection", "contract", "agency_levels", "financeiro",
 ] as const;
 export type OptionalFeatureKey = (typeof OPTIONAL_FEATURE_KEYS)[number];
 export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string; description: string }> = {
@@ -642,6 +650,10 @@ export const OPTIONAL_FEATURE_LABEL: Record<OptionalFeatureKey, { label: string;
   agency_levels: {
     label: "Programa de Níveis",
     description: "Selo de nível (Bronze a Lendária) na barra lateral, baseado no quanto sua agência usa o Modo Criador.",
+  },
+  financeiro: {
+    label: "Financeiro",
+    description: "Entradas e saídas, resultado do mês e orçamentos no menu. Meu plano continua acessível pelo master.",
   },
 };
 
