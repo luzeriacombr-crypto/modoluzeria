@@ -106,7 +106,7 @@ import { listContentStatuses, upsertContentStatus, deleteContentStatus, setConte
 import { listClientCategories, createClientCategory, renameClientCategory, deleteClientCategory } from "./client-categories.functions";
 import { setProfileClientAccess } from "./client-access.functions";
 import { listClientPayments, setOrgPixKey, setPaymentMessageTemplate, setContractTemplate, markClientPaymentReceived, unmarkClientPaymentReceived, listClientPaymentHistory } from "./client-payments.functions";
-import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid } from "./cash-flow.functions";
+import { listCashFlowEntries, addCashFlowEntry, updateCashFlowEntry, removeCashFlowEntry, setCashFlowEntryPaid, getWalletBalance } from "./cash-flow.functions";
 import { listBankAccounts, addBankAccount, updateBankAccount, removeBankAccount } from "./bank-accounts.functions";
 import {
   listContractRequests, createContractRequest, cancelContractRequest,
@@ -352,6 +352,8 @@ export const cashFlowEntriesQO = (monthKey: string) =>
 
 export const bankAccountsQO = () =>
   queryOptions({ queryKey: ["bank-accounts"], queryFn: () => listBankAccounts() });
+export const walletBalanceQO = () =>
+  queryOptions({ queryKey: ["wallet-balance"], queryFn: () => getWalletBalance() });
 
 export const campaignsQO = (clientId: string) =>
   queryOptions({ queryKey: ["campaigns", clientId], queryFn: () => listCampaigns({ data: { clientId } }) });
@@ -1351,29 +1353,30 @@ export function useApi() {
       onSuccess: () => qc.invalidateQueries({ queryKey: ["client-payments"] }),
       onError: (e: any) => toastFriendlyError(e, "Erro ao desfazer marcação."),
     }),
-    // As 4 mutations abaixo também invalidam "bank-accounts": lançar/editar/
-    // apagar uma entrada, ou marcar/desmarcar uma saída como paga, pode
-    // ajustar o saldo do banco escolhido (ver cash-flow.functions.ts) — sem
+    // As 4 mutations abaixo também invalidam "bank-accounts" e "wallet-balance":
+    // lançar/editar/apagar uma entrada, ou marcar/desmarcar uma saída como
+    // paga, pode ajustar o saldo do banco escolhido OU o saldo em carteira
+    // quando nenhum banco foi escolhido (ver cash-flow.functions.ts) — sem
     // isso o card "Saldo em banco" ficava com o valor antigo até recarregar
-    // a página, mesmo o banco já tendo sido atualizado.
+    // a página, mesmo o saldo já tendo sido atualizado.
     addCashFlowEntry: useMutation({
       mutationFn: useServerFn(addCashFlowEntry),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao lançar."),
     }),
     updateCashFlowEntry: useMutation({
       mutationFn: useServerFn(updateCashFlowEntry),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao salvar."),
     }),
     setCashFlowEntryPaid: useMutation({
       mutationFn: useServerFn(setCashFlowEntryPaid),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao marcar pagamento."),
     }),
     removeCashFlowEntry: useMutation({
       mutationFn: useServerFn(removeCashFlowEntry),
-      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); },
+      onSuccess: () => { qc.invalidateQueries({ queryKey: ["cash-flow-entries"] }); qc.invalidateQueries({ queryKey: ["bank-accounts"] }); qc.invalidateQueries({ queryKey: ["wallet-balance"] }); },
       onError: (e: any) => toastFriendlyError(e, "Erro ao remover."),
     }),
     addBankAccount: useMutation({

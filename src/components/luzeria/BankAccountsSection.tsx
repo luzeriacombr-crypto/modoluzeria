@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { bankAccountsQO, useApi } from "@/lib/luzeria/queries";
+import { Plus, Pencil, Trash2, Wallet } from "lucide-react";
+import { bankAccountsQO, walletBalanceQO, useApi } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import type { BankAccount } from "@/lib/luzeria/bank-accounts.functions";
 
@@ -41,6 +41,8 @@ function parseAmount(raw: string): number | null {
  * reformulação de "Pagamentos" → "Financeiro". */
 export function BankAccountsSection() {
   const { data: accounts = [] } = useQuery(bankAccountsQO());
+  const { data: wallet } = useQuery(walletBalanceQO());
+  const walletCents = wallet?.balanceCents ?? 0;
   const api = useApi();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -105,10 +107,22 @@ export function BankAccountsSection() {
         </div>
       )}
 
-      {accounts.length === 0 && !adding ? (
-        <div className="text-[11px] text-foreground/35 py-2">Nenhuma conta cadastrada ainda.</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-3">
+          {/* Carteira/espécie não é uma conta cadastrável (não dá pra editar
+           * nem remover) — é só o total acumulado das entradas/saídas
+           * lançadas sem banco escolhido, somado na hora (ver
+           * getWalletBalance em cash-flow.functions.ts). Pedido do Junior
+           * (30/09) pra aparecer junto dos bancos, com ícone de carteira. */}
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-dashed border-foreground/15" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(var(--lz-brand-rgb),0.16)" }}>
+              <Wallet size={15} style={{ color: "var(--lz-accent-ink)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12.5px] font-bold text-foreground truncate">Carteira / espécie</div>
+              <div className="text-[10.5px] text-foreground/40">Soma das entradas e saídas sem banco</div>
+            </div>
+            <div className="text-sm font-extrabold text-foreground whitespace-nowrap">{money(walletCents)}</div>
+          </div>
           {accounts.map((a) => (
             <div key={a.id} className="group flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style={{ background: "color-mix(in srgb, var(--foreground) 2.5%, transparent)" }}>
               <div className="h-8 w-8 rounded-lg flex items-center justify-center text-[11px] font-extrabold text-white shrink-0" style={{ background: avatarColor(a.name) }}>
@@ -125,8 +139,7 @@ export function BankAccountsSection() {
               </div>
             </div>
           ))}
-        </div>
-      )}
+      </div>
 
       {accounts.length > 0 && (
         <div className="flex items-center justify-between pt-3 border-t border-foreground/6">

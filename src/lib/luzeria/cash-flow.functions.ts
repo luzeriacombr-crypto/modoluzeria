@@ -199,6 +199,33 @@ export const setCashFlowEntryPaid = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Saldo acumulado em "carteira/espécie" (bank_account_id nulo) — pedido do
+ * Junior (30/09) pra aparecer junto dos bancos, com ícone de wallet. Não tem
+ * uma linha própria pra incrementar feito bank_accounts (carteira não é uma
+ * conta cadastrável), então é somado na hora a partir do histórico: entrada
+ * conta na hora, saída só quando paga — mesma regra do ajuste automático de
+ * banco (ver adjustBankAccountBalance). */
+export const getWalletBalance = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<{ balanceCents: number }> => {
+    await assertFinanceiroAccess(context.supabase, context.userId);
+    const { data: entradas, error: entradasErr } = await (context.supabase as any)
+      .from("cash_flow_entries").select("amount_cents")
+      .eq("org_id", context.orgId).eq("direction", "entrada").is("bank_account_id", null);
+    if (entradasErr) throw new Error(entradasErr.message);
+    const entradasTotal = (entradas ?? []).reduce((s: number, r: any) => s + r.amount_cents, 0);
+
+    const { data: saidas, error: saidasErr } = await (context.supabase as any)
+      .from("cash_flow_entries").select("amount_cents, cash_flow_entry_payments(month_key)")
+      .eq("org_id", context.orgId).eq("direction", "saida").is("bank_account_id", null);
+    if (saidasErr) throw new Error(saidasErr.message);
+    const saidasTotal = (saidas ?? []).reduce(
+      (s: number, r: any) => s + r.amount_cents * (r.cash_flow_entry_payments?.length ?? 0), 0,
+    );
+
+    return { balanceCents: entradasTotal - saidasTotal };
+  });
+
 export const removeCashFlowEntry = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
