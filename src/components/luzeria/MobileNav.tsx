@@ -106,7 +106,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
         <div className="fixed inset-0 z-40 bg-background pt-14 pb-20 flex flex-col">
           <div className="px-5 py-4 border-b border-border bg-background shrink-0">
             <div className="flex items-end justify-between">
-              <h2 className="text-lg font-bold text-foreground">{term(me, "Clientes")}</h2>
+              <h2 className="text-lg font-bold text-foreground">{house ? "Publicações" : term(me, "Clientes")}</h2>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-foreground/40">{activeClients.length}</span>
                 {canCreateClient && onCreateClient && (

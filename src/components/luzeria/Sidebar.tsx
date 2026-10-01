@@ -191,7 +191,9 @@ export function Sidebar({
   const homePath = house ? "/meu-dia" : "/minhas-tarefas";
   const homeLabel = house ? navLabel("meu-dia", "Meu dia") : navLabel("minhas-demandas", "Minhas demandas");
   const rotinaLabel = house ? "Checklists" : "Rotina";
-  const clientesLabel = navLabel("clientes", singleBrandId ? term(me, "Cliente") : term(me, "Clientes"));
+  // House: o item é "Publicações" (o que se faz ali); com uma marca só vai direto
+  // pra ela, com mais de uma vira lista com o nome de cada marca.
+  const clientesLabel = navLabel("clientes", house ? "Publicações" : term(me, "Clientes"));
   function orderSection<T extends { id: string; label: string; node: React.ReactNode }>(sectionKey: string, items: T[]): T[] {
     const order = navOrder[sectionKey];
     if (!order || order.length === 0) return items;
