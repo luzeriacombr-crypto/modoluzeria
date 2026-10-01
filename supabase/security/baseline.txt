@@ -71,7 +71,8 @@ sensitive-column:photo_selections.token
 sensitive-column:client_contract_requests.token         # RLS: só admin com acesso ao cliente
 sensitive-column:client_contract_requests.signer_cpf    # RLS: só admin com acesso ao cliente
 sensitive-column:orgs.pix_key                           # chave Pix da agência, vai na mensagem de cobrança pro cliente
-# PENDENTE: CPF/CNPJ do cliente é filtrado só no servidor (listClients);
-# a RLS de clients deixa qualquer membro com acesso ao cliente ler a coluna.
+sensitive-column:client_legal_info.cnpj_cpf            # RLS: só admin com acesso ao cliente
+sensitive-column:client_legal_info.legal_responsible_cpf
+# Em transição (somem com 20261001140000): colunas antigas, sem uso pelo código novo.
 sensitive-column:clients.cnpj_cpf
 sensitive-column:clients.legal_responsible_cpf
