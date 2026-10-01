@@ -1817,11 +1817,10 @@ export const updateMyAccount = createServerFn({ method: "POST" })
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
-    // cnpj_cpf/address/legal_responsible_name/legal_responsible_cpf são
-    // colunas novas — cast até os tipos do Supabase serem regenerados
-    // depois da migração rodar.
+    // legal_responsible_name e outras colunas novas — cast até os tipos do
+    // Supabase serem regenerados depois da migração rodar.
     const { data, error } = await (context.supabase as any).from("clients")
-      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, stories_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, cnpj_cpf, address, legal_responsible_name, legal_responsible_cpf, ai_planning_enabled, competitors, content_briefing, recent_roteiros, avulso_delivered_at")
+      .select("id, name, color, icon, favorite, archived, category, niche, posts_per_week, reels_per_week, stories_per_week, fixed_responsible_id, review_day, notes, created_at, description, photo_url, notify_stories_in_tasks, contract_value, payment_due_day, contract_start_date, contract_end_date, hidden_tabs, legal_responsible_name, ai_planning_enabled, competitors, content_briefing, recent_roteiros, avulso_delivered_at")
       .order("name");
     if (error) throw new Error(error.message);
     const photoPaths = (data ?? []).map((c: any) => c.photo_url).filter(Boolean) as string[];
@@ -1829,9 +1828,15 @@ export const listClients = createServerFn({ method: "GET" })
     // contract_value é dado financeiro sensível — só volta pro Adm Master, mesmo que a
     // RLS de admin manage clients já libere leitura/escrita pra setor também.
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
-    // CPF/CNPJ e endereço (LGPD) só servem pro contrato, que é tela de
-    // admin — quem não é admin não edita nem gera contrato, então não recebe.
+    // CPF/CNPJ e endereço (LGPD) ficam em client_legal_info, que a RLS só
+    // libera pra admin com acesso ao cliente — só servem pro contrato.
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    const legalByClient = new Map<string, any>();
+    if (isAdmin) {
+      const { data: legalRows } = await (context.supabase as any)
+        .from("client_legal_info").select("client_id, cnpj_cpf, address, legal_responsible_cpf");
+      (legalRows ?? []).forEach((r: any) => legalByClient.set(r.client_id, r));
+    }
     return (data ?? []).map((c: any) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
@@ -1849,10 +1854,10 @@ export const listClients = createServerFn({ method: "GET" })
         recentRoteiros: c.recent_roteiros ?? "",
       },
       aiPlanningEnabled: c.ai_planning_enabled ?? false,
-      cnpjCpf: isAdmin ? (c.cnpj_cpf ?? null) : null,
-      address: isAdmin ? (c.address ?? null) : null,
+      cnpjCpf: legalByClient.get(c.id)?.cnpj_cpf ?? null,
+      address: legalByClient.get(c.id)?.address ?? null,
       legalResponsibleName: c.legal_responsible_name ?? null,
-      legalResponsibleCpf: isAdmin ? (c.legal_responsible_cpf ?? null) : null,
+      legalResponsibleCpf: legalByClient.get(c.id)?.legal_responsible_cpf ?? null,
       createdAt: c.created_at,
       description: c.description ?? null,
       photoPath: c.photo_url ?? null,
@@ -2079,6 +2084,22 @@ export const updateClient = createServerFn({ method: "POST" })
         patch = Object.fromEntries(Object.entries(patch).filter(([k]) => !masterOnlyKeys.includes(k)));
       }
     }
+    // CPF/CNPJ e endereço vão pra client_legal_info (só admin — a RLS
+    // recusa os outros); o resto do patch segue pra clients.
+    const legalKeys = ["cnpj_cpf", "address", "legal_responsible_cpf"];
+    const legalPatch = Object.fromEntries(Object.entries(patch).filter(([k]) => legalKeys.includes(k)));
+    patch = Object.fromEntries(Object.entries(patch).filter(([k]) => !legalKeys.includes(k)));
+    if (Object.keys(legalPatch).length > 0) {
+      const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+      if (isAdmin) {
+        const { error: legalError } = await (context.supabase as any).from("client_legal_info").upsert(
+          { client_id: data.id, ...legalPatch, updated_at: new Date().toISOString() },
+          { onConflict: "client_id" },
+        );
+        if (legalError) throw new Error(legalError.message);
+      }
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
     const { error } = await context.supabase.from("clients").update(patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
     if ("archived" in patch || "category" in patch) await syncHouseSubscriptionValue(context.orgId);
