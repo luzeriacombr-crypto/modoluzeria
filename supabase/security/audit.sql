@@ -17,13 +17,17 @@ WITH findings(f) AS (
   FROM pg_policies p
   WHERE p.schemaname IN ('public', 'storage') AND (p.qual = 'true' OR p.with_check = 'true')
 
-  -- Política que vale pra anon/public (gente deslogada), a não ser "nega tudo".
+  -- Política que vale pra anon/public (gente deslogada) e não exige login
+  -- (auth.uid()) nem é "nega tudo". Política sem "TO <role>" vale pra
+  -- public — comum em código gerado — e só é segura se exigir auth.uid().
   UNION ALL
   SELECT 'policy-anon:' || p.schemaname || '.' || p.tablename || ':' || p.policyname
   FROM pg_policies p
   WHERE p.schemaname IN ('public', 'storage')
     AND p.roles && ARRAY['anon', 'public']::name[]
     AND coalesce(p.qual, '') <> 'false'
+    AND coalesce(p.with_check, '') <> 'false'
+    AND (coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '')) !~ 'auth\.uid\(\)'
 
   -- View sem security_invoker ignora a RLS das tabelas por baixo.
   UNION ALL
@@ -42,11 +46,13 @@ WITH findings(f) AS (
 
   -- SECURITY DEFINER que gente deslogada consegue chamar (roda como dono,
   -- sem RLS). Os de link público (token) são esperados; função nova aqui
-  -- precisa de revisão.
+  -- precisa de revisão. Função de gatilho fica de fora: o Postgres não
+  -- deixa chamar direto.
   UNION ALL
   SELECT 'definer-anon:' || p.proname
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.prosecdef
+    AND p.prorettype NOT IN ('trigger'::regtype, 'event_trigger'::regtype)
     AND has_function_privilege('anon', p.oid, 'EXECUTE')
     AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
 

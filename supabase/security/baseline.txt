@@ -1,4 +1,77 @@
 # Achados conhecidos e ACEITOS da auditoria (scripts/security/audit.sh).
 # Um por linha, com o motivo em comentário. Só entra aqui depois de
 # revisado: se não deveria estar exposto, corrija com uma migration em
-# vez de aceitar.
+# vez de aceitar. Revisão inicial: 2026-10-01.
+
+# ---- Conteúdo público de propósito (site, página de vendas, blog) ----
+anon-reads:blog_posts                                   # só posts publicados
+anon-reads:plans                                        # tabela de preços
+anon-reads:sales_page_blocks                            # só blocos visíveis
+anon-reads:site_tracking_settings                       # pixel da Meta, textos da landing; escrita só master Luzeria
+policy-anon:public.blog_posts:Qualquer_um_pode_ler_posts_publicados
+policy-anon:public.plans:anon_read_plans
+policy-anon:public.sales_page_blocks:anon_read_visible_blocks
+policy-anon:public.site_tracking_settings:anon_read_tracking_settings
+policy-true:public.plans:anon_read_plans
+policy-true:public.plans:auth_read_plans
+policy-true:public.site_tracking_settings:anon_read_tracking_settings
+policy-true:public.site_tracking_settings:auth_read_tracking_settings
+
+# ---- Buckets públicos de propósito ----
+public-bucket:marketing-assets                          # imagens da landing
+anon-lists-bucket:marketing-assets                      # lista nomes de arquivo; conteúdo já é público
+policy-anon:storage.objects:public_read_marketing_assets
+public-bucket:playbook-assets                           # imagens do playbook público
+policy-anon:storage.objects:playbook_assets_public_read
+public-bucket:instagram-publish-temp                    # a Meta precisa baixar a mídia por URL; só o service role escreve
+
+# ---- Funções de link público (validam o token por dentro) ----
+definer-anon:add_public_feedback
+definer-anon:approve_public_feed
+definer-anon:complete_instagram_connect_request
+definer-anon:get_client_id_for_docs_token
+definer-anon:get_client_id_for_token
+definer-anon:get_org_id_for_token
+definer-anon:get_public_campaign
+definer-anon:get_public_contract_request
+definer-anon:get_public_feed
+definer-anon:get_public_instagram_connect_info
+definer-anon:get_public_instagram_insights_info
+definer-anon:get_public_photo_selection_info
+definer-anon:get_public_referrer_name
+definer-anon:set_roteiro_client_status
+definer-anon:sign_client_contract_request
+definer-anon:submit_photo_selection_response
+definer-anon:verify_public_token_file
+
+# ---- Funções auxiliares de RLS (só respondem sim/não sobre um id) ----
+# Usadas dentro de políticas; tirar do anon pode quebrar leitura pública.
+definer-anon:has_client_access
+definer-anon:is_active_profile
+definer-anon:is_house_team
+
+# ---- Colunas sensíveis protegidas pela RLS ----
+# Tabelas de credencial sem nenhuma política: só o service role lê.
+sensitive-column:client_linkedin_credentials.access_token
+sensitive-column:client_linkedin_credentials.refresh_token
+sensitive-column:client_tiktok_credentials.access_token
+sensitive-column:client_tiktok_credentials.refresh_token
+# Só o dono / só o master da agência.
+sensitive-column:user_calendar_tokens.access_token      # RLS: auth.uid() = user_id
+sensitive-column:user_calendar_tokens.refresh_token
+sensitive-column:org_google_credentials.refresh_token   # RLS: só master da agência
+# Tokens de link público: quem é da agência gera e compartilha o link.
+sensitive-column:campaign_share_tokens.token
+sensitive-column:client_docs_share_tokens.token
+sensitive-column:client_feedback.share_token
+sensitive-column:feed_share_tokens.token
+sensitive-column:insights_share_tokens.token
+sensitive-column:instagram_connect_requests.token
+sensitive-column:photo_selections.token
+sensitive-column:client_contract_requests.token         # RLS: só admin com acesso ao cliente
+sensitive-column:client_contract_requests.signer_cpf    # RLS: só admin com acesso ao cliente
+sensitive-column:orgs.pix_key                           # chave Pix da agência, vai na mensagem de cobrança pro cliente
+# PENDENTE: CPF/CNPJ do cliente é filtrado só no servidor (listClients);
+# a RLS de clients deixa qualquer membro com acesso ao cliente ler a coluna.
+sensitive-column:clients.cnpj_cpf
+sensitive-column:clients.legal_responsible_cpf
