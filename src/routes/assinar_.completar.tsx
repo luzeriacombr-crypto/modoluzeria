@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { completeGoogleSignup } from "@/lib/luzeria/signup.functions";
+import { friendlyDbError } from "@/lib/luzeria/friendly-error";
 import { Check, Lock } from "lucide-react";
 import { ModoCriadorLogo } from "@/components/ModoCriadorLogo";
 
@@ -45,7 +46,7 @@ function CompleteGoogleSignupPage() {
         (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
         setState("done");
       } catch (err: any) {
-        setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
+        setError(friendlyDbError(err, "Não foi possível concluir seu cadastro. Tente novamente."));
         setState("error");
       }
     })();

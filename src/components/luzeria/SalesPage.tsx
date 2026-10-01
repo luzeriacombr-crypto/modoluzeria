@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Check, ChevronDown, Lock } from "lucide-react";
 import { getPublicPlans, publicSignup } from "@/lib/luzeria/signup.functions";
+import { friendlyDbError } from "@/lib/luzeria/friendly-error";
 import { SALES_FAQ } from "@/lib/luzeria/sales-knowledge";
 import { SalesChatWidget } from "./SalesChatWidget";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,7 +109,7 @@ export function SalesPage() {
       setInvoiceUrl(r.invoiceUrl);
       (window as any).fbq?.("track", "StartTrial", { value: 0.00, currency: "BRL" });
     } catch (err: any) {
-      setError(err?.message ?? "Não foi possível concluir seu cadastro. Tente novamente.");
+      setError(friendlyDbError(err, "Não foi possível concluir seu cadastro. Tente novamente."));
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ export function SalesPage() {
       });
       if (oauthErr) throw oauthErr;
     } catch (err: any) {
-      setError(err?.message ?? "Erro ao continuar com o Google");
+      setError(friendlyDbError(err, "Erro ao continuar com o Google"));
       setGoogleLoading(false);
     }
   }

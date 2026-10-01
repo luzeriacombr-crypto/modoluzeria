@@ -20,6 +20,54 @@ const whatsappSchema = z.string()
   .refine((v) => /^[1-9][0-9]\d{8,9}$/.test(v), "WhatsApp inválido. Informe DDD + número, ex: 11987654321.")
   .transform((v) => `55${v}`);
 
+// Pegava cadastro com CPF/CNPJ "11111111111" ou nome "Aaa"/"Bbb" — a regex de
+// 11/14 dígitos sozinha não barra sequência repetida, e não tinha nenhuma
+// validação de nome. O dígito verificador sozinho não resolve: uma sequência
+// de dígito repetido (ex: 11111111111) passa pelo cálculo normalmente —
+// pegadinha conhecida do algoritmo — por isso o check explícito abaixo.
+function isAllSameDigit(value: string): boolean {
+  return /^(\d)\1+$/.test(value);
+}
+
+function isValidCpf(cpf: string): boolean {
+  if (isAllSameDigit(cpf)) return false;
+  const d = cpf.split("").map(Number);
+  const calc = (len: number) => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += d[i] * (len + 1 - i);
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+  return calc(9) === d[9] && calc(10) === d[10];
+}
+
+function isValidCnpj(cnpj: string): boolean {
+  if (isAllSameDigit(cnpj)) return false;
+  const d = cnpj.split("").map(Number);
+  const calc = (len: number) => {
+    const weights = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += d[i] * weights[i];
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  return calc(12) === d[12] && calc(13) === d[13];
+}
+
+function isValidCpfOrCnpj(value: string): boolean {
+  if (value.length === 11) return isValidCpf(value);
+  if (value.length === 14) return isValidCnpj(value);
+  return false;
+}
+
+// "Aaa", "Bbb", "xxxxx" — mesma letra repetida do início ao fim (ignorando
+// espaço/maiúscula). Nome de verdade praticamente nunca cai nisso, então o
+// risco de barrar gente real é mínimo.
+function looksLikeFakeName(name: string): boolean {
+  const compact = name.replace(/\s+/g, "").toLowerCase();
+  return /^(.)\1+$/.test(compact);
+}
+
 /** Boas-vindas no WhatsApp de quem acabou de cadastrar a agência (modelo
  * aprovado na Meta, ver whatsapp.server.ts). Best-effort, igual ao e-mail:
  * roda só depois do cadastro dar certo e nunca derruba o signup. */
@@ -101,12 +149,12 @@ export const publicSignup = createServerFn({ method: "POST" })
     billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY";
   }) =>
     z.object({
-      agencyName: z.string().trim().min(2).max(80),
-      name: z.string().trim().min(2).max(80),
+      agencyName: z.string().trim().min(2).max(80).refine((v) => !looksLikeFakeName(v), "Nome da agência inválido."),
+      name: z.string().trim().min(2).max(80).refine((v) => !looksLikeFakeName(v), "Nome inválido."),
       email: z.string().trim().toLowerCase().email(),
       password: z.string().min(8).max(72),
       planId: z.string().min(1),
-      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
+      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido.").refine((v) => isValidCpfOrCnpj(v), "CNPJ ou CPF inválido."),
       whatsapp: whatsappSchema,
       website: z.string().max(0).optional().or(z.literal("")), // honeypot — must stay empty
       promoCode: z.string().optional(),
@@ -330,9 +378,9 @@ export const completeGoogleSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { agencyName: string; name: string; taxId: string; whatsapp: string; planId: string; promoCode?: string; affiliateCode?: string; refCode?: string; billingType?: "CREDIT_CARD" | "UNDEFINED" | "TRIAL_ONLY" }) =>
     z.object({
-      agencyName: z.string().trim().min(2).max(80),
-      name: z.string().trim().min(2).max(80),
-      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido."),
+      agencyName: z.string().trim().min(2).max(80).refine((v) => !looksLikeFakeName(v), "Nome da agência inválido."),
+      name: z.string().trim().min(2).max(80).refine((v) => !looksLikeFakeName(v), "Nome inválido."),
+      taxId: z.string().trim().regex(/^\d{11}$|^\d{14}$/, "CNPJ ou CPF inválido.").refine((v) => isValidCpfOrCnpj(v), "CNPJ ou CPF inválido."),
       whatsapp: whatsappSchema,
       planId: z.string().min(1),
       promoCode: z.string().optional(),

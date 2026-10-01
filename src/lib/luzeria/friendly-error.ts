@@ -12,6 +12,22 @@ export function friendlyDbError(error: DbErrorLike, fallback: string): string {
   const raw = error?.message ?? "";
   const code = error?.code ?? "";
 
+  // Erro de validação (zod) cruza o server function como uma string JSON
+  // crua das issues (ex: '[{"code":"custom","message":"Nome inválido.",
+  // "path":["name"]}]') — sem isso a pessoa via esse JSON ilegível na tela
+  // em vez da mensagem de verdade.
+  if (raw.trim().startsWith("[")) {
+    try {
+      const issues = JSON.parse(raw);
+      if (Array.isArray(issues) && issues.length > 0) {
+        const messages = [...new Set(issues.map((i: any) => i?.message).filter(Boolean))];
+        if (messages.length > 0) return messages.join(" ");
+      }
+    } catch {
+      // não era JSON de verdade — segue pras checagens normais abaixo
+    }
+  }
+
   if (code === "23505" || /duplicate key value violates unique constraint/i.test(raw)) {
     return "Já existe um registro com essas informações.";
   }
