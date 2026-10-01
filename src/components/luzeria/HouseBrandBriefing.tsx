@@ -11,6 +11,7 @@ import { getBrandBriefing, saveBrandBriefing, organizeBriefingWithAI } from "@/l
 import { BRAND_BRIEFING_FIELDS, briefingCompleteness, type BrandBriefing } from "@/lib/luzeria/house-brand";
 
 export const brandBriefingKey = ["house-brand-briefing"];
+const NICHE_MAX = 200;
 
 export function useBrandBriefing() {
   const fn = useServerFn(getBrandBriefing);
@@ -42,17 +43,33 @@ export function HouseBrandBriefing() {
     mutationFn: () => organizeFn({ data: { text: briefing.full ?? "" } }),
     onSuccess: (r) => {
       // Preenche só o que a IA achou — não apaga o que já estava escrito.
-      if (r.niche && !niche.trim()) setNiche(r.niche);
-      if (r.description && !description.trim()) setDescription(r.description);
-      if (r.competitors && !competitors.trim()) setCompetitors(r.competitors);
+      // Cada campo tem um limite; se a IA passar dele, corta E AVISA (o texto
+      // completo continua em "Colar tudo de uma vez", nada se perde).
+      const cut: string[] = [];
+      const fit = (value: string, max: number, label: string) => {
+        if (value.length <= max) return value;
+        cut.push(`${label} (${value.length} → ${max})`);
+        return value.slice(0, max);
+      };
+      let descriptionFill = r.description;
+      if (r.niche && !niche.trim()) {
+        if (r.niche.length > NICHE_MAX && !description.trim() && !descriptionFill) descriptionFill = r.niche;
+        setNiche(fit(r.niche, NICHE_MAX, "Segmento"));
+      }
+      if (descriptionFill && !description.trim()) setDescription(fit(descriptionFill, 4000, "Sobre a empresa"));
+      if (r.competitors && !competitors.trim()) setCompetitors(fit(r.competitors, 2000, "Concorrentes"));
       setBriefing((b) => {
         const next = { ...b };
-        for (const f of BRAND_BRIEFING_FIELDS) if (r.briefing[f.key] && !b[f.key]?.trim()) next[f.key] = r.briefing[f.key];
+        for (const f of BRAND_BRIEFING_FIELDS) if (r.briefing[f.key] && !b[f.key]?.trim()) next[f.key] = fit(r.briefing[f.key]!, 4000, f.label);
         return next;
       });
       setDirty(true);
       setMode("partes");
-      toast.success("Organizado! Confira os campos e salve.");
+      if (cut.length) {
+        toast.warning(`Organizado, mas encurtei: ${cut.join("; ")}. O texto completo continua em "Colar tudo de uma vez". Confira os campos antes de salvar.`, { duration: 12000 });
+      } else {
+        toast.success("Organizado! Confira os campos e salve.");
+      }
     },
     onError: (e: any) => toastFriendlyError(e, "Não consegui organizar"),
   });
@@ -125,7 +142,10 @@ export function HouseBrandBriefing() {
         </div>
       ) : (
       <div className="grid gap-4 md:grid-cols-2">
-        {field("Segmento", "Ex: clínica de estética, odontologia, academia.", niche, setNiche, 1, 200)}
+        <div>
+          {field("Segmento", "Em poucas palavras. Ex: clínica de estética, odontologia, academia.", niche, setNiche, 1, NICHE_MAX)}
+          <div className="text-right text-[10.5px] tabular-nums mt-1 text-foreground/40">{niche.length}/{NICHE_MAX}</div>
+        </div>
         {field("Concorrentes", "Um por linha: @perfil ou nome.", competitors, setCompetitors, 2, 2000)}
         <div className="md:col-span-2">{field("Sobre a empresa", "O que a empresa faz, há quanto tempo, onde fica, a história em poucas linhas.", description, setDescription, 3, 4000)}</div>
         {BRAND_BRIEFING_FIELDS.map((f) => (

@@ -71,7 +71,7 @@ const ORGANIZE_TOOL = {
   input_schema: {
     type: "object",
     properties: {
-      segmento: { type: "string" },
+      segmento: { type: "string", description: "Segmento em poucas palavras, no máximo 80 caracteres. Ex: Clínica médica multiespecialidades" },
       sobre: { type: "string", description: "O que a empresa faz, história, onde fica" },
       concorrentes: { type: "string", description: "Um por linha" },
       ...Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, { type: "string", description: f.hint }])),
