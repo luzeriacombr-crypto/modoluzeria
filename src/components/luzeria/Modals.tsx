@@ -51,7 +51,13 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
     if (house && !(await requestConfirm(`Cada marca além da principal soma R$ 79,90/mês à sua assinatura. Adicionar "${name.trim()}"?`))) return;
     let client: { id: string };
     try {
-      client = await createClient.mutateAsync({ data: { name: name.trim(), category, color, icon: null } });
+      client = await createClient.mutateAsync({
+        data: {
+          name: name.trim(), category, color, icon: null,
+          postsPerWeek: postsPerWeek.trim() !== "" ? Number(postsPerWeek) || 0 : undefined,
+          reelsPerWeek: reelsPerWeek.trim() !== "" ? Number(reelsPerWeek) || 0 : undefined,
+        },
+      });
     } catch (e: any) {
       toastFriendlyError(e, `Não consegui criar ${term(me, "oCliente")}. Tenta de novo?`);
       return;

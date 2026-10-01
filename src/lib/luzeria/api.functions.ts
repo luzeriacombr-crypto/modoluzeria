@@ -2053,12 +2053,17 @@ export async function aplicarExtrasDoModelo(
 
 export const createClient = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name: string; category?: string; color?: string; icon?: string | null }) =>
+  .inputValidator((d: { name: string; category?: string; color?: string; icon?: string | null; postsPerWeek?: number; reelsPerWeek?: number }) =>
     z.object({
       name: z.string().trim().min(1).max(80),
       category: z.string().trim().min(1).max(40).optional(),
       color: z.string().trim().optional(),
       icon: z.string().nullable().optional(),
+      // Volume mensal, escolhido no mesmo formulário — usado só pra decidir
+      // quantos cards o mês inicial já nasce com, quando a agência não tem
+      // um modelo configurado pra essa categoria (ver seedMonth abaixo).
+      postsPerWeek: z.number().int().min(0).max(1000).optional(),
+      reelsPerWeek: z.number().int().min(0).max(1000).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
@@ -2092,7 +2097,12 @@ export const createClient = createServerFn({ method: "POST" })
         userId: context.userId, modelo,
       });
     } else if (categoria !== "Avulsos") {
-      await seedMonth(context.supabase, client.id, key);
+      // Sem modelo pra categoria: nasce com o Volume mensal que a pessoa
+      // acabou de digitar nesse mesmo formulário — se não digitou nada
+      // (undefined), seedMonth cai no padrão de 6+6 de sempre.
+      await seedMonth(context.supabase, client.id, key, {
+        postsCount: data.postsPerWeek, reelsCount: data.reelsPerWeek,
+      });
     } else {
       // Avulsos sem modelo: mês vazio só pra poder receber itens depois.
       await context.supabase.from("months").insert({ client_id: client.id, key, org_id: context.orgId });
