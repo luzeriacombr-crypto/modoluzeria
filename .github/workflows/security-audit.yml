@@ -1,0 +1,44 @@
+name: Security audit (porta aberta)
+
+# Procura exposição de dados no banco de produção — tabela sem RLS,
+# política frouxa, coluna sensível legível, bucket público, e tenta ler
+# tudo com a chave pública como um atacante faria. Ver
+# scripts/security/audit.sh. Roda depois de cada deploy de migration
+# (o Lovable cria tabela nova o tempo todo) e todo dia, pra pegar mudança
+# feita na mão pelo painel/SQL Editor. Achado novo deixa o job vermelho
+# (e o GitHub manda e-mail); achado revisado e aceito vai pro
+# supabase/security/baseline.txt.
+
+on:
+  workflow_run:
+    workflows: ["Deploy Supabase migrations"]
+    types: [completed]
+  schedule:
+    - cron: "0 11 * * *" # 08:00 em Brasília
+  workflow_dispatch:
+    inputs:
+      report_only:
+        description: "Só listar os achados, sem falhar (pra montar o baseline)"
+        type: boolean
+        default: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref grmayzeeemilvhjeninh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Audit
+        run: bash scripts/security/audit.sh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REPORT_ONLY: ${{ github.event.inputs.report_only == 'true' && '1' || '' }}

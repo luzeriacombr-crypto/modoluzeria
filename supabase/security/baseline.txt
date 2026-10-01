@@ -1,0 +1,4 @@
+# Achados conhecidos e ACEITOS da auditoria (scripts/security/audit.sh).
+# Um por linha, com o motivo em comentário. Só entra aqui depois de
+# revisado: se não deveria estar exposto, corrija com uma migration em
+# vez de aceitar.
