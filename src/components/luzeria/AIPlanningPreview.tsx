@@ -51,15 +51,24 @@ const LOADING_STEPS_LOOP: { icon: typeof FileText; text: string }[] = [
   { icon: Wand2, text: "Ainda trabalhando nisso, quase lá…" },
 ];
 
+// Estimativa pra contagem regressiva — baseada no tempo real medido (ver
+// comentário em ai-planning.functions.ts: 12 itens levam ~44s sem pesquisa
+// de concorrentes). Com pesquisa na web pode passar disso — nesse caso,
+// em vez de ficar em "0s" parecendo travado, troca pra uma frase de espera.
+const ESTIMATED_SECONDS = 50;
+
 function AILoadingState() {
   const [tick, setTick] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 2200);
-    return () => clearInterval(id);
+    const stepId = setInterval(() => setTick((t) => t + 1), 2200);
+    const secondId = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => { clearInterval(stepId); clearInterval(secondId); };
   }, []);
   const inFirstPass = tick < LOADING_STEPS.length;
   const current = inFirstPass ? LOADING_STEPS[tick] : LOADING_STEPS_LOOP[(tick - LOADING_STEPS.length) % LOADING_STEPS_LOOP.length];
   const Current = current.icon;
+  const remaining = ESTIMATED_SECONDS - elapsed;
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-16">
       <div className="relative w-14 h-14 flex items-center justify-center">
@@ -70,6 +79,9 @@ function AILoadingState() {
       </div>
       <p key={tick} className="text-sm text-foreground/60 text-center max-w-[280px] leading-relaxed flex items-center justify-center min-h-[46px]" style={{ animation: "lzKnowledgeFadeIn 0.4s ease" }}>
         {current.text}
+      </p>
+      <p className="text-xs text-foreground/35 -mt-3">
+        {remaining > 0 ? `Tempo estimado: ~${remaining}s` : "Já era pra tá quase pronto…"}
       </p>
       <div className="flex items-center gap-1.5">
         {LOADING_STEPS.map((_, i) => (
