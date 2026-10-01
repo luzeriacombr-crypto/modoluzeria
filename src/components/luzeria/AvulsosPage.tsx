@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Folder, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, RotateCcw, FolderInput } from "lucide-react";
+import { Folder, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle2, RotateCcw, FolderInput, Trash2 } from "lucide-react";
 import { clientsQO, clientCategoriesQO, avulsoMonthsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { formatMonth, currentMonthKey } from "@/lib/luzeria/utils";
+import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { Avatar } from "./Avatar";
 import type { Client } from "@/lib/luzeria/types";
 
@@ -20,7 +21,7 @@ export function AvulsosPage() {
   const { data: customCategories = [] } = useQuery(clientCategoriesQO());
   const me = useMe().data;
   const isAdmin = me?.role === "master" || me?.role === "setor";
-  const { setAvulsoDelivered, updateClient } = useApi();
+  const { setAvulsoDelivered, updateClient, deleteClient } = useApi();
 
   // Um avulso pode virar cliente recorrente — pedido do Junior (30/09) pra
   // poder mover pra Social Media/Pack Digital (ou outra categoria) direto
@@ -56,6 +57,12 @@ export function AvulsosPage() {
   const entregues = projectsInMonth.filter((c) => c.avulsoDeliveredAt);
 
   const [entreguesOpen, setEntreguesOpen] = useState(false);
+
+  async function handleDelete(c: Client) {
+    if (await requestConfirm(`Excluir "${c.name}" e todo seu histórico?`, { danger: true })) {
+      deleteClient.mutate({ data: { id: c.id } });
+    }
+  }
 
   return (
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-8 max-w-4xl mx-auto">
@@ -103,6 +110,7 @@ export function AvulsosPage() {
             toggleTitle="Marcar como entregue"
             moveTargets={moveTargets}
             onMove={(c, category) => updateClient.mutate({ data: { id: c.id, patch: { category } } })}
+            onDelete={handleDelete}
           />
           <ProjectFolder
             label="Projetos entregues"
@@ -116,6 +124,7 @@ export function AvulsosPage() {
             toggleTitle="Reabrir projeto"
             moveTargets={moveTargets}
             onMove={(c, category) => updateClient.mutate({ data: { id: c.id, patch: { category } } })}
+            onDelete={handleDelete}
           />
         </div>
       )}
@@ -124,11 +133,11 @@ export function AvulsosPage() {
 }
 
 function ProjectFolder({
-  label, open, onToggleOpen, projects, emptyLabel, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove,
+  label, open, onToggleOpen, projects, emptyLabel, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove, onDelete,
 }: {
   label: string; open: boolean; onToggleOpen?: () => void; projects: Client[]; emptyLabel: string;
   isAdmin: boolean; onToggleDelivered: (c: Client) => void; toggleIcon: React.ReactNode; toggleTitle: string;
-  moveTargets: string[]; onMove: (c: Client, category: string) => void;
+  moveTargets: string[]; onMove: (c: Client, category: string) => void; onDelete: (c: Client) => void;
 }) {
   return (
     <div className="rounded-xl border border-foreground/7 bg-card overflow-hidden">
@@ -153,6 +162,7 @@ function ProjectFolder({
                 key={c.id} client={c} isAdmin={isAdmin}
                 onToggleDelivered={() => onToggleDelivered(c)} toggleIcon={toggleIcon} toggleTitle={toggleTitle}
                 moveTargets={moveTargets} onMove={(category) => onMove(c, category)}
+                onDelete={() => onDelete(c)}
               />
             ))
           )}
@@ -163,10 +173,10 @@ function ProjectFolder({
 }
 
 function ProjectRow({
-  client: c, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove,
+  client: c, isAdmin, onToggleDelivered, toggleIcon, toggleTitle, moveTargets, onMove, onDelete,
 }: {
   client: Client; isAdmin: boolean; onToggleDelivered: () => void; toggleIcon: React.ReactNode; toggleTitle: string;
-  moveTargets: string[]; onMove: (category: string) => void;
+  moveTargets: string[]; onMove: (category: string) => void; onDelete: () => void;
 }) {
   const [moving, setMoving] = useState(false);
   return (
@@ -191,6 +201,13 @@ function ProjectRow({
               className="shrink-0 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition"
             >
               {toggleIcon} {toggleTitle}
+            </button>
+            <button
+              onClick={onDelete}
+              title="Excluir cliente"
+              className="shrink-0 inline-flex items-center justify-center rounded-md p-1.5 text-foreground/30 hover:text-red-400 hover:bg-foreground/5 transition"
+            >
+              <Trash2 size={13} />
             </button>
           </>
         )}
