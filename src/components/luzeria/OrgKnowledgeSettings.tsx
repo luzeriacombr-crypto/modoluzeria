@@ -90,7 +90,7 @@ export function OrgKnowledgeSettings() {
         </div>
       )}
 
-      <div className="rounded-xl p-5 mb-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+      <div data-tour="knowledge-add-text" className="rounded-xl p-5 mb-6" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
         <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Adicionar texto</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título opcional" className={inp + " mb-2.5"} />
         <textarea
@@ -111,7 +111,7 @@ export function OrgKnowledgeSettings() {
               {uploading ? "Enviando…" : "Anexar arquivo"}
             </button>
           </div>
-          <button onClick={saveText} disabled={saveOrgKnowledgeText.isPending} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50">
+          <button data-tour="knowledge-save" onClick={saveText} disabled={saveOrgKnowledgeText.isPending} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-50">
             {saveOrgKnowledgeText.isPending ? "Salvando…" : "Salvar nota"}
           </button>
         </div>

@@ -351,7 +351,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">
         Equipe ativa <span className="text-foreground/30">({active.length})</span>
       </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lz-stagger">
+      <div data-tour="team-active-list" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lz-stagger">
         {active.map((p) => <TeamMemberCard key={p.id} profile={p} />)}
       </div>
 

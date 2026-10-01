@@ -10,7 +10,7 @@ import {
   FilePlus2, Save, IdCard, Building2, History, FolderOpen, Wand2, ClipboardPaste, Copy, FileDown,
   ListFilter, Type, Download, Filter, Share2, KeyRound, AlertCircle, TrendingDown, TrendingUp, Search,
   Star, Code2, FlaskConical, Clock, MoreVertical, Smartphone, Repeat, Bell, MessageSquareText, Sparkles,
-  LifeBuoy, Eye, SlidersHorizontal, Palette, FolderKanban, EyeOff,
+  LifeBuoy, Eye, SlidersHorizontal, Palette, FolderKanban, EyeOff, Compass,
   type LucideIcon,
 } from "lucide-react";
 import { useMe, useApi, myBugReportsQO, allBugReportsQO } from "@/lib/luzeria/queries";
@@ -19,6 +19,8 @@ import { ForumTab } from "./ForumTab";
 import { SupportChatAdminPanel } from "./SupportChatWidget";
 import { SupportChatTopicsPanel } from "./SupportChatTopicsPanel";
 import { FAQ, TUTORIALS as TUTORIALS_BASE, TUTORIAL_CATEGORIES, type HelpTutorial } from "@/lib/luzeria/help-content";
+import { GUIDED_TUTORIALS } from "@/lib/luzeria/guided-tutorials";
+import { useGuidedTutorial } from "@/lib/luzeria/guided-tutorial-store";
 
 type Tab = "faq" | "tutoriais" | "minhas" | "todas" | "chats" | "temas" | "forum";
 
@@ -197,6 +199,7 @@ function CategoryPill({ label, active, onClick }: { label: string; active: boole
 
 function TutorialItem({ tutorial: t }: { tutorial: HelpTutorial & { images?: { src: string; alt: string }[]; videoUrl?: string } }) {
   const [open, setOpen] = useState(false);
+  const { start, askForClient } = useGuidedTutorial();
   return (
     <div className="bg-card rounded-lg overflow-hidden">
       <button
@@ -214,6 +217,19 @@ function TutorialItem({ tutorial: t }: { tutorial: HelpTutorial & { images?: { s
                 <img key={img.src} src={img.src} alt={img.alt} className="w-full h-auto rounded-md border border-foreground/10" />
               ))}
             </div>
+          )}
+          {GUIDED_TUTORIALS[t.title] && (
+            <button
+              onClick={() => {
+                const guide = GUIDED_TUTORIALS[t.title];
+                if (guide.needsClient) askForClient(t.title);
+                else start(t.title);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-4 text-xs font-bold rounded-full transition-opacity hover:opacity-85"
+              style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
+            >
+              <Compass size={13} /> Me guie
+            </button>
           )}
           <ol className="list-none">
             {t.steps.map((s, i) => {

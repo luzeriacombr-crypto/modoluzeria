@@ -207,7 +207,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
               Função
               <InfoTip text="Membro: só vê e mexe no que for atribuído a ele. Adm Setor: pode ter permissões extras configuradas por cargo. Adm Master: acesso total à agência." />
             </label>
-            <select value={profile.role} disabled={isSelf}
+            <select data-tour="member-role-select" value={profile.role} disabled={isSelf}
               onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } }, {
                 onSuccess: () => toast.success("Função atualizada."),
               })}

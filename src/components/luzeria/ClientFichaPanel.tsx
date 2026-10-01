@@ -876,7 +876,7 @@ function InstagramSection({ clientId }: { clientId: string }) {
   const data = status.data;
 
   return (
-    <div>
+    <div data-tour="client-instagram-section">
       <p className="text-[11px] text-foreground/40 mb-3">
         Conecte a conta do Instagram (Business ou Criador de Conteúdo) desse cliente pra poder publicar Posts, Carrosséis, Reels e Stories direto pelo Modo Criador.
       </p>

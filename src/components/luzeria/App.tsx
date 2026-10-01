@@ -30,6 +30,7 @@ import { AIPlanningPreview } from "./AIPlanningPreview";
 import { AiPlanningJobsTray } from "./AiPlanningJobsTray";
 import { AgencyLevelModal } from "./AgencyLevelModal";
 import { AppTour } from "./AppTour";
+import { GuidedTutorialRunner } from "./GuidedTutorialRunner";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
 import { PastDueBanner } from "./PastDueBanner";
@@ -397,6 +398,7 @@ export function App() {
       <AiPlanningJobsTray />
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
+      <GuidedTutorialRunner />
       <GlobalConfirmDialog />
       <SupportChatWidget />
       {me.data?.accountType === "house" && <QuickLeadButton />}

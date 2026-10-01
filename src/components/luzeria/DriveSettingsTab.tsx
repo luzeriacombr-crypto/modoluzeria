@@ -299,7 +299,7 @@ export function DriveSettingsTab() {
 
   return (
     <div className="space-y-6">
-      <section className="bg-card rounded-lg p-6 border border-foreground/6">
+      <section data-tour="drive-wizard" className="bg-card rounded-lg p-6 border border-foreground/6">
         <div className="flex items-center gap-2 text-foreground/60 text-[11px] uppercase tracking-wider font-bold mb-4">
           <HardDrive size={12} /> Assistente de configuração
         </div>
