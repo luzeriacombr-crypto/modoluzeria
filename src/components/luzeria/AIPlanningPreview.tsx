@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { estimatePlanSeconds, DEFAULT_PLAN_ITEMS } from "@/lib/luzeria/planning-estimate";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked, Check } from "lucide-react";
@@ -9,7 +10,7 @@ import {
   useAiPlanningStore, startAiPlanningJob, resolveAiPlanningJob, failAiPlanningJob,
   minimizeAiPlanningModal, dismissAiPlanningJob, updateAiPlanningJobResult,
 } from "@/lib/luzeria/ai-planning-store";
-import { useApi, orgKnowledgeQO } from "@/lib/luzeria/queries";
+import { useApi, orgKnowledgeQO, clientsQO } from "@/lib/luzeria/queries";
 import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
 import { MonthPickerList } from "./MonthPickerList";
@@ -51,24 +52,25 @@ const LOADING_STEPS_LOOP: { icon: typeof FileText; text: string }[] = [
   { icon: Wand2, text: "Ainda trabalhando nisso, quase lá…" },
 ];
 
-// Estimativa pra contagem regressiva — baseada no tempo real medido (ver
-// comentário em ai-planning.functions.ts: 12 itens levam ~44s sem pesquisa
-// de concorrentes). Com pesquisa na web pode passar disso — nesse caso,
-// em vez de ficar em "0s" parecendo travado, troca pra uma frase de espera.
-const ESTIMATED_SECONDS = 50;
-
-function AILoadingState() {
+// A contagem regressiva usa a estimativa calculada na hora de gerar (cresce
+// com a quantidade de conteúdos e com a pesquisa de concorrentes — ver
+// planning-estimate.ts) e parte do início REAL da geração, então minimizar e
+// reabrir a tela não zera o relógio. Se passar do previsto, em vez de ficar
+// em "0s" parecendo travado, avisa que continua trabalhando.
+function AILoadingState({ startedAt, estimatedSeconds, itemCount }: { startedAt?: number; estimatedSeconds: number; itemCount?: number }) {
   const [tick, setTick] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const startRef = useRef(startedAt ?? Date.now());
   useEffect(() => {
     const stepId = setInterval(() => setTick((t) => t + 1), 2200);
-    const secondId = setInterval(() => setElapsed((s) => s + 1), 1000);
+    const secondId = setInterval(() => setNow(Date.now()), 1000);
     return () => { clearInterval(stepId); clearInterval(secondId); };
   }, []);
+  const elapsed = Math.max(0, Math.floor((now - startRef.current) / 1000));
   const inFirstPass = tick < LOADING_STEPS.length;
   const current = inFirstPass ? LOADING_STEPS[tick] : LOADING_STEPS_LOOP[(tick - LOADING_STEPS.length) % LOADING_STEPS_LOOP.length];
   const Current = current.icon;
-  const remaining = ESTIMATED_SECONDS - elapsed;
+  const remaining = estimatedSeconds - elapsed;
   return (
     <div className="flex flex-col items-center justify-center gap-5 py-16">
       <div className="relative w-14 h-14 flex items-center justify-center">
@@ -81,7 +83,9 @@ function AILoadingState() {
         {current.text}
       </p>
       <p className="text-xs text-foreground/35 -mt-3">
-        {remaining > 0 ? `Tempo estimado: ~${remaining}s` : "Já era pra tá quase pronto…"}
+        {remaining > 0
+          ? `Tempo estimado: ~${remaining}s${itemCount ? ` · ${itemCount} conteúdos` : ""}`
+          : `Está demorando mais que o previsto (${elapsed}s), mas continua gerando. Pode minimizar.`}
       </p>
       <div className="flex items-center gap-1.5">
         {LOADING_STEPS.map((_, i) => (
@@ -144,6 +148,7 @@ export function AIPlanningPreview() {
   // antes, na tela de configurar, pra pessoa poder preencher primeiro se
   // quiser.
   const { data: knowledge = [] } = useQuery(orgKnowledgeQO());
+  const { data: clients = [] } = useQuery(clientsQO());
   const [extraContext, setExtraContext] = useState("");
   const [contentTypes, setContentTypes] = useState<Set<ContentTypeKey>>(new Set(["reel", "estatico", "carrossel"]));
   const [pickingMonth, setPickingMonth] = useState(false);
@@ -170,7 +175,13 @@ export function AIPlanningPreview() {
   function generateNow() {
     if (!job) return;
     const trimmedContext = extraContext.trim().slice(0, 60000);
-    startAiPlanningJob(clientId, job.clientName);
+    // Quantos conteúdos vão ser pedidos: metas da marca (posts + reels), ou o padrão.
+    const c = clients.find((x) => x.id === clientId);
+    const items = ((c?.customFields?.postsPerWeek ?? 0) + (c?.customFields?.reelsPerWeek ?? 0)) || DEFAULT_PLAN_ITEMS;
+    startAiPlanningJob(clientId, job.clientName, {
+      itemCount: items,
+      estimatedSeconds: estimatePlanSeconds({ items, researchCompetitors: !!c?.customFields?.competitors?.trim(), extraContextChars: trimmedContext.length }),
+    });
     generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
       .then((r) => resolveAiPlanningJob(clientId, r))
       .catch((e: any) => failAiPlanningJob(clientId, friendlyError(e, "Não consegui gerar a prévia. Tenta de novo em instantes.")));
@@ -324,7 +335,7 @@ export function AIPlanningPreview() {
 
       {job.status === "loading" && (
         <>
-          <AILoadingState />
+          <AILoadingState startedAt={job.startedAt} estimatedSeconds={job.estimatedSeconds ?? estimatePlanSeconds({ items: DEFAULT_PLAN_ITEMS })} itemCount={job.itemCount} />
           <div className="flex items-center justify-center -mt-4">
             <button onClick={minimizeAiPlanningModal} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">
               Minimizar e continuar usando o app

@@ -14,6 +14,13 @@ export type AiPlanningJob = {
   status: AiPlanningJobStatus;
   result: MonthlyPlanResult | null;
   error: string | null;
+  /** Quando a geração começou (ms) — a contagem regressiva parte daqui, então
+   * minimizar e reabrir a tela não zera o relógio. */
+  startedAt?: number;
+  /** Estimativa em segundos, calculada na hora de gerar (ver planning-estimate.ts). */
+  estimatedSeconds?: number;
+  /** Quantos conteúdos foram pedidos (pra mostrar na tela de espera). */
+  itemCount?: number;
 };
 
 interface AiPlanningState {
@@ -47,8 +54,14 @@ export function openAiPlanningModal(clientId: string, clientName: string) {
   s._setOpen(clientId);
 }
 
-export function startAiPlanningJob(clientId: string, clientName: string) {
-  useAiPlanningStore.getState()._setJob({ clientId, clientName, status: "loading", result: null, error: null });
+export function startAiPlanningJob(
+  clientId: string, clientName: string,
+  estimate?: { estimatedSeconds: number; itemCount: number },
+) {
+  useAiPlanningStore.getState()._setJob({
+    clientId, clientName, status: "loading", result: null, error: null,
+    startedAt: Date.now(), estimatedSeconds: estimate?.estimatedSeconds, itemCount: estimate?.itemCount,
+  });
 }
 
 export function resolveAiPlanningJob(clientId: string, result: MonthlyPlanResult) {
