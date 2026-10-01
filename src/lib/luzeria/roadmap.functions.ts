@@ -775,8 +775,11 @@ export const getAppSettings = createServerFn({ method: "GET" })
       dailySplashSoundUrl = signed?.signedUrl ?? null;
     }
 
+    // Chave por agência (`<chave>:<org_id>`); sem ela, cai no valor global
+    // de antes de o ajuste ser por agência.
+    const rating = map.get(`require_rating_on_finalize:${context.orgId}`) ?? map.get("require_rating_on_finalize");
     return {
-      requireRatingOnFinalize: map.get("require_rating_on_finalize")?.enabled !== false,
+      requireRatingOnFinalize: rating?.enabled !== false,
       demoWhatsappMessage: map.get("demo_whatsapp_message")?.text ?? null,
       dailySplashSoundUrl,
       dailySplashDurationMs: map.get("daily_splash_duration_ms")?.ms ?? 1700,
@@ -803,11 +806,11 @@ export const updateAppSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Forbidden");
-    // app_settings não tem org_id (é uma tabela global, RLS só exige
-    // is_master) — sem esse check, o master de qualquer agência poderia
-    // sobrescrever o texto de abordagem que o Junior usa com os próprios
-    // leads (ou a splash/som de todo mundo), então esses campos ficam
-    // restritos à Luzeria mesmo.
+    // app_settings não tem org_id: chave sem sufixo é global e só o master
+    // da Luzeria grava (texto de abordagem dos leads do Junior, splash/som
+    // de todo mundo); chave `<chave>:<org_id>` é da própria agência. A RLS
+    // (20261001100000_security_hardening.sql) garante o mesmo — este check
+    // só devolve um erro mais claro antes.
     if (data.demoWhatsappMessage !== undefined || data.dailySplashSoundPath !== undefined || data.dailySplashDurationMs !== undefined) {
       const { LUZERIA_ORG_ID } = await import("./api.functions");
       if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
@@ -815,7 +818,7 @@ export const updateAppSettings = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     if (data.requireRatingOnFinalize !== undefined) {
       const { error } = await db.from("app_settings").upsert({
-        key: "require_rating_on_finalize",
+        key: `require_rating_on_finalize:${context.orgId}`,
         value: { enabled: data.requireRatingOnFinalize },
         updated_at: new Date().toISOString(),
         updated_by: context.userId,

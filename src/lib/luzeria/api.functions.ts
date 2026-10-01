@@ -1829,6 +1829,9 @@ export const listClients = createServerFn({ method: "GET" })
     // contract_value é dado financeiro sensível — só volta pro Adm Master, mesmo que a
     // RLS de admin manage clients já libere leitura/escrita pra setor também.
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    // CPF/CNPJ e endereço (LGPD) só servem pro contrato, que é tela de
+    // admin — quem não é admin não edita nem gera contrato, então não recebe.
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     return (data ?? []).map((c: any) => ({
       id: c.id, name: c.name, color: c.color, icon: c.icon,
       favorite: c.favorite, archived: c.archived,
@@ -1846,10 +1849,10 @@ export const listClients = createServerFn({ method: "GET" })
         recentRoteiros: c.recent_roteiros ?? "",
       },
       aiPlanningEnabled: c.ai_planning_enabled ?? false,
-      cnpjCpf: c.cnpj_cpf ?? null,
-      address: c.address ?? null,
+      cnpjCpf: isAdmin ? (c.cnpj_cpf ?? null) : null,
+      address: isAdmin ? (c.address ?? null) : null,
       legalResponsibleName: c.legal_responsible_name ?? null,
-      legalResponsibleCpf: c.legal_responsible_cpf ?? null,
+      legalResponsibleCpf: isAdmin ? (c.legal_responsible_cpf ?? null) : null,
       createdAt: c.created_at,
       description: c.description ?? null,
       photoPath: c.photo_url ?? null,

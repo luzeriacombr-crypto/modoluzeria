@@ -29,6 +29,27 @@ async function assertClientInOrg(supabase: any, clientId: string, orgId: string)
   if (!data) throw new Error("Cliente não encontrado.");
 }
 
+/** access_token não é legível com a sessão do usuário (só service role —
+ * ver 20261001100000_security_hardening.sql). Primeiro confere pela RLS,
+ * com a sessão de quem chama, que essa pessoa enxerga a conexão desse
+ * cliente; só então busca o token pelo admin. */
+async function getClientFacebookCreds(supabase: any, clientId: string) {
+  const { data: visible } = await supabase
+    .from("client_facebook_credentials")
+    .select("client_id")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (!visible) throw new Error("Esse cliente ainda não conectou o Facebook.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: creds } = await (supabaseAdmin as any)
+    .from("client_facebook_credentials")
+    .select("facebook_page_id, access_token")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
+  return creds as { facebook_page_id: string; access_token: string };
+}
+
 export const getFacebookConnectionStatus = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
@@ -134,15 +155,24 @@ export const connectFacebookPage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCanPublish(context.supabase, context.userId);
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
-    const { error } = await (context.supabase as any).from("client_facebook_credentials").upsert({
-      client_id: data.clientId,
+    // Update-ou-insert em vez de upsert: o ON CONFLICT DO UPDATE exige
+    // SELECT em access_token, que a sessão do usuário não tem mais
+    // (20261001100000_security_hardening.sql). A RLS de master vale igual.
+    const db = context.supabase as any;
+    const fields = {
       facebook_page_id: data.pageId,
       page_name: data.pageName,
       access_token: data.pageAccessToken,
       connected_by: context.userId,
       connected_at: new Date().toISOString(),
-    }, { onConflict: "client_id" });
-    if (error) throw new Error(error.message);
+    };
+    const { count, error: updateError } = await db.from("client_facebook_credentials")
+      .update(fields, { count: "exact" }).eq("client_id", data.clientId);
+    if (updateError) throw new Error(updateError.message);
+    if (!count) {
+      const { error } = await db.from("client_facebook_credentials").insert({ client_id: data.clientId, ...fields });
+      if (error) throw new Error(error.message);
+    }
     return { ok: true as const, pageName: data.pageName };
   });
 
@@ -342,13 +372,7 @@ export const getFacebookItemEngagement = createServerFn({ method: "GET" })
     if (!fbMediaId) throw new Error("Esse item ainda não foi publicado no Facebook.");
     const clientId = (item as any).months?.client_id;
 
-    const { data: creds } = await (context.supabase as any)
-      .from("client_facebook_credentials")
-      .select("access_token")
-      .eq("client_id", clientId)
-      .maybeSingle();
-    if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
-
+    const creds = await getClientFacebookCreds(context.supabase, clientId);
     return fetchFacebookPostEngagement(fbMediaId, creds.access_token);
   });
 
@@ -390,12 +414,7 @@ export const getFacebookPagePosts = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Forbidden");
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
 
-    const { data: creds } = await (context.supabase as any)
-      .from("client_facebook_credentials")
-      .select("facebook_page_id, access_token")
-      .eq("client_id", data.clientId)
-      .maybeSingle();
-    if (!creds) throw new Error("Esse cliente ainda não conectou o Facebook.");
+    const creds = await getClientFacebookCreds(context.supabase, data.clientId);
 
     const fields = "id,message,created_time,permalink_url";
     const res = await fetch(

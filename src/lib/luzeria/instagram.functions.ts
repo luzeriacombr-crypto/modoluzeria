@@ -190,17 +190,26 @@ export const completeInstagramConnect = createServerFn({ method: "POST" })
     await assertClientInOrg(context.supabase, data.clientId, context.orgId);
     const { igId, igUsername, accessToken, tokenExpiresAt } = await exchangeInstagramCode(data.code, INSTAGRAM_REDIRECT_URI);
 
+    // Update-ou-insert em vez de upsert: o ON CONFLICT DO UPDATE exige
+    // SELECT em access_token, que a sessão do usuário não tem mais
+    // (20261001100000_security_hardening.sql). A RLS de master vale igual.
     // token_expires_at ainda não está nos tipos gerados do Supabase.
-    const { error } = await (context.supabase as any).from("client_instagram_credentials").upsert({
-      client_id: data.clientId,
+    const db = context.supabase as any;
+    const fields = {
       instagram_business_account_id: igId,
       ig_username: igUsername,
       access_token: accessToken,
       token_expires_at: tokenExpiresAt,
       connected_by: context.userId,
       connected_at: new Date().toISOString(),
-    }, { onConflict: "client_id" });
-    if (error) throw new Error(error.message);
+    };
+    const { count, error: updateError } = await db.from("client_instagram_credentials")
+      .update(fields, { count: "exact" }).eq("client_id", data.clientId);
+    if (updateError) throw new Error(updateError.message);
+    if (!count) {
+      const { error } = await db.from("client_instagram_credentials").insert({ client_id: data.clientId, ...fields });
+      if (error) throw new Error(error.message);
+    }
 
     return { ok: true as const, igUsername };
   });
@@ -1518,8 +1527,19 @@ async function fetchMediaInsights(accessToken: string, mediaId: string, productT
   }
 }
 
+/** access_token não é legível com a sessão do usuário (só service role —
+ * ver 20261001100000_security_hardening.sql). Primeiro confere pela RLS,
+ * com o client recebido, que quem chama enxerga esse cliente; só então
+ * busca o token pelo admin. */
 async function getClientInstagramCreds(supabase: any, clientId: string) {
-  const { data: creds } = await supabase
+  const { data: visible } = await supabase
+    .from("client_instagram_credentials")
+    .select("client_id")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (!visible) throw new Error("Esse cliente não está mais com o Instagram conectado.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: creds } = await (supabaseAdmin as any)
     .from("client_instagram_credentials")
     .select("instagram_business_account_id, access_token, ig_username")
     .eq("client_id", clientId)
