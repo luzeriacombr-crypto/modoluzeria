@@ -10,6 +10,7 @@ import { useCallStore } from "@/lib/luzeria/call-store";
 import type { Client } from "@/lib/luzeria/types";
 import { Sidebar } from "./Sidebar";
 import { DetailPanel } from "./DetailPanel";
+import { AutoTranslate } from "./AutoTranslate";
 import { NotificationsBell } from "./Notifications";
 import { HelpButton } from "./HelpButton";
 import { NewClientModal, CustomFieldsModal } from "./Modals";
@@ -338,6 +339,7 @@ export function App() {
       {/* No celular o aviso nasceria dentro da faixa da barra de navegação
        * (64px) e bloquearia os botões "Clientes" e "Menu" a cada ação. */}
       <Toaster theme={theme} position={isMobile ? "top-center" : "bottom-right"} />
+      <AutoTranslate />
       <div
         className="hidden md:flex overflow-hidden self-start"
         style={{

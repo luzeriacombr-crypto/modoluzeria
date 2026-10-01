@@ -1019,3 +1019,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   }
   .lz-no-print { display: none !important; }
 }
+
+/* Google Tradutor (AutoTranslate.tsx): o idioma é escolhido em Perfil, então
+ * a barra, o balão de "texto original" e o destaque ao passar o mouse do
+ * Google só atrapalham — e a barra empurra o app pra baixo (body { top }). */
+.goog-te-banner-frame,
+iframe.skiptranslate,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+#lz-google-translate-element { display: none !important; }
+body { top: 0 !important; }
+.goog-text-highlight,
+.VIpgJd-yAWNEb-VIpgJd-fmcmS-sn54Q { background: none !important; box-shadow: none !important; }

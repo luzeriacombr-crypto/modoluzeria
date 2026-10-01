@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMe, useApi, notificationPrefsQO, myCalendarConnectionQO, clientsQO } from "@/lib/luzeria/queries";
 import { useTheme } from "@/lib/luzeria/theme-store";
+import { LANGUAGES, useLanguage } from "@/lib/luzeria/language-store";
 import { withOAuthState } from "@/lib/luzeria/google-calendar-connect";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
@@ -17,6 +18,7 @@ import { PasswordInput } from "./PasswordInput";
 export function ProfilePage() {
   const me = useMe().data;
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
   const { updateMyProfile, setMyNotificationPreferences, updateMyAccount, updateMyDefaultLanding } = useApi();
   const { data: prefs } = useQuery(notificationPrefsQO());
   const { data: clients = [] } = useQuery(clientsQO());
@@ -158,6 +160,21 @@ export function ProfilePage() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${theme === "light" ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/50 hover:text-foreground"}`}>
               <Sun size={13} /> Claro
             </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-start gap-4 mt-6">
+          <div className="flex-1 min-w-[180px]">
+            <div className="text-sm font-semibold text-foreground">Idioma</div>
+            <div className="text-[11px] text-foreground/50 mt-1">Fora o português, a tradução é automática (Google Tradutor) — a preferência fica salva nesse aparelho.</div>
+          </div>
+          {/* notranslate: o nome de cada idioma fica sempre no próprio idioma. */}
+          <div className="notranslate flex items-center gap-1 rounded-full bg-foreground/[0.06] p-1 shrink-0" translate="no">
+            {LANGUAGES.map((l) => (
+              <button key={l.code} type="button" onClick={() => setLanguage(l.code)} title={l.label}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${language === l.code ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/50 hover:text-foreground"}`}>
+                <span className="text-sm leading-none">{l.flag}</span> {l.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
