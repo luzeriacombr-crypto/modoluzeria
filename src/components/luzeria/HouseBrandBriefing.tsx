@@ -72,14 +72,14 @@ export function HouseBrandBriefing() {
   if (!data) return null;
   const pct = Math.round(briefingCompleteness(briefing, description) * 100);
   const inp = "w-full bg-background border border-foreground/10 rounded-xl px-3.5 py-2.5 text-[14px] text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] resize-y";
-  const field = (label: string, hint: string, value: string, onChange: (v: string) => void, rows = 2) => (
+  const field = (label: string, hint: string, value: string, onChange: (v: string) => void, rows = 2, maxLength = 4000) => (
     <label className="block">
       <span className="block text-sm font-semibold text-foreground">{label}</span>
       <span className="block text-[11.5px] text-foreground/45 mb-1.5">{hint}</span>
       {rows <= 1 ? (
-        <input value={value} onChange={(e) => { onChange(e.target.value); setDirty(true); }} className={inp} />
+        <input value={value} onChange={(e) => { onChange(e.target.value); setDirty(true); }} maxLength={maxLength} className={inp} />
       ) : (
-        <textarea value={value} onChange={(e) => { onChange(e.target.value); setDirty(true); }} rows={rows} className={inp} />
+        <textarea value={value} onChange={(e) => { onChange(e.target.value); setDirty(true); }} rows={rows} maxLength={maxLength} className={inp} />
       )}
     </label>
   );
@@ -125,9 +125,9 @@ export function HouseBrandBriefing() {
         </div>
       ) : (
       <div className="grid gap-4 md:grid-cols-2">
-        {field("Segmento", "Ex: clínica de estética, odontologia, academia.", niche, setNiche, 1)}
-        {field("Concorrentes", "Um por linha: @perfil ou nome.", competitors, setCompetitors, 2)}
-        <div className="md:col-span-2">{field("Sobre a empresa", "O que a empresa faz, há quanto tempo, onde fica, a história em poucas linhas.", description, setDescription, 3)}</div>
+        {field("Segmento", "Ex: clínica de estética, odontologia, academia.", niche, setNiche, 1, 200)}
+        {field("Concorrentes", "Um por linha: @perfil ou nome.", competitors, setCompetitors, 2, 2000)}
+        <div className="md:col-span-2">{field("Sobre a empresa", "O que a empresa faz, há quanto tempo, onde fica, a história em poucas linhas.", description, setDescription, 3, 4000)}</div>
         {BRAND_BRIEFING_FIELDS.map((f) => (
           <div key={f.key} className={f.rows >= 3 ? "md:col-span-2" : ""}>
             {field(f.label, f.hint, briefing[f.key] ?? "", (v) => setBriefing((b) => ({ ...b, [f.key]: v })), f.rows)}

@@ -17,8 +17,8 @@ async function houseBrand(context: { supabase: any; orgId: string }) {
 /* ============== Briefing da marca ============== */
 
 const briefingSchema = z.object({
-  ...(Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, z.string().max(4000).optional()])) as Record<string, z.ZodOptional<z.ZodString>>),
-  full: z.string().max(20000).optional(),
+  ...(Object.fromEntries(BRAND_BRIEFING_FIELDS.map((f) => [f.key, z.string().max(4000, "Texto muito longo (máximo 4000 caracteres).").optional()])) as Record<string, z.ZodOptional<z.ZodString>>),
+  full: z.string().max(20000, "Texto muito longo (máximo 20000 caracteres).").optional(),
 });
 
 export const getBrandBriefing = createServerFn({ method: "GET" })
@@ -41,9 +41,9 @@ export const saveBrandBriefing = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { niche?: string; description?: string; competitors?: string; briefing: BrandBriefing }) =>
     z.object({
-      niche: z.string().trim().max(200).optional(),
-      description: z.string().trim().max(4000).optional(),
-      competitors: z.string().trim().max(2000).optional(),
+      niche: z.string().trim().max(200, "Texto muito longo (máximo 200 caracteres).").optional(),
+      description: z.string().trim().max(4000, "Texto muito longo (máximo 4000 caracteres).").optional(),
+      competitors: z.string().trim().max(2000, "Texto muito longo (máximo 2000 caracteres).").optional(),
       briefing: briefingSchema,
     }).parse(d))
   .handler(async ({ data, context }) => {
