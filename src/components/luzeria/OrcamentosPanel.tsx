@@ -8,6 +8,26 @@ import { budgetProductsQO, budgetsQO, useApi, useMe } from "@/lib/luzeria/querie
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { supabase } from "@/integrations/supabase/client";
 import type { BudgetProduct, BudgetProductPlan, Budget, BudgetItem, BudgetFront } from "@/lib/luzeria/budgets.functions";
+import { ImageCropModal } from "./ImageCropModal";
+
+// Tamanho ideal de cada imagem do orçamento — bate com a dica mostrada em
+// cada campo de upload abaixo. Quando a imagem escolhida não vem exatamente
+// nesse tamanho, abre o recorte em vez de subir torto.
+const BUDGET_IMAGE_SIZE: Record<"header" | "cover" | "back", { w: number; h: number }> = {
+  header: { w: 2000, h: 370 },
+  cover: { w: 1240, h: 1754 },
+  back: { w: 1240, h: 1754 },
+};
+
+function getImageSize(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Não foi possível ler a imagem.")); };
+    img.src = url;
+  });
+}
 
 function money(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -408,6 +428,10 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
   const [backColor, setBackColor] = useState<string | null>(existing?.backColor ?? null);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const [saving, setSaving] = useState<"save" | "pdf" | null>(null);
+  // Se a imagem já vier exatamente no tamanho ideal (header 2000×370, capa/
+  // contracapa 1240×1754), sobe direto. Senão, abre o recorte pra pessoa
+  // não precisar adaptar a arte sozinha antes — pedido do Junior (01/10).
+  const [cropTarget, setCropTarget] = useState<{ file: File; kind: "header" | "cover" | "back" } | null>(null);
 
   const totalCents = items.reduce((s, i) => s + i.priceCents, 0);
 
@@ -441,39 +465,57 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
     setFronts((f) => f.map((fr, idx) => idx === fi ? { ...fr, items: fr.items.filter((_, j) => j !== ii) } : fr));
   }
 
-  async function pickHeader(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("Escolha uma imagem."); return; }
-    setUploadingHeader(true);
-    try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `budgets/${me?.orgId}/header-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
-      if (error) throw error;
-      setHeaderImagePath(path);
-      setHeaderImageUrl(URL.createObjectURL(file));
-    } catch { toast.error("Erro ao enviar a imagem de cabeçalho."); }
-    finally { setUploadingHeader(false); }
+  async function uploadBudgetImage(kind: "header" | "cover" | "back", data: Blob, contentType: string, ext: string) {
+    const path = `budgets/${me?.orgId}/${kind}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, data, { contentType, upsert: true });
+    if (error) throw error;
+    const url = URL.createObjectURL(data);
+    if (kind === "header") { setHeaderImagePath(path); setHeaderImageUrl(url); }
+    else if (kind === "cover") { setCoverImagePath(path); setCoverImageUrl(url); }
+    else { setBackCoverImagePath(path); setBackCoverImageUrl(url); }
   }
 
-  async function pickCoverImage(kind: "cover" | "back", e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  // Se a imagem já vier exatamente no tamanho ideal, sobe direto — só abre
+  // o recorte quando precisa de verdade, pra não incomodar quem já manda
+  // certo.
+  async function handlePickedImage(kind: "header" | "cover" | "back", file: File) {
     if (!file.type.startsWith("image/")) { toast.error("Escolha uma imagem."); return; }
-    setUploadingCover(kind);
+    const { w, h } = BUDGET_IMAGE_SIZE[kind];
+    let exact = false;
+    try {
+      const dims = await getImageSize(file);
+      exact = dims.width === w && dims.height === h;
+    } catch { /* não deu pra medir — melhor recortar do que arriscar subir torto */ }
+    if (!exact) { setCropTarget({ file, kind }); return; }
+    if (kind === "header") setUploadingHeader(true); else setUploadingCover(kind);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `budgets/${me?.orgId}/${kind}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
-      if (error) throw error;
-      const url = URL.createObjectURL(file);
-      if (kind === "cover") { setCoverImagePath(path); setCoverImageUrl(url); }
-      else { setBackCoverImagePath(path); setBackCoverImageUrl(url); }
+      await uploadBudgetImage(kind, file, file.type, ext);
+    } catch { toast.error(kind === "header" ? "Erro ao enviar a imagem de cabeçalho." : "Erro ao enviar a imagem."); }
+    finally { if (kind === "header") setUploadingHeader(false); else setUploadingCover(null); }
+  }
+
+  function pickHeader(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) handlePickedImage("header", file);
+  }
+
+  function pickCoverImage(kind: "cover" | "back", e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) handlePickedImage(kind, file);
+  }
+
+  async function handleCropConfirm(result: { blob: Blob; contentType: string; ext: string }) {
+    if (!cropTarget) return;
+    const { kind } = cropTarget;
+    setCropTarget(null);
+    if (kind === "header") setUploadingHeader(true); else setUploadingCover(kind);
+    try {
+      await uploadBudgetImage(kind, result.blob, result.contentType, result.ext);
     } catch { toast.error("Erro ao enviar a imagem."); }
-    finally { setUploadingCover(null); }
+    finally { if (kind === "header") setUploadingHeader(false); else setUploadingCover(null); }
   }
 
   function buildPayload() {
@@ -729,6 +771,19 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
           <Download size={13} /> {saving === "pdf" ? "Gerando…" : "Salvar e baixar PDF"}
         </button>
       </div>
+
+      {cropTarget && (
+        <ImageCropModal
+          file={cropTarget.file}
+          onCancel={() => setCropTarget(null)}
+          onConfirm={handleCropConfirm}
+          cropShape="rect"
+          outputWidth={BUDGET_IMAGE_SIZE[cropTarget.kind].w}
+          outputHeight={BUDGET_IMAGE_SIZE[cropTarget.kind].h}
+          title={cropTarget.kind === "header" ? "Ajustar cabeçalho" : cropTarget.kind === "cover" ? "Ajustar capa" : "Ajustar contracapa"}
+          hint={`Sua imagem não veio no tamanho ideal (${BUDGET_IMAGE_SIZE[cropTarget.kind].w}×${BUDGET_IMAGE_SIZE[cropTarget.kind].h}px) — arraste e dê zoom pra encaixar. Sai certinha no tamanho certo.`}
+        />
+      )}
     </div>
   );
 }

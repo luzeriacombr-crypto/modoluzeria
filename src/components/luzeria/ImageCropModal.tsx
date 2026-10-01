@@ -19,15 +19,16 @@ async function cropAndResize(
   imageSrc: string,
   area: Area,
   originalType: string,
+  outputWidth: number,
+  outputHeight: number,
 ): Promise<{ blob: Blob; contentType: string; ext: string }> {
   const image = await loadImage(imageSrc);
-  const outSize = Math.min(MAX_OUTPUT_SIZE, Math.round(area.width));
   const canvas = document.createElement("canvas");
-  canvas.width = outSize;
-  canvas.height = outSize;
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas não suportado neste navegador.");
-  ctx.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, outSize, outSize);
+  ctx.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, outputWidth, outputHeight);
   const contentType = originalType === "image/png" ? "image/png" : "image/jpeg";
   const ext = contentType === "image/png" ? "png" : "jpg";
   const blob = await new Promise<Blob>((resolve, reject) => {
@@ -40,14 +41,26 @@ async function cropAndResize(
   return { blob, contentType, ext };
 }
 
-/** Modal to reposition/zoom a picked image into a 1:1 crop, then downscale it
- * to at most MAX_OUTPUT_SIZE×MAX_OUTPUT_SIZE before handing back a Blob. */
+/** Modal pra reposicionar/dar zoom numa imagem até encaixar na proporção e
+ * no tamanho exigidos, antes de mandar um Blob de volta. Usado tanto pra
+ * foto de perfil (1:1, redonda, até 500×500 — o comportamento original)
+ * quanto pra imagem de orçamento (retangular, tamanho exato, ex: banner de
+ * cabeçalho 2000×370 ou capa A4 1240×1754) — ver OrcamentosPanel.tsx. */
 export function ImageCropModal({
   file, onCancel, onConfirm,
+  outputWidth = MAX_OUTPUT_SIZE, outputHeight = MAX_OUTPUT_SIZE, cropShape = "round",
+  title = "Ajustar foto", hint,
 }: {
   file: File;
   onCancel: () => void;
   onConfirm: (result: { blob: Blob; contentType: string; ext: string }) => void;
+  /** Tamanho exato de saída em pixels — default 500×500 (foto de perfil). */
+  outputWidth?: number;
+  outputHeight?: number;
+  cropShape?: "round" | "rect";
+  title?: string;
+  /** Texto de ajuda abaixo do zoom — default explica o tamanho de saída quadrado. */
+  hint?: string;
 }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -67,7 +80,7 @@ export function ImageCropModal({
     if (!imageSrc || !area) return;
     setProcessing(true);
     try {
-      const result = await cropAndResize(imageSrc, area, file.type);
+      const result = await cropAndResize(imageSrc, area, file.type, outputWidth, outputHeight);
       onConfirm(result);
     } catch (e: any) {
       toastFriendlyError(e, "Erro ao processar imagem.");
@@ -75,26 +88,37 @@ export function ImageCropModal({
     setProcessing(false);
   }
 
+  const aspect = outputWidth / outputHeight;
+  // Caixa de corte quadrada/redonda (foto de perfil) fica como sempre foi.
+  // Pra formato retangular (banner, capa A4...) a caixa acompanha a
+  // proporção de saída, numa largura maior — senão um banner bem baixo
+  // (ex: 2000×370) ficava espremido demais pra arrastar/dar zoom direito.
+  const boxWidth = cropShape === "round" ? undefined : 460;
+  const boxHeight = cropShape === "round" ? undefined : Math.max(130, Math.min(420, boxWidth! / aspect));
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onCancel}
     >
-      <div className="w-full max-w-sm bg-card border border-foreground/10 rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+      <div className={`w-full bg-card border border-foreground/10 rounded-2xl p-6 ${cropShape === "round" ? "max-w-sm" : "max-w-lg"}`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
-          <h3 className="text-base font-semibold text-foreground">Ajustar foto</h3>
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
           <button onClick={onCancel} className="text-foreground/40 hover:text-foreground"><X size={16} /></button>
         </div>
 
-        <div className="relative w-full h-72 rounded-lg overflow-hidden bg-black">
+        <div
+          className="relative w-full rounded-lg overflow-hidden bg-black mx-auto"
+          style={cropShape === "round" ? { height: 288 } : { height: boxHeight, maxWidth: boxWidth }}
+        >
           {imageSrc && (
             <Cropper
               image={imageSrc}
               crop={crop}
               zoom={zoom}
-              aspect={1}
-              cropShape="round"
-              showGrid={false}
+              aspect={aspect}
+              cropShape={cropShape}
+              showGrid={cropShape === "rect"}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
@@ -111,7 +135,7 @@ export function ImageCropModal({
           />
         </div>
         <p className="text-[10px] text-foreground/40 mt-2">
-          Arraste pra reposicionar, use o controle pra dar zoom. A foto final sai em até {MAX_OUTPUT_SIZE}×{MAX_OUTPUT_SIZE}px.
+          {hint ?? `Arraste pra reposicionar, use o controle pra dar zoom. A imagem final sai em ${outputWidth}×${outputHeight}px.`}
         </p>
 
         <div className="flex gap-2 mt-5">
