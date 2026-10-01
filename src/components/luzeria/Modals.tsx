@@ -50,12 +50,18 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
     // House: marca além da principal entra na assinatura — avisa antes.
     if (house && !(await requestConfirm(`Cada marca além da principal soma R$ 79,90/mês à sua assinatura. Adicionar "${name.trim()}"?`))) return;
     let client: { id: string };
+    // Mexeu em pelo menos um campo do Volume mensal? Aí o que ficar em
+    // branco conta como zero (não gera cards daquele tipo) — não faz
+    // sentido pedir "3 posts" e ainda ganhar 6 reels de brinde porque esse
+    // campo ficou vazio. Sem mexer em nenhum dos dois, mantém o padrão de
+    // sempre (6 posts + 6 reels) pra não nascer com o mês vazio.
+    const touchedVolume = postsPerWeek.trim() !== "" || reelsPerWeek.trim() !== "";
     try {
       client = await createClient.mutateAsync({
         data: {
           name: name.trim(), category, color, icon: null,
-          postsPerWeek: postsPerWeek.trim() !== "" ? Number(postsPerWeek) || 0 : undefined,
-          reelsPerWeek: reelsPerWeek.trim() !== "" ? Number(reelsPerWeek) || 0 : undefined,
+          postsPerWeek: touchedVolume ? Number(postsPerWeek) || 0 : undefined,
+          reelsPerWeek: touchedVolume ? Number(reelsPerWeek) || 0 : undefined,
         },
       });
     } catch (e: any) {
