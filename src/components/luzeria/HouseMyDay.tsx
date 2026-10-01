@@ -1,15 +1,17 @@
 // House (Fase 2) — "Meu dia": a home da pessoa da equipe. Checklist do dia,
 // barras das metas mínimas, próximos conteúdos com prazo e o "+ Lead"
 // (esse fica fixo em todas as telas da House, ver HouseLeads.tsx).
+import { useState } from "react";
+import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, Check, ChevronRight, ClipboardList, Instagram, ListChecks, Target, Plus, Undo2, UserPlus, Hand } from "lucide-react";
+import { AlertTriangle, CalendarClock, Check, ChevronRight, ClipboardList, Instagram, ListChecks, Target, Plus, Undo2, UserPlus, Hand, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useMe, profilesQO, contentStatusesQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getMyDay, setChecklistDone, type MyDay } from "@/lib/luzeria/house-day.functions";
-import { logActivity, undoActivity, listUnassignedItems } from "@/lib/luzeria/house-team.functions";
+import { logActivity, undoActivity, listUnassignedItems, listActivityLogs, deleteActivityLog } from "@/lib/luzeria/house-team.functions";
 import { useApi } from "@/lib/luzeria/queries";
 import { CADENCE_LABEL, checklistDueLabel } from "@/lib/luzeria/house-checklists";
 import { statusLabel, getStatusMeta } from "@/lib/luzeria/types";
@@ -243,29 +245,60 @@ function UpcomingCard({ day }: { day: MyDay }) {
 
 /** Registro rápido do que a pessoa postou direto no Instagram — dá o
  * crédito no ranking e conta nas metas quando não há Instagram conectado. */
+const LOG_KIND_LABEL = { story: "Story", post: "Post", reel: "Reels" } as const;
+
 function LogCard({ day }: { day: MyDay }) {
   const qc = useQueryClient();
+  const me = useMe().data;
   const logFn = useServerFn(logActivity);
   const undoFn = useServerFn(undoActivity);
-  const after = () => { qc.invalidateQueries({ queryKey: myDayQueryKey }); qc.invalidateQueries({ queryKey: ["house-owner-panel"] }); };
+  const listFn = useServerFn(listActivityLogs);
+  const deleteFn = useServerFn(deleteActivityLog);
+  const [showList, setShowList] = useState(false);
+  const [scope, setScope] = useState<"mine" | "team">("mine");
+  const isMaster = me?.role === "master";
+  const after = () => {
+    qc.invalidateQueries({ queryKey: myDayQueryKey });
+    qc.invalidateQueries({ queryKey: ["house-activity-logs"] });
+    qc.invalidateQueries({ queryKey: ["house-owner-panel"] });
+    qc.invalidateQueries({ queryKey: ["house-ranking"] });
+  };
+  const undo = useMutation({
+    mutationFn: (kind: "story" | "post" | "reel") => undoFn({ data: { kind } }),
+    onSettled: after,
+  });
   const add = useMutation({
     mutationFn: (kind: "story" | "post" | "reel") => logFn({ data: { kind } }),
     onMutate: (kind) => {
       const prev = qc.getQueryData<MyDay>(myDayQueryKey);
       if (prev) qc.setQueryData<MyDay>(myDayQueryKey, { ...prev, myLogsToday: { ...prev.myLogsToday, [kind]: prev.myLogsToday[kind] + 1 } });
     },
+    onSuccess: (_r, kind) => {
+      // Aviso com botão: errou o toque? Desfaz na hora.
+      toast.success(`${LOG_KIND_LABEL[kind]} registrado`, {
+        duration: 8000,
+        action: { label: "Desfazer", onClick: () => undo.mutate(kind) },
+      });
+    },
     onError: (e: any) => { after(); toastFriendlyError(e, "Não consegui registrar"); },
     onSettled: after,
   });
-  const undo = useMutation({
-    mutationFn: (kind: "story" | "post" | "reel") => undoFn({ data: { kind } }),
-    onSettled: after,
+  const { data: logs = [] } = useQuery({
+    queryKey: ["house-activity-logs", scope],
+    queryFn: () => listFn({ data: { scope } }),
+    enabled: showList,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => { toast.success("Registro apagado."); after(); },
+    onError: (e: any) => toastFriendlyError(e, "Não consegui apagar"),
   });
   const items = [
     { kind: "story" as const, label: "Story" },
     { kind: "post" as const, label: "Post" },
     { kind: "reel" as const, label: "Reels" },
   ];
+  const today = day.todayKey;
   return (
     <Card icon={<Hand size={14} />} title="Postei agora"
       right={<span className="text-[10px] text-foreground/40">o que você postou direto no Instagram</span>}>
@@ -279,16 +312,55 @@ function LogCard({ day }: { day: MyDay }) {
                 style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
                 <Plus size={15} strokeWidth={2.5} /> {it.label}
               </button>
-              <div className="flex items-center justify-center gap-1.5 mt-2 text-[11px] text-foreground/55">
-                <span className="tabular-nums">{n} hoje</span>
-                {n > 0 && (
-                  <button onClick={() => undo.mutate(it.kind)} title="Desfazer o último" className="p-0.5 rounded text-foreground/40 hover:text-foreground"><Undo2 size={11} /></button>
-                )}
-              </div>
+              <div className="mt-2 text-[11px] text-foreground/55 tabular-nums">{n} hoje</div>
+              {n > 0 && (
+                <button onClick={() => undo.mutate(it.kind)}
+                  className="mt-1.5 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-foreground/70 hover:text-foreground hover:bg-foreground/[0.07] transition">
+                  <Undo2 size={12} /> Desfazer
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      <button onClick={() => setShowList((v) => !v)} className="mt-3 text-[11px] font-semibold text-foreground/50 hover:text-foreground">
+        {showList ? "Esconder registros" : "Ver / apagar registros"}
+      </button>
+      {showList && (
+        <div className="mt-2">
+          {isMaster && (
+            <div className="inline-flex items-center gap-1 bg-background rounded-full p-0.5 border border-foreground/[0.08] mb-2 text-[11px]">
+              {(["mine", "team"] as const).map((sc) => (
+                <button key={sc} onClick={() => setScope(sc)}
+                  className={`px-2.5 py-1 rounded-full font-semibold ${scope === sc ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/55"}`}>
+                  {sc === "mine" ? "Meus" : "Da equipe"}
+                </button>
+              ))}
+            </div>
+          )}
+          {logs.length === 0 ? (
+            <div className="text-xs text-foreground/45 py-2">Nenhum registro nos últimos 7 dias.</div>
+          ) : (
+            <ul className="space-y-0.5 max-h-56 overflow-y-auto">
+              {logs.map((l) => (
+                <li key={l.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-foreground/[0.04]">
+                  <span className="flex-1 min-w-0 text-xs text-foreground/80 truncate">
+                    {l.qty > 1 ? `${l.qty}× ` : ""}{LOG_KIND_LABEL[l.kind]}
+                    {scope === "team" && l.userName ? ` · ${l.userName.split(" ")[0]}` : ""}
+                  </span>
+                  <span className="text-[10.5px] text-foreground/40 tabular-nums shrink-0">
+                    {l.day === today ? "hoje" : `${l.day.slice(8, 10)}/${l.day.slice(5, 7)}`}{" "}
+                    {new Date(l.createdAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <button onClick={() => remove.mutate(l.id)} title="Apagar esse registro" aria-label="Apagar esse registro"
+                    className="p-1 rounded text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"><X size={13} /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

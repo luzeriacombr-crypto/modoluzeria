@@ -108,6 +108,47 @@ export const undoActivity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type ActivityLogRow = { id: string; kind: LogKind; qty: number; day: string; createdAt: string; userId: string; userName: string };
+
+/** Registros dos últimos 7 dias — os da própria pessoa, ou (só o gestor,
+ * scope "team") os de toda a equipe, pra limpar um registro de teste. */
+export const listActivityLogs = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { scope?: "mine" | "team" }) => z.object({ scope: z.enum(["mine", "team"]).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }): Promise<ActivityLogRow[]> => {
+    await houseInfo(context);
+    const db: any = context.supabase;
+    if (data.scope === "team") {
+      const { data: isMaster } = await db.rpc("is_master", { _user_id: context.userId });
+      if (!isMaster) throw new Error("Só o gestor vê os registros da equipe.");
+    }
+    const since = new Date(Date.now() - 7 * 86_400_000);
+    const sinceKey = houseDateKey(since);
+    let q = db.from("house_activity_logs").select("id, kind, qty, day, created_at, user_id")
+      .eq("org_id", context.orgId).gte("day", sinceKey).order("created_at", { ascending: false }).limit(100);
+    if (data.scope !== "team") q = q.eq("user_id", context.userId);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const ids = [...new Set(((rows ?? []) as any[]).map((r) => r.user_id as string))];
+    const { data: people } = ids.length ? await db.from("profiles").select("id, name").in("id", ids) : { data: [] };
+    const nameById = new Map(((people ?? []) as any[]).map((p) => [p.id, p.name as string]));
+    return ((rows ?? []) as any[]).map((r) => ({
+      id: r.id, kind: r.kind, qty: r.qty, day: r.day, createdAt: r.created_at, userId: r.user_id, userName: nameById.get(r.user_id) ?? "",
+    }));
+  });
+
+/** Apaga um registro específico (o seu, ou qualquer um se for o gestor). */
+export const deleteActivityLog = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error, count } = await (context.supabase as any).from("house_activity_logs")
+      .delete({ count: "exact" }).eq("id", data.id).eq("org_id", context.orgId);
+    if (error) throw new Error(error.message);
+    if (!count) throw new Error("Esse registro não é seu — só o gestor apaga o de outra pessoa.");
+    return { ok: true };
+  });
+
 /* ============== Ranking da equipe ============== */
 
 export const RANKING_POINTS = { story: 1, post: 2, content: 3, demand: 2, lead: 1, scheduled: 3, checklist: 1, task: 1 } as const;
