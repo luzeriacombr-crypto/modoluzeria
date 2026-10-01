@@ -118,9 +118,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   // House: a marca principal ganha o bloco guiado "Briefing da marca".
   const isHouseBrand = isHouse(me) && me?.houseClientId === clientId;
 
-  const [description, setDescription] = useState("");
-  useEffect(() => { setDescription(ficha?.description ?? ""); }, [ficha?.description]);
-
   const [groupLink, setGroupLink] = useState("");
   useEffect(() => { setGroupLink(ficha?.whatsappGroupLink ?? ""); }, [ficha?.whatsappGroupLink]);
 
@@ -184,16 +181,16 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         )}
         <FichaCard label="Métricas">
           <div className="grid grid-cols-2 gap-2">
-            <MetricMini icon={<FileText size={13} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
-            <MetricMini icon={<CheckCircle2 size={13} />} label="Prontos" value={metrics?.finalized ?? 0} color="var(--lz-accent-ink)" />
+            <MetricMini icon={<FileText size={11} />} label="Itens totais" value={metrics?.totalItems ?? 0} />
+            <MetricMini icon={<CheckCircle2 size={11} />} label="Prontos" value={metrics?.finalized ?? 0} color="var(--lz-accent-ink)" />
             <MetricMini
-              icon={<AlertOctagon size={13} />}
+              icon={<AlertOctagon size={11} />}
               label="Travados"
               value={metrics?.blocked ?? 0}
               color={(metrics?.blocked ?? 0) > 0 ? "#FF6B6B" : undefined}
               onClick={(metrics?.blocked ?? 0) > 0 ? () => setShowBlockedModal(true) : undefined}
             />
-            <MetricMini icon={<Clock size={13} />} label="Lead time médio" value={formatHours(metrics?.avgLeadTimeHours ?? null)} />
+            <MetricMini icon={<Clock size={11} />} label="Lead time médio" value={formatHours(metrics?.avgLeadTimeHours ?? null)} />
           </div>
           {metrics?.lastDeliveryAt && (
             <p className="mt-2 text-[10px] text-foreground/40">
@@ -225,30 +222,6 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
       {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing />}
       {activeTab === "geral" && (
         <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
-        {!isHouseBrand && <FichaCard label="Sobre" wide>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={() => {
-              const v = description.trim();
-              if (v !== (ficha?.description ?? "")) {
-                api.updateClient.mutate(
-                  { data: { id: client.id, patch: { description: v } } },
-                  {
-                    onSuccess: () => {
-                      // also revalidate ficha
-                      // (queryClient invalidate is already done; nothing extra needed)
-                    },
-                  },
-                );
-              }
-            }}
-            disabled={!isAdmin}
-            rows={4}
-            placeholder={isAdmin ? "Tom de voz, nicho, observações, instruções do cliente…" : "Sem descrição."}
-            className="w-full bg-card border border-foreground/8 rounded-md px-3 py-2.5 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] placeholder:text-foreground/30 resize-none disabled:opacity-70"
-          />
-        </FichaCard>}
         <FichaCard label={isHouseBrand ? "Configuração da marca" : "Configuração do cliente"} wide>
           <ClientConfigBlock client={client} hideBriefing={isHouseBrand} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </FichaCard>
@@ -1613,12 +1586,12 @@ function MetricMini({ icon, label, value, color, onClick }: { icon: React.ReactN
   return (
     <Comp
       onClick={onClick}
-      className={`bg-foreground/[0.05] rounded-xl px-3 py-2.5 text-left w-full ${onClick ? "hover:bg-foreground/[0.09] transition cursor-pointer" : ""}`}
+      className={`bg-foreground/[0.05] rounded-lg px-2.5 py-1.5 text-left w-full ${onClick ? "hover:bg-foreground/[0.09] transition cursor-pointer" : ""}`}
     >
-      <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/50">
+      <div className="flex items-center gap-1 text-[9px] uppercase font-bold tracking-wider text-foreground/50">
         {icon} {label}
       </div>
-      <div className="text-xl font-bold tabular-nums mt-0.5" style={{ color: color ?? "var(--foreground)" }}>{value}</div>
+      <div className="text-base font-bold tabular-nums mt-0.5" style={{ color: color ?? "var(--foreground)" }}>{value}</div>
     </Comp>
   );
 }
@@ -1989,6 +1962,7 @@ function RecurringBlock({ clientId }: { clientId: string }) {
     <div>
       <p className="text-[11px] text-foreground/50 mb-3">
         Tarefas geradas automaticamente. Cada recorrência tem seu próprio período — use "Gerar agora" pra criar os itens.
+        Ex.: se você faz um anúncio todo mês pra esse cliente, crie uma recorrência de "Anúncio" — um card com esse nome aparece todo mês sozinho.
       </p>
       <div className="space-y-2">
         {templates.length === 0 && !adding && (
