@@ -61,7 +61,7 @@ const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations",
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
-  const { setUserActive, deleteUser, adminCreateUser, createAgency } = useApi();
+  const { deleteUser, adminCreateUser, createAgency } = useApi();
   const [adding, setAdding] = useState(false);
   const [creatingAgency, setCreatingAgency] = useState(false);
   // Ponte entre os cartões clicáveis de AgenciesBillingPanel ("quem falta")
@@ -323,9 +323,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <>
       {pending.length > 0 && (
         <>
-          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">
-            Aguardando aprovação <span className="text-[var(--lz-accent-ink)]">({pending.length})</span>
+          <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-1">
+            Cadastros travados <span className="text-[var(--lz-accent-ink)]">({pending.length})</span>
           </h2>
+          <p className="text-[11px] text-foreground/40 mb-3">
+            Não são pedidos pra entrar na sua equipe — são pessoas de fora que começaram a assinar o Modo Criador (login com Google) e não terminaram o cadastro da agência delas. Só remova; não há como "aprovar" certo aqui.
+          </p>
           <div className="bg-card rounded-lg overflow-hidden mb-8">
             {pending.map((p) => (
               <div key={p.id} className="flex items-center gap-3 px-5 py-4 border-b border-foreground/5 last:border-b-0">
@@ -335,16 +338,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
                   <div className="text-[11px] text-foreground/40 truncate">{p.email}</div>
                 </div>
                 <button
-                  onClick={() => setUserActive.mutate({ data: { userId: p.id, active: true } }, {
-                    onSuccess: () => toast.success(`${p.name} aprovado.`),
-                  })}
-                  className="lz-btn-primary text-xs px-3 py-1.5 rounded-md">
-                  Aprovar
-                </button>
-                <button
                   onClick={() => handleRemove(p.id, p.name)}
                   className="text-xs px-3 py-1.5 rounded-md border border-foreground/10 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition">
-                  Recusar
+                  Remover
                 </button>
               </div>
             ))}
