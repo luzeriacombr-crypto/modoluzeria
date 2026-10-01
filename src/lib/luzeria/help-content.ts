@@ -13,6 +13,7 @@ export const FAQ: HelpFaqGroup[] = [
     category: "Equipe e automações",
     items: [
       { q: "Como envio uma foto de perfil pra um colega que ainda não tem?", a: "Em Configurações → Equipe, clique no card do colaborador — abre um modal onde o Admin Master pode enviar ou trocar a foto dele." },
+      { q: "A automação \"Deixar mensagem de WhatsApp pronta\" manda a mensagem sozinha pro cliente?", a: "Não, ela não envia nada sozinha. Ela avisa o responsável (ou os masters) com uma notificação que já abre o WhatsApp com o número do cliente e a mensagem pronta — a pessoa só revisa e aperta enviar. Tem até um Modelo pronto pra cobrar aprovação parada, em Configurações → Automações." },
       { q: "Esqueci minha senha, e agora?", a: "Peça pro Admin Master da sua agência: Configurações → Equipe → clique no seu card → \"Resetar senha\". Você recebe um link por e-mail." },
       { q: "O e-mail de boas-vindas pra um colaborador novo não chegou, o que eu faço?", a: "Primeiro peça pra ele conferir a caixa de spam/lixo eletrônico. Se não estiver lá, vá em Configurações → Equipe, clique no card da pessoa e depois em \"Reenviar e-mail de boas-vindas\"." },
       { q: "Como funcionam as Automações?", a: "Em Configurações → Automações, o Admin Master cria regras do tipo \"quando acontecer X, então fazer Y\", que rodam sozinhas. Veja o passo a passo completo (com os Modelos prontos) no tutorial \"Criar uma automação\", aqui na aba Tutoriais." },
@@ -22,7 +23,9 @@ export const FAQ: HelpFaqGroup[] = [
   {
     category: "Clientes e arquivos",
     items: [
+      { q: "Dá pra colocar a logo ou foto do cliente no lugar da bolinha com a inicial do nome?", a: "Dá sim. Na Ficha do Cliente tem o campo \"Foto do cliente (aparece no lugar da bolinha)\", com o botão \"Adicionar foto\" (ou \"Alterar foto\", se já tiver uma) — escolhe a imagem, ajusta o recorte e salva. Só quem é admin da agência consegue editar essa parte." },
       { q: "Como meu cliente aprova um post sem ter conta?", a: "Cada cliente tem um link público (aba \"Preview de Feed\" dentro do cliente) — manda esse link e ele aprova ou comenta direto, sem login. Veja o passo a passo completo (incluindo como mandar pelo WhatsApp) no tutorial \"Como o cliente aprova o conteúdo\", aqui na aba Tutoriais." },
+      { q: "Posso organizar o feed numa ordem diferente da data de publicação?", a: "Pode. Dentro do cliente, na aba \"Preview de Feed\", troque o modo de \"Cronológica\" pra \"Personalizada\" — aí quem é admin (pelo computador, não funciona no celular) pode arrastar os cards pra reordenar do jeito que quiser." },
       { q: "Como funciona o backup no Google Drive?", a: "Conecte sua conta do Drive em Configurações → Drive. Os arquivos enviados nos posts/reels são organizados automaticamente lá, por cliente e mês." },
       { q: "Dá pra importar vários clientes de uma vez, sem cadastrar um por um?", a: "Sim — de planilha/CSV/PDF, prints de tela, ou conectando direto com Trello, ClickUp ou Notion. Veja o passo a passo no tutorial \"Importar vários clientes de uma vez\"." },
       { q: "Importei clientes do Trello/ClickUp/Notion, mas não vieram todos — por quê?", a: "A IA lê a estrutura do seu board pra separar um cliente por lista/coluna, e isso às vezes não bate 100% com boards organizados de um jeito diferente. Confira se cada cliente está numa lista/coluna própria e tente importar de novo; se continuar faltando gente, manda uma mensagem pelo ícone de interrogação (?) que a gente ajuda a resolver." },
@@ -37,6 +40,14 @@ export const FAQ: HelpFaqGroup[] = [
       { q: "Além do Instagram, dá pra publicar em outra rede social?", a: "Por enquanto só no Instagram (posts, carrosséis, reels e stories). Facebook, TikTok e LinkedIn ainda não estão liberados pra todas as agências." },
       { q: "Consigo excluir um post, reel ou story que já foi publicado pelo Modo Criador?", a: "Pelo Modo Criador ainda não: a Meta não permite que o app apague publicações do Instagram com o tipo de conexão que usamos. O caminho é abrir o item, ir na seção \"No Instagram\" e clicar em \"Ver no Instagram\"; o post abre lá e você exclui direto no app (três pontinhos → Excluir)." },
       { q: "Os relatórios de alcance, curtidas e outras métricas do Instagram do meu cliente aparecem no Modo Criador?", a: "Sim, em \"Instagram\" no menu lateral — veja o tutorial \"Ver publicações programadas, publicadas e os Insights de um cliente\". Uma parte mais completa de insights ainda depende de uma aprovação separada da Meta, em análise." },
+      { q: "Qual o tamanho e formato ideais pra imagem ficar grande e nítida no post?", a: "Pro Feed, o Instagram aceita de 4:5 (mais alto, ex: 1080×1350 — ocupa mais tela) até 1.91:1 (mais largo); pra Reels e Stories é sempre 9:16, padrão 1080×1920. Fora dessas faixas o Instagram recusa ou corta a imagem na hora de publicar." },
+    ],
+  },
+  {
+    category: "Financeiro e Vendas",
+    items: [
+      { q: "Meu cliente paga por semana, não por mês — dá pra configurar isso no Financeiro?", a: "Hoje não: o controle de pagamento do cliente (Financeiro → Entradas e saídas, na Ficha do Cliente) só aceita um valor de contrato e um dia de vencimento por mês, sem opção de periodicidade semanal ou outra. Pra cliente com cobrança diferente de mensal, o controle precisa ser feito à parte por enquanto." },
+      { q: "Depois de cadastrar um cliente, preciso colocar ele também em Vendas pra aparecer no meu faturamento?", a: "Não precisa. Vendas é o funil de prospecção — quando um lead é marcado como \"Ganho\", ele vira cliente automaticamente. Já o faturamento do Financeiro vem direto do cadastro do cliente (campos \"Valor do contrato\" e \"Dia de vencimento\", na Ficha do Cliente), então um cliente cadastrado direto já conta, sem precisar passar por Vendas." },
     ],
   },
   {
@@ -44,6 +55,7 @@ export const FAQ: HelpFaqGroup[] = [
     items: [
       { q: "Como coloco a logo e as cores da minha agência no Modo Criador?", a: "Em Configurações → Geral, seção \"Marca da agência\". Veja o passo a passo completo no tutorial \"Personalizar a logo e as cores da agência\"." },
       { q: "Dá pra organizar tarefas ou projetos que não são post, reel ou story (ex: identidade visual, um evento)?", a: "Dá, com limitações: pra algo pontual, use \"Registrar nova atividade\" dentro do cliente. Pra um projeto com várias etapas, crie uma \"Campanha\" nesse cliente. Hoje isso é organizado por cliente e mês, sem um quadro kanban arrastável nem visão geral da agência — veja o tutorial \"Organizar tarefas e projetos além de posts, reels e stories\" pra entender o que dá pra fazer hoje." },
+      { q: "Dá pra colocar o nome da minha agência na URL do Modo Criador?", a: "Não — o Modo Criador roda sempre em modocriador.com.br pra todo mundo, sem subdomínio ou URL própria por agência. O que já muda com a sua marca são os links que você manda pro cliente (aprovação, feed, orçamento): eles mostram sua logo e suas cores, não \"Modo Criador\"." },
     ],
   },
   {

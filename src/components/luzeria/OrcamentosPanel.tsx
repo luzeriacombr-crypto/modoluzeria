@@ -672,6 +672,15 @@ function BudgetBuilder({ budgetId, onDone }: { budgetId: string | null; onDone: 
         <p className={hint}>Uma linha curta (até ~90 caracteres) no pé das páginas de conteúdo: nome da agência, @ do Instagram, WhatsApp e site ou e-mail.</p>
       </label>
 
+      {version === "simples" && (
+        <SimpleBudgetPreview
+          clientName={clientName} items={items} totalCents={totalCents}
+          headerImageUrl={headerImageUrl} footerText={footerText}
+          logoUrl={logoVariant === "light" ? (me?.orgLogoUrlLight ?? me?.orgLogoUrl ?? null) : (me?.orgLogoUrl ?? me?.orgLogoUrlLight ?? null)}
+          accent={me?.orgColorPrimary ?? "#CDFF00"}
+        />
+      )}
+
       {version === "completo" && (
         <div className="space-y-4 pt-2 border-t border-foreground/10">
           <div className="text-xs font-bold text-foreground/60 uppercase tracking-wide">Proposta completa</div>
@@ -820,6 +829,68 @@ function ProductPicker({ products, onPick }: { products: BudgetProduct[]; onPick
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Prévia do PDF (orçamento simples)
+// ---------------------------------------------------------------------------
+
+type SimplePreviewProps = {
+  clientName: string; items: BudgetItem[]; totalCents: number;
+  headerImageUrl: string | null; footerText: string; logoUrl: string | null; accent: string;
+};
+
+/** Miniatura A4 da página única do simples — mesma ideia da prévia do
+ * completo (BudgetPreview), espelhando o bloco version === "simples" de
+ * budget-pdf.server.ts (pedido do Junior, 01/10). */
+function SimpleBudgetPreview(p: SimplePreviewProps) {
+  const W = 132, H = Math.round(W * 841.89 / 595.28), K = W / 595.28;
+  const pt = (v: number) => `${(v * K).toFixed(2)}px`;
+  const page = "relative shrink-0 overflow-hidden rounded-[3px] shadow-md border border-foreground/10";
+  const visibleItems = p.items.slice(0, 7);
+
+  return (
+    <div className="rounded-lg p-3" style={{ background: "color-mix(in srgb, var(--foreground) 3%, transparent)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <span className={label}>Prévia do PDF</span>
+        <span className="text-[10px] text-foreground/35">aproximada — o PDF final sai ao baixar</span>
+      </div>
+      <div className={page} style={{ width: W, height: H, background: "#FFFFFF", color: "#17181A" }}>
+        <div className="absolute flex flex-col" style={{ left: pt(56), right: pt(56), top: pt(56), bottom: pt(56) }}>
+          {p.headerImageUrl && (
+            <img src={p.headerImageUrl} alt="" className="mx-auto object-contain" style={{ maxWidth: "100%", maxHeight: pt(50) }} />
+          )}
+          <div className="flex items-center gap-1.5" style={{ marginTop: p.headerImageUrl ? pt(14) : 0 }}>
+            {p.logoUrl && <img src={p.logoUrl} alt="" style={{ maxWidth: pt(60), maxHeight: pt(16) }} className="object-contain object-left shrink-0" />}
+            <div style={{ fontSize: pt(10.5), fontWeight: 800 }} className="truncate">Orçamento — {p.clientName || "Cliente"}</div>
+          </div>
+          <div style={{ borderTop: "1px solid #D9D9D1", marginTop: pt(14), marginBottom: pt(12) }} />
+          <div className="flex-1 overflow-hidden">
+            {visibleItems.length === 0 && <div style={{ fontSize: pt(8), color: "#8A8D91" }}>Nenhum item ainda</div>}
+            {visibleItems.map((it, i) => (
+              <div key={i} style={{ marginBottom: pt(8) }}>
+                <div className="flex items-baseline justify-between gap-1">
+                  <span style={{ fontSize: pt(8.5), fontWeight: 700 }} className="truncate">{it.label || "—"}</span>
+                  <span style={{ fontSize: pt(8.5), fontWeight: 700 }} className="shrink-0">{money(it.priceCents)}</span>
+                </div>
+                <div style={{ borderTop: "1px solid #EBEBE7", marginTop: pt(6) }} />
+              </div>
+            ))}
+            {p.items.length > visibleItems.length && (
+              <div style={{ fontSize: pt(7.5), color: "#8A8D91" }}>+{p.items.length - visibleItems.length} item(ns)</div>
+            )}
+          </div>
+          <div className="flex items-center justify-between" style={{ background: `color-mix(in srgb, ${p.accent} 12%, white)`, borderRadius: 1 }}>
+            <span style={{ fontSize: pt(8), fontWeight: 800, padding: `${pt(5)} ${pt(8)}`, color: "#17181A" }}>TOTAL</span>
+            <span style={{ fontSize: pt(9.5), fontWeight: 800, padding: `${pt(5)} ${pt(8)}`, color: "#17181A" }}>{money(p.totalCents)}</span>
+          </div>
+        </div>
+        {p.footerText && (
+          <div className="absolute inset-x-0 text-center truncate px-1" style={{ bottom: pt(24), fontSize: pt(7), color: "#8A8D91" }}>{p.footerText}</div>
+        )}
+      </div>
     </div>
   );
 }
