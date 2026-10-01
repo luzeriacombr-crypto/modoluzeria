@@ -14,6 +14,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
+import {
+  PLAN_KINDS, PLAN_KIND_LABEL, MAX_PLAN_ITEMS, planTotal, countPlanItems, classifyPlanItem, describePlanCounts,
+  type PlanCounts,
+} from "./planning-counts";
+import { PLAN_CHUNK_SIZE } from "./planning-estimate";
 
 /** Quantos clientes podem ter a IA de planejamento ativada quando a
  * agência ainda não tem assinatura registrada no Asaas (teste grátis) OU
@@ -223,6 +228,11 @@ const PlanResultSchema = z.object({
 });
 export type MonthlyPlanItem = z.infer<typeof PlanItemSchema>;
 export type MonthlyPlanResult = z.infer<typeof PlanResultSchema> & {
+  /** O que foi pedido e o que veio de verdade, por tipo (reel / estático / carrossel). */
+  requested: PlanCounts;
+  delivered: PlanCounts;
+  /** Preenchido só quando faltou algo mesmo depois de pedir de novo — a tela mostra. */
+  shortfallNote?: string;
   /** Quantas entradas a base de conhecimento da agência tinha na hora
    * dessa geração — usado pra sugerir preencher a base quando estiver
    * vazia (feature em beta, quanto mais contexto melhor o resultado). */
@@ -231,7 +241,7 @@ export type MonthlyPlanResult = z.infer<typeof PlanResultSchema> & {
 
 export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { clientId: string; extraContext?: string; contentTypes?: ("reel" | "estatico" | "carrossel")[] }) =>
+  .inputValidator((d: { clientId: string; extraContext?: string; contentTypes?: ("reel" | "estatico" | "carrossel")[]; counts?: PlanCounts }) =>
     z.object({
       clientId: z.string().uuid(),
       // Colado na hora, só pra essa geração — reunião recente, transcrição,
@@ -244,6 +254,14 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       // sem isso a IA às vezes concentrava tudo num tipo só e ignorava os
       // outros. Vazio/ausente = os três liberados (comportamento antigo).
       contentTypes: z.array(z.enum(["reel", "estatico", "carrossel"])).min(1).max(3).optional(),
+      // Quantos de cada tipo (a pessoa escolhe na tela). Tem prioridade sobre
+      // contentTypes; total de 1 a MAX_PLAN_ITEMS por geração.
+      counts: z.object({
+        reel: z.number().int().min(0).max(MAX_PLAN_ITEMS),
+        estatico: z.number().int().min(0).max(MAX_PLAN_ITEMS),
+        carrossel: z.number().int().min(0).max(MAX_PLAN_ITEMS),
+      }).refine((c) => c.reel + c.estatico + c.carrossel >= 1 && c.reel + c.estatico + c.carrossel <= MAX_PLAN_ITEMS,
+        { message: `Escolha de 1 a ${MAX_PLAN_ITEMS} conteúdos no total.` }).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }): Promise<MonthlyPlanResult> => {
@@ -413,17 +431,14 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       "",
       "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se já tiver essa informação no briefing/histórico/base de conhecimento, use direto. Só use web_search pra isso (no máximo 1 busca rápida) se REALMENTE não tiver nenhuma pista sobre o nicho; nunca gaste várias buscas só pra achar pergunta frequente, isso é secundário à pesquisa de concorrentes.",
       "",
-      data.contentTypes && data.contentTypes.length > 0
-        ? `TIPOS DE CONTEÚDO PERMITIDOS NESSA LEVA (a pessoa escolheu na tela, siga à risca, nunca sugira um tipo fora dessa lista): ${data.contentTypes.map((t) => ({ reel: "Reel", estatico: "Post estático", carrossel: "Post carrossel" }[t])).join(", ")}. Se só um tipo foi marcado, TODOS os itens da leva precisam ser desse tipo. Se mais de um foi marcado, distribua de forma equilibrada entre eles, nunca concentre quase tudo num só tipo só porque é mais fácil de escrever.`
-        : "Nenhuma preferência de tipo foi marcada — misture Reels, posts estáticos e carrosséis de forma equilibrada, nunca concentre quase tudo num tipo só.",
-      "",
       HOUSE_STYLE_GUIDE,
     ];
 
     const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
     const anthropic = getAnthropicClient();
 
-    async function runBatch(wantCount: number, alreadyTitles: string[], allowWebSearch: boolean) {
+    async function runBatch(want: PlanCounts, alreadyTitles: string[], allowWebSearch: boolean) {
+      const wantCount = planTotal(want);
       const instruction = [
         ...baseInstructionParts,
         "",
@@ -435,6 +450,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
         alreadyTitles.length
           ? `Essa prévia já teve ${alreadyTitles.length} sugestão(ões) gerada(s) numa chamada anterior (mesmo planejamento, em lotes) — NÃO repita esses temas nem títulos parecidos: ${alreadyTitles.join("; ")}.`
           : "",
+        `QUANTIDADE EXATA POR TIPO (a pessoa escolheu na tela, siga à risca, nem a mais nem a menos): ${describePlanCounts(want)}, total de ${wantCount}. Reel = type "reel". Post estático = type "post" com postFormat "estatico". Carrossel = type "post" com postFormat "carrossel". Nunca sugira um tipo que não está nessa lista e nunca entregue menos do que o pedido em nenhum tipo.`,
         `Gere exatamente ${wantCount} sugestõe${wantCount === 1 ? "" : "s"} de posts/reels pro próximo mês. Escreva tudo em português do Brasil, com tom real e específico do nicho do cliente — nunca genérico ou clichê. As legendas (publishCaption) precisam variar de tamanho entre si — misture curtas, médias e longas na mesma leva, não entregue tudo com uma frase só. Termine SEMPRE chamando a tool report_monthly_plan com o resultado final.`,
       ].filter(Boolean).join("\n");
 
@@ -505,16 +521,31 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     // resposta, bem longe do teto de 20000 — testado ao vivo. CHUNK_SIZE
     // alto cobre a esmagadora maioria dos clientes numa chamada só; só quem
     // tiver meta bem acima disso (raro) cai em mais de um lote sequencial.
-    const CHUNK_SIZE = 20;
-    const totalWanted = monthlyTarget > 0 ? monthlyTarget : 6;
-    const numChunks = Math.max(1, Math.ceil(totalWanted / CHUNK_SIZE));
-    const chunkSizes: number[] = [];
+    // O que pedir de cada tipo: o que a pessoa escolheu na tela (counts); sem
+    // isso (chamada antiga), divide a meta da marca entre os tipos marcados.
+    const want: PlanCounts = (() => {
+      if (data.counts) return data.counts;
+      const kinds = (data.contentTypes && data.contentTypes.length ? data.contentTypes : [...PLAN_KINDS]) as (keyof PlanCounts)[];
+      const total = Math.min(MAX_PLAN_ITEMS, monthlyTarget > 0 ? monthlyTarget : 6);
+      const c: PlanCounts = { reel: 0, estatico: 0, carrossel: 0 };
+      for (let i = 0; i < total; i++) c[kinds[i % kinds.length]]++;
+      return c;
+    })();
+    const totalWanted = planTotal(want);
+
+    // Divide o pedido em lotes (cada chamada gera até PLAN_CHUNK_SIZE),
+    // mantendo a proporção de cada tipo em cada lote.
+    const numChunks = Math.max(1, Math.ceil(totalWanted / PLAN_CHUNK_SIZE));
+    const chunkWants: PlanCounts[] = [];
     {
-      let remaining = totalWanted;
+      const remaining: PlanCounts = { ...want };
       for (let i = 0; i < numChunks; i++) {
-        const size = Math.ceil(remaining / (numChunks - i));
-        chunkSizes.push(size);
-        remaining -= size;
+        const take: PlanCounts = { reel: 0, estatico: 0, carrossel: 0 };
+        for (const k of PLAN_KINDS) {
+          take[k] = Math.ceil(remaining[k] / (numChunks - i));
+          remaining[k] -= take[k];
+        }
+        chunkWants.push(take);
       }
     }
 
@@ -522,7 +553,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     let allItems: any[] = [];
     let competitorNotes: string | undefined;
     for (let i = 0; i < numChunks; i++) {
-      const batch = await runBatch(chunkSizes[i], allItems.map((it) => it.title), i === 0);
+      const batch = await runBatch(chunkWants[i], allItems.map((it) => it.title), i === 0);
       if (i === 0) { summary = batch.summary; competitorNotes = batch.competitorNotes; }
       allItems.push(...batch.items);
     }
@@ -531,7 +562,42 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       console.error("generateMonthlyPlanPreview: nenhum item válido na resposta", { clientId: data.clientId });
       throw new Error("A IA devolveu a prévia num formato inesperado — tenta gerar de novo.");
     }
-    return { summary, items: allItems, competitorNotes, knowledgeItemsCount: knowledge.length };
+
+    // Conferência: a IA às vezes entrega menos (ou outro tipo) do que o
+    // pedido. Pede SÓ a diferença, até 2 vezes, antes de aceitar menos.
+    const missingOf = (): PlanCounts => {
+      const have = countPlanItems(allItems);
+      return { reel: Math.max(0, want.reel - have.reel), estatico: Math.max(0, want.estatico - have.estatico), carrossel: Math.max(0, want.carrossel - have.carrossel) };
+    };
+    for (let attempt = 0; attempt < 2 && planTotal(missingOf()) > 0; attempt++) {
+      const missing = missingOf();
+      console.error("generateMonthlyPlanPreview: faltou conteúdo, pedindo a diferença", { missing, attempt, clientId: data.clientId });
+      try {
+        const extra = await runBatch(missing, allItems.map((it) => it.title), false);
+        allItems.push(...extra.items);
+      } catch (e: any) {
+        console.error("generateMonthlyPlanPreview: falha ao complementar", { message: e?.message, clientId: data.clientId });
+        break;
+      }
+    }
+
+    // Sobrou (IA entregou a mais de algum tipo)? Mantém só o pedido, na ordem.
+    const kept: Record<string, number> = { reel: 0, estatico: 0, carrossel: 0 };
+    allItems = allItems.filter((it) => {
+      const k = classifyPlanItem(it);
+      if (kept[k] >= want[k]) return false;
+      kept[k]++;
+      return true;
+    });
+
+    const delivered = countPlanItems(allItems);
+    const short = PLAN_KINDS.filter((k) => delivered[k] < want[k])
+      .map((k) => `${PLAN_KIND_LABEL[k].plural}: pedi ${want[k]}, vieram ${delivered[k]}`);
+    return {
+      summary, items: allItems, competitorNotes, knowledgeItemsCount: knowledge.length,
+      requested: want, delivered,
+      shortfallNote: short.length ? `A IA não entregou tudo mesmo pedindo de novo (${short.join("; ")}). Gere de novo só o que faltou, se quiser.` : undefined,
+    };
   });
 
 /** Liga/desliga a IA de planejamento pra UM cliente específico — a própria

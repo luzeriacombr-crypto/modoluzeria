@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { estimatePlanSeconds, DEFAULT_PLAN_ITEMS } from "@/lib/luzeria/planning-estimate";
+import {
+  PLAN_KINDS, PLAN_KIND_LABEL, MAX_PLAN_ITEMS, planTotal, defaultPlanCounts, describePlanCounts, countPlanItems,
+  type PlanCounts, type PlanKind,
+} from "@/lib/luzeria/planning-counts";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Sparkles, Trash2, FileText, Layers, Image as ImageIcon, Search, Brain, Wand2, Star, BookMarked, Check } from "lucide-react";
@@ -15,12 +19,11 @@ import { formatMonth } from "@/lib/luzeria/utils";
 import { Modal } from "./Modals";
 import { MonthPickerList } from "./MonthPickerList";
 
-type ContentTypeKey = "reel" | "estatico" | "carrossel";
-const CONTENT_TYPE_OPTIONS: { key: ContentTypeKey; label: string }[] = [
-  { key: "reel", label: "Reels" },
-  { key: "estatico", label: "Post estático" },
-  { key: "carrossel", label: "Post carrossel" },
-];
+const KIND_ROW_LABEL: Record<PlanKind, { title: string; hint: string }> = {
+  reel: { title: "Reels", hint: "vídeos curtos" },
+  estatico: { title: "Posts estáticos", hint: "imagem única" },
+  carrossel: { title: "Carrosséis", hint: "vários slides" },
+};
 
 const MONTH_LABEL = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
@@ -150,7 +153,7 @@ export function AIPlanningPreview() {
   const { data: knowledge = [] } = useQuery(orgKnowledgeQO());
   const { data: clients = [] } = useQuery(clientsQO());
   const [extraContext, setExtraContext] = useState("");
-  const [contentTypes, setContentTypes] = useState<Set<ContentTypeKey>>(new Set(["reel", "estatico", "carrossel"]));
+  const [counts, setCounts] = useState<PlanCounts>({ reel: 3, estatico: 2, carrossel: 1 });
   const [pickingMonth, setPickingMonth] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [reasonDraft, setReasonDraft] = useState("");
@@ -162,7 +165,9 @@ export function AIPlanningPreview() {
   // visualmente pra outra.
   useEffect(() => {
     setExtraContext("");
-    setContentTypes(new Set(["reel", "estatico", "carrossel"]));
+    // Padrão = metas da marca (posts e reels por mês); sem metas, 3 reels, 2 estáticos e 1 carrossel.
+    const c = clients.find((x) => x.id === openClientId);
+    setCounts(defaultPlanCounts(c?.customFields?.postsPerWeek ?? 0, c?.customFields?.reelsPerWeek ?? 0));
     setPickingMonth(false);
     setRating(null);
     setReasonDraft("");
@@ -177,12 +182,12 @@ export function AIPlanningPreview() {
     const trimmedContext = extraContext.trim().slice(0, 60000);
     // Quantos conteúdos vão ser pedidos: metas da marca (posts + reels), ou o padrão.
     const c = clients.find((x) => x.id === clientId);
-    const items = ((c?.customFields?.postsPerWeek ?? 0) + (c?.customFields?.reelsPerWeek ?? 0)) || DEFAULT_PLAN_ITEMS;
+    const items = planTotal(counts) || DEFAULT_PLAN_ITEMS;
     startAiPlanningJob(clientId, job.clientName, {
       itemCount: items,
       estimatedSeconds: estimatePlanSeconds({ items, researchCompetitors: !!c?.customFields?.competitors?.trim(), extraContextChars: trimmedContext.length }),
     });
-    generate({ data: { clientId, extraContext: trimmedContext || undefined, contentTypes: [...contentTypes] } })
+    generate({ data: { clientId, extraContext: trimmedContext || undefined, counts } })
       .then((r) => resolveAiPlanningJob(clientId, r))
       .catch((e: any) => failAiPlanningJob(clientId, friendlyError(e, "Não consegui gerar a prévia. Tenta de novo em instantes.")));
   }
@@ -209,15 +214,11 @@ export function AIPlanningPreview() {
     updateAiPlanningJobResult(clientId, (r) => ({ ...r, items: r.items.filter((_, i) => i !== idx) }));
   }
 
-  function toggleContentType(key: ContentTypeKey) {
-    setContentTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        if (next.size === 1) return next; // sempre pelo menos um marcado
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+  /** Mexe num contador respeitando o teto de MAX_PLAN_ITEMS no total. */
+  function bump(kind: PlanKind, delta: number) {
+    setCounts((prev) => {
+      const next = { ...prev, [kind]: Math.max(0, prev[kind] + delta) };
+      if (planTotal(next) > MAX_PLAN_ITEMS) return prev;
       return next;
     });
   }
@@ -302,31 +303,36 @@ export function AIPlanningPreview() {
           )}
 
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wide text-foreground/40 mb-1.5 block">Quais tipos de conteúdo você quer nessa leva?</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {CONTENT_TYPE_OPTIONS.map((opt) => {
-                const active = contentTypes.has(opt.key);
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => toggleContentType(opt.key)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
-                    style={active
-                      ? { backgroundColor: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }
-                      : { backgroundColor: "transparent", color: "color-mix(in srgb, var(--foreground) 45%, transparent)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}
-                  >
-                    {active && <Check size={12} />}
-                    {opt.label}
-                  </button>
-                );
-              })}
+            <label className="text-[10px] font-bold uppercase tracking-wide text-foreground/40 mb-2 block">Quantos conteúdos de cada tipo você quer nessa leva?</label>
+            <div className="rounded-lg divide-y divide-foreground/[0.06]" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+              {PLAN_KINDS.map((kind) => (
+                <div key={kind} className="flex items-center gap-3 px-3.5 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground">{KIND_ROW_LABEL[kind].title}</div>
+                    <div className="text-[11px] text-foreground/45">{KIND_ROW_LABEL[kind].hint}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={() => bump(kind, -1)} disabled={counts[kind] <= 0} aria-label={`Menos ${KIND_ROW_LABEL[kind].title}`}
+                      className="h-8 w-8 rounded-md border border-foreground/15 text-foreground/70 hover:bg-foreground/5 disabled:opacity-30 text-base leading-none">−</button>
+                    <span className="w-8 text-center text-base font-bold tabular-nums text-foreground">{counts[kind]}</span>
+                    <button type="button" onClick={() => bump(kind, 1)} disabled={planTotal(counts) >= MAX_PLAN_ITEMS} aria-label={`Mais ${KIND_ROW_LABEL[kind].title}`}
+                      className="h-8 w-8 rounded-md border border-foreground/15 text-foreground/70 hover:bg-foreground/5 disabled:opacity-30 text-base leading-none">+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between mt-2 text-[11px]">
+              <span className="text-foreground/50 tabular-nums">
+                Total: <strong className="text-foreground">{planTotal(counts)}</strong> de {MAX_PLAN_ITEMS}
+                {planTotal(counts) > 0 && <> · ~{estimatePlanSeconds({ items: planTotal(counts), researchCompetitors: !!clients.find((x) => x.id === clientId)?.customFields?.competitors?.trim(), extraContextChars: extraContext.length })}s pra gerar</>}
+              </span>
+              {planTotal(counts) >= MAX_PLAN_ITEMS && <span className="text-foreground/40">limite por geração</span>}
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={() => dismissAiPlanningJob(clientId)} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2">Cancelar</button>
-            <button onClick={generateNow} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md">
+            <button onClick={generateNow} disabled={planTotal(counts) < 1} className="lz-btn-primary text-xs px-5 py-2.5 rounded-md disabled:opacity-40">
               {extraContext.trim() ? "Gerar prévia com esse contexto" : "Gerar prévia sem contexto extra"}
             </button>
           </div>
@@ -376,6 +382,17 @@ export function AIPlanningPreview() {
                 <span className="font-semibold text-foreground">Sua Base de Conhecimento está vazia.</span> A prévia fica melhor com contexto de como sua agência cria conteúdo — clique pra preencher.
               </div>
             </button>
+          )}
+
+          {result.shortfallNote && (
+            <div className="rounded-lg p-3.5 text-[12.5px] leading-relaxed" style={{ background: "rgba(231,169,81,0.1)", border: "1px solid rgba(231,169,81,0.35)", color: "var(--foreground)" }}>
+              <strong>Faltou conteúdo.</strong> {result.shortfallNote}
+            </div>
+          )}
+          {result.requested && !result.shortfallNote && (
+            <div className="text-[11.5px] text-foreground/50">
+              Entregue como pedido: {describePlanCounts(result.delivered ?? countPlanItems(result.items))}.
+            </div>
           )}
 
           <div className="rounded-lg p-3.5 text-[13px] text-foreground/80 leading-relaxed" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
