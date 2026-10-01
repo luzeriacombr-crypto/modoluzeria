@@ -7,7 +7,7 @@ import { Loader2, Receipt, Building2, Trash2, X, AlertTriangle, Mail, Phone, Mes
 import { orgsBillingQO, plansQO, agencyWelcomeMessageQO, orgPageViewsQO, useApi } from "@/lib/luzeria/queries";
 import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency-level";
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
-import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, adminResendWelcomeEmail, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, adminResendWelcomeEmail, sendOrgDeactivationNotice, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
 import { CreateHouseModal, HouseInviteModal, ConvertToHouseModal } from "@/components/luzeria/HouseAdminModals";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -949,6 +949,16 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
     onError: (e: any) => toastFriendlyError(e, "Erro ao reenviar e-mail."),
   });
 
+  // Aviso de desativação pra conta com cadastro claramente inválido (nome
+  // tipo "Aaa"/"Bbb", CNPJ/CPF que não passa no dígito verificador) — ver
+  // sendOrgDeactivationNotice. Só manda o e-mail; remover de fato continua
+  // sendo feito à parte, abrindo o DeleteOrgModal normalmente.
+  const sendDeactivationNotice = useMutation({
+    mutationFn: useServerFn(sendOrgDeactivationNotice),
+    onSuccess: (r: any) => toast.success(`Aviso de desativação enviado pra ${r.email}.`),
+    onError: (e: any) => toastFriendlyError(e, "Erro ao enviar aviso de desativação."),
+  });
+
   function openTemplateEditor() {
     setTemplateDraft(customTemplate ?? DEFAULT_WELCOME_TEMPLATE);
     setEditingTemplate(true);
@@ -1252,6 +1262,16 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               className="text-[11px] text-foreground/40 hover:text-foreground transition inline-flex items-center gap-1 disabled:opacity-50"
             >
               <Mail size={11} /> {resendWelcomeEmail.isPending ? "Reenviando…" : `Reenviar e-mail de boas-vindas (pro cadastro, ${org.ownerEmail ?? "sem e-mail"})`}
+            </button>
+          )}
+
+          {org.ownerId && (
+            <button
+              onClick={() => sendDeactivationNotice.mutate({ data: { orgId: org.id } })}
+              disabled={sendDeactivationNotice.isPending}
+              className="text-[11px] text-red-400/70 hover:text-red-400 transition inline-flex items-center gap-1 disabled:opacity-50"
+            >
+              <AlertTriangle size={11} /> {sendDeactivationNotice.isPending ? "Enviando…" : "Enviar aviso de desativação (dados de cadastro inválidos)"}
             </button>
           )}
 

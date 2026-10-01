@@ -1780,6 +1780,36 @@ export const adminResendWelcomeEmail = createServerFn({ method: "POST" })
     return { ok: true, email: target.email };
   });
 
+/** Aviso pro dono de uma agência com dados de cadastro claramente inválidos
+ * (nome tipo "Aaa"/"Bbb", CNPJ/CPF que não passa no dígito verificador) de
+ * que a conta vai ser desativada por isso — pedido do Junior em 01/10/2026,
+ * depois de mapear contas assim na base. Só manda o aviso; a remoção em si
+ * continua sendo feita à parte com deleteOrg. */
+export const sendOrgDeactivationNotice = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: masterRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master");
+    const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles").select("id, email, created_at").eq("org_id", data.orgId);
+    const owner = (profiles ?? [])
+      .filter((p: any) => masterIds.has(p.id))
+      .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))[0];
+    if (!owner?.email) throw new Error("Essa agência não tem um responsável com e-mail cadastrado.");
+
+    const { sendEmail } = await import("./resend.server");
+    const text = "Olá!\n\nDurante uma revisão de segurança nos cadastros, identificamos que os dados da sua conta no Modo Criador (nome da agência e/ou CNPJ/CPF) não correspondem a informações válidas.\n\nPor isso, sua conta foi desativada.\n\nSe isso foi um engano e você quer continuar usando o Modo Criador, é só se cadastrar de novo em https://modocriador.com.br/assinar com os dados corretos da sua agência — leva menos de 2 minutos.\n\nQualquer dúvida, é só responder esse e-mail.\n\nAbraço,\nJunior Reis\nModo Criador";
+    const html = text
+      .split("\n\n")
+      .map((p) => `<p>${p.replace(/\n/g, "<br>").replace("https://modocriador.com.br/assinar", '<a href="https://modocriador.com.br/assinar">modocriador.com.br/assinar</a>')}</p>`)
+      .join("\n");
+    await sendEmail({ to: owner.email, subject: "Sua conta no Modo Criador foi desativada", html, text });
+    return { ok: true, email: owner.email };
+  });
+
 export const adminSetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { userId: string; password: string }) =>
