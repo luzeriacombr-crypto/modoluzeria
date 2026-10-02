@@ -22,7 +22,13 @@ export type BuiltinStatus =
   // Activity-only (gravacao/roteiro/sistema/outros) — simple two-state pipeline,
   // these aren't "published" so the post/reel funnel doesn't apply.
   | "PENDENTE"
-  | "CONCLUIDO";
+  | "CONCLUIDO"
+  // Arquivado (pedido de cliente, 02/10): o item não é apagado nem conta
+  // como pendente/atrasado/entregue. ARQUIVADO fica fora do Preview de Feed;
+  // ARQUIVADO_FEED continua aparecendo no feed interno, com tarja. O link
+  // público do cliente nunca mostra nenhum dos dois.
+  | "ARQUIVADO"
+  | "ARQUIVADO_FEED";
 
 /** Runtime status value stored in content_items.status — any of the 14
  * builtins (autocompletes in editors) OR an org-specific custom key
@@ -37,7 +43,7 @@ export type Status = BuiltinStatus | (string & {});
 export const BUILTIN_STATUS_KEYS: BuiltinStatus[] = [
   "PLANEJAMENTO", "COPY", "REVISAO_INTERNA", "REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO",
   "PRONTO_PARA_PUBLICAR", "FINALIZADO", "TRAVADO", "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO",
-  "PENDENTE", "CONCLUIDO",
+  "PENDENTE", "CONCLUIDO", "ARQUIVADO", "ARQUIVADO_FEED",
 ];
 
 /** Status keys an org can rename via Configurações → Geral (the other 5
@@ -53,8 +59,13 @@ export const CUSTOMIZABLE_BUILTIN_STATUS_KEYS: BuiltinStatus[] = [
  * because they drive record_finalizations()/metrics/goal-tracking/
  * automations/Instagram auto-publish. */
 export const PROTECTED_STATUS_KEYS: BuiltinStatus[] = [
-  "PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO", "TRAVADO", "PENDENTE",
+  "PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO", "TRAVADO", "PENDENTE", "ARQUIVADO", "ARQUIVADO_FEED",
 ];
+
+/** Item arquivado: fora das contas de pendente/atrasado/entregue e de Minhas Demandas. */
+export function isArchivedStatus(status: Status): boolean {
+  return status === "ARQUIVADO" || status === "ARQUIVADO_FEED";
+}
 
 /** True for org-added custom statuses (not one of the 14 builtins). */
 export function isCustomStatus(status: Status): boolean {
@@ -694,6 +705,8 @@ export const STATUS_META: Record<
   EM_EDICAO:           { label: "Em edição",         bg: "var(--status-edicao-bg)", color: "var(--status-edicao-color)", icon: "Scissors" },
   PENDENTE:            { label: "Pendente",             bg: "var(--status-pendente-bg)", color: "var(--status-pendente-color)", icon: "Clock" },
   CONCLUIDO:           { label: "Concluído",            bg: "var(--status-concluido-bg)", color: "var(--status-concluido-color)", icon: "CheckCircle" },
+  ARQUIVADO:           { label: "Arquivado (fora do feed)", bg: "var(--status-arquivado-bg)", color: "var(--status-arquivado-color)", icon: "Archive" },
+  ARQUIVADO_FEED:      { label: "Arquivado (aparece no feed)", bg: "var(--status-arquivado-bg)", color: "var(--status-arquivado-color)", icon: "Archive" },
 };
 
 const FALLBACK_STATUS_META = {
@@ -766,6 +779,7 @@ export const STATUS_GROUPS: { label: string; statuses: BuiltinStatus[] }[] = [
   { label: "Produção", statuses: ["PLANEJAMENTO", "COPY", "CRIACAO", "REVISAO_ARTE", "EM_GRAVACAO", "EM_EDICAO", "REVISAO_INTERNA", "PENDENTE"] },
   { label: "Aprovação", statuses: ["REVISAO_CLIENTE", "AGENDAMENTO", "REVISAO_AGENDAMENTO", "TRAVADO"] },
   { label: "Publicação", statuses: ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"] },
+  { label: "Arquivo", statuses: ["ARQUIVADO", "ARQUIVADO_FEED"] },
 ];
 
 /** `customStatuses` (opcional) são os status extras que a agência criou —
@@ -793,8 +807,8 @@ export function statusOptionsFor(
   // pra ver de novo depois de "Finalizado", então só post/reel ganham essa
   // etapa extra.
   const tail: Status[] = type === "post" || type === "reel"
-    ? ["TRAVADO", "PRONTO_PARA_PUBLICAR", "FINALIZADO"]
-    : ["TRAVADO", "PRONTO_PARA_PUBLICAR"];
+    ? ["TRAVADO", "PRONTO_PARA_PUBLICAR", "FINALIZADO", "ARQUIVADO", "ARQUIVADO_FEED"]
+    : ["TRAVADO", "PRONTO_PARA_PUBLICAR", "ARQUIVADO"];
 
   const base: Status[] = [
     "PLANEJAMENTO",

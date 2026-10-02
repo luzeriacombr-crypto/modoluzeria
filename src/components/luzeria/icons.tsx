@@ -1,7 +1,7 @@
 import {
   FileText, PenLine, Search, MessageSquare, CalendarCheck, CalendarClock, CheckCircle,
   Paintbrush, Eye, Video, Scissors, Clock, Archive, Circle,
-  Film, Image as ImageIcon, Grid3x3, Link as LinkIcon, Ban,
+  Film, Image as ImageIcon, Grid3x3, Link as LinkIcon, Ban, FolderArchive,
 } from "lucide-react";
 import type { BuiltinStatus, Status } from "@/lib/luzeria/types";
 
@@ -22,6 +22,8 @@ export const STATUS_ICONS: Record<BuiltinStatus, React.ComponentType<IconProps>>
   EM_EDICAO: Scissors,
   PENDENTE: Clock,
   CONCLUIDO: CheckCircle,
+  ARQUIVADO: FolderArchive,
+  ARQUIVADO_FEED: FolderArchive,
 };
 
 /** Safe replacement for bare `STATUS_ICONS[status]` indexing — falls back

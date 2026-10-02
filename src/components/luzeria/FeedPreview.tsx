@@ -30,6 +30,7 @@ export function FeedPreview({ month, client }: { month: MonthData; client: Clien
     "REVISAO_AGENDAMENTO",
     "PRONTO_PARA_PUBLICAR",
     "FINALIZADO",
+    "ARQUIVADO_FEED", // arquivado que a agência escolheu manter visível aqui (com tarja)
   ]);
 
   const ready = useMemo(() => {
@@ -309,7 +310,7 @@ function FeedCell({
       style={{
         background: "var(--card)",
         cursor: draggable ? "grab" : "pointer",
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0.4 : item.status === "ARQUIVADO_FEED" ? 0.6 : 1,
         outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none",
         outlineOffset: isOver ? "-2px" : 0,
       }}
@@ -324,6 +325,11 @@ function FeedCell({
             #{String(item.idx).padStart(2, "0")} · {isReel ? "Reel" : "Post"}
           </div>
         </div>
+      )}
+      {item.status === "ARQUIVADO_FEED" && (
+        <span className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-black/70 text-white/90 backdrop-blur-sm">
+          Arquivado
+        </span>
       )}
       {(isReel || isCarousel) && (
         <div className="absolute top-1.5 right-1.5 text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">

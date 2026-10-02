@@ -266,6 +266,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --status-finalizado-color: #9AA4B2;
   --status-travado-bg: #3A1A1A;
   --status-travado-color: #FF6B6B;
+  --status-arquivado-bg: #26272B;
+  --status-arquivado-color: #8E929B;
   --status-criacao-bg: #3D2B5E;
   --status-criacao-color: #C084FC;
   --status-revisao-arte-bg: #4A2800;
@@ -363,6 +365,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   --status-finalizado-color: color-mix(in srgb, #9AA4B2 70%, black);
   --status-travado-bg: color-mix(in srgb, #FF6B6B 15%, white);
   --status-travado-color: color-mix(in srgb, #FF6B6B 65%, black);
+  --status-arquivado-bg: color-mix(in srgb, #8E929B 18%, white);
+  --status-arquivado-color: color-mix(in srgb, #8E929B 70%, black);
   --status-criacao-bg: color-mix(in srgb, #C084FC 15%, white);
   --status-criacao-color: color-mix(in srgb, #C084FC 60%, black);
   --status-revisao-arte-bg: color-mix(in srgb, #FF8C42 18%, white);

@@ -343,7 +343,9 @@ export const getPublicFeed = createServerFn({ method: "GET" })
 
     // Travado items don't show to the client at all — no "blocked" badge,
     // no confusing internal jargon, just absent until the team unblocks it.
-    const sorted = (rawItems ?? []).filter((it: any) => it.status !== "TRAVADO").sort((a: any, b: any) => {
+    // Link público: travado e arquivado ficam escondidos do cliente.
+    const hiddenFromClient = (s: string) => s === "TRAVADO" || s === "ARQUIVADO" || s === "ARQUIVADO_FEED";
+    const sorted = (rawItems ?? []).filter((it: any) => !hiddenFromClient(it.status)).sort((a: any, b: any) => {
       const ao = a.feed_order ?? Number.POSITIVE_INFINITY;
       const bo = b.feed_order ?? Number.POSITIVE_INFINITY;
       if (ao !== bo) return ao - bo;
@@ -352,7 +354,7 @@ export const getPublicFeed = createServerFn({ method: "GET" })
     });
     // Stories already come pre-ordered by scheduled_at from the RPC — just
     // drop the blocked ones, same rule as posts/reels.
-    const sortedStories = (rawStories ?? []).filter((it: any) => it.status !== "TRAVADO");
+    const sortedStories = (rawStories ?? []).filter((it: any) => !hiddenFromClient(it.status));
 
     // Collect all unique Drive file IDs and fetch thumbnail URLs in parallel
     const allDriveIds = new Set<string>();

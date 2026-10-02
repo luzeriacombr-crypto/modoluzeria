@@ -2578,7 +2578,7 @@ export const getClientFicha = createServerFn({ method: "GET" })
         .from("content_items")
         .select("status, started_at, finished_at")
         .in("month_id", monthIds);
-      totalItems = (items ?? []).length;
+      totalItems = (items ?? []).filter((it: any) => it.status !== "ARQUIVADO" && it.status !== "ARQUIVADO_FEED").length;
       let sumHours = 0, leadCount = 0;
       (items ?? []).forEach((it: any) => {
         if (it.status === "PRONTO_PARA_PUBLICAR" || it.status === "FINALIZADO") {
@@ -3122,6 +3122,8 @@ export const listMyTasks = createServerFn({ method: "GET" })
       // Stories only show up here for clients that opted in — otherwise
       // high-frequency Stories work would clutter everyone's task list.
       .filter((it: any) => it.type !== "story" || it.months.clients.notify_stories_in_tasks)
+      // Item arquivado sai da lista de demandas de quem era responsável.
+      .filter((it: any) => it.status !== "ARQUIVADO" && it.status !== "ARQUIVADO_FEED")
       .map((it: any) => ({
         id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
         dueDate: it.due_date ?? null,
@@ -3462,6 +3464,8 @@ export const getAdminDashboard = createServerFn({ method: "GET" })
     const { data: items } = monthIds.length
       ? await context.supabase
           .from("content_items").select("id, month_id, type, status, title, campaign_internal").in("month_id", monthIds)
+          // Arquivado não conta nem como meta, nem como pendente, nem como entregue.
+          .not("status", "in", "(ARQUIVADO,ARQUIVADO_FEED)")
       : { data: [] as any[] };
 
     type Row = {

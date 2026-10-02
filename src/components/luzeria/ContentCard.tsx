@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link as LinkIcon, MessageCircle, Plus, Scissors, Calendar, Image as ImageIcon, Trash2, Check, Megaphone, FolderInput } from "lucide-react";
-import { isDoneStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
+import { isDoneStatus, isArchivedStatus, hasSetorPermission, type ContentItem, type Profile } from "@/lib/luzeria/types";
 import {
   statusOptionsFor, REEL_TYPE_LABEL, POST_FORMAT_LABEL,
   type ReelType, type PostFormat,
@@ -69,7 +69,7 @@ export function ContentCard({
     ? editor.name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("")
     : "";
   const isOverdue =
-    !!item.dueDate && !isDoneStatus(item.status) &&
+    !!item.dueDate && !isDoneStatus(item.status) && !isArchivedStatus(item.status) &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
   const dueLabel = item.dueDate
     ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
@@ -310,7 +310,7 @@ export function ContentListRow({
     .map((id) => profiles.find((p) => p.id === id))
     .filter(Boolean) as Profile[];
   const isOverdue =
-    !!item.dueDate && !isDoneStatus(item.status) &&
+    !!item.dueDate && !isDoneStatus(item.status) && !isArchivedStatus(item.status) &&
     new Date(item.dueDate + "T23:59:59").getTime() < Date.now();
   const dueLabel = item.dueDate
     ? new Date(item.dueDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
