@@ -46,6 +46,7 @@ export function ClientDocsTab({
   const enableAiPlanning = useServerFn(setClientAiPlanningEnabled);
   const qc = useQueryClient();
   const [checkingAiPlanning, setCheckingAiPlanning] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [activeType, setActiveType] = useState<ClientDocType>("roteiro");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -157,27 +158,34 @@ export function ClientDocsTab({
           <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes pra montar uma prévia do próximo mês.</div>
         </div>
       </button>
-      {/* Tutorial */}
+      {/* Tutorial — recolhido por padrão (a maioria já sabe como funciona) */}
       <div className="rounded-xl p-4 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
-        <div className="text-[11px] font-bold uppercase tracking-wide text-foreground/35 mb-3">Como funciona</div>
-        <div className="flex flex-col gap-3">
-          {[
-            <>Clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material bruto do cliente — a gente já formata pra você, de graça (ou use <span className="text-foreground font-medium">Copiar modelo</span> se preferir formatar numa IA própria que você já assina).</>,
-            <>Revise o texto formatado — ajuste o que quiser.</>,
-            <>Clique em <span className="text-foreground font-medium">Salvar</span>.</>,
-            <>Pronto — o cliente já vê organizado no link de preview dele.</>,
-          ].map((text, i) => (
-            <div key={i} className="flex gap-3 items-start">
-              <div
-                className="shrink-0 w-[22px] h-[22px] rounded-full text-[11px] font-bold flex items-center justify-center"
-                style={{ background: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}
-              >
-                {i + 1}
+        <button onClick={() => setGuideOpen((v) => !v)} className="w-full flex items-center gap-2.5 text-left">
+          <div className="flex-1 min-w-0 text-[11px] font-bold uppercase tracking-wide text-foreground/35">Como funciona</div>
+          {guideOpen ? <ChevronDown size={14} className="text-foreground/40 shrink-0" /> : <ChevronRight size={14} className="text-foreground/40 shrink-0" />}
+        </button>
+        {guideOpen && (
+          <div className="flex flex-col gap-3 mt-3">
+            {[
+              <>Preencha o <span className="text-foreground font-medium">Perfil &amp; Briefing</span> na Ficha do cliente (nicho, concorrentes, briefing) — é o que a IA lê pra conhecer esse cliente.</>,
+              <>Pra montar o próximo mês, clique em <span className="text-foreground font-medium">Gerar prévia de planejamento com IA</span>. Revise cada sugestão e salve como Planejamento ou aprove direto pros Roteiros de um mês.</>,
+              <>Já tem o material bruto do cliente? Escolha <span className="text-foreground font-medium">Roteiros</span> ou <span className="text-foreground font-medium">Planejamento / Relatório</span>, clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material (ou use <span className="text-foreground font-medium">Copiar modelo</span> numa IA que você já assina). Revise o texto e clique em <span className="text-foreground font-medium">Salvar</span>.</>,
+              approvalLinkHidden
+                ? <>Em <span className="text-foreground font-medium">Documentos salvos</span> ficam todos os textos do cliente, prontos pra editar, aprovar ou levar pros Roteiros do mês.</>
+                : <>Em <span className="text-foreground font-medium">Documentos salvos</span>, o botão <span className="text-foreground font-medium">Compartilhar</span> gera o link de preview: o cliente vê tudo organizado e aprova por lá.</>,
+            ].map((text, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <div
+                  className="shrink-0 w-[22px] h-[22px] rounded-full text-[11px] font-bold flex items-center justify-center"
+                  style={{ background: "rgba(var(--lz-brand-rgb),0.15)", color: "var(--lz-accent-ink)" }}
+                >
+                  {i + 1}
+                </div>
+                <div className="text-[13px] text-foreground/75 leading-relaxed pt-0.5">{text}</div>
               </div>
-              <div className="text-[13px] text-foreground/75 leading-relaxed pt-0.5">{text}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Composer */}
