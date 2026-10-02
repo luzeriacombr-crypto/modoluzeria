@@ -62,9 +62,14 @@ function effortParts(
   if (it.type === "post" || it.type === "reel") {
     const plan = avg[it.type] ?? 1;
     const prod = avg[it.type === "post" ? "post_design" : "reel_edit"] ?? 0;
+    const editorId = it.editor_id || finalizerId;
+    // Quem é Editor do item e também responsável conta só como editor: sai
+    // da lista de quem planejou (sobrando ninguém, a etapa de planejar não
+    // gera custo pra não contar a mesma pessoa duas vezes).
+    const planners = (assigneeIds.length > 0 ? assigneeIds : [finalizerId]).filter((id) => id !== editorId);
     return [
-      { payers: assigneeIds.length > 0 ? assigneeIds : [finalizerId], hours: plan, role: "plan" },
-      { payers: [it.editor_id || finalizerId], hours: prod, role: "edit" },
+      { payers: planners, hours: planners.length > 0 ? plan : 0, role: "plan" },
+      { payers: [editorId], hours: prod, role: "edit" },
     ];
   }
   const weight = it.type === "gravacao" && (it.activity_quantity ?? 0) > 0 ? (it.activity_quantity as number) : 1;
