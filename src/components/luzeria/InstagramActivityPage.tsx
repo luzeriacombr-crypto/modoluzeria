@@ -659,8 +659,8 @@ const PERF_SERIES = {
 /** Alcance e novos seguidores por dia (30 dias) no mesmo gráfico, cada um
  * com a própria escala; os botões ligam e desligam cada linha. Usa só a
  * série diária que a Visão geral já busca. */
-function PerformanceCard({ reachSeries, followersSeries }: {
-  reachSeries: { date: string; value: number }[]; followersSeries: { date: string; value: number }[];
+function PerformanceCard({ days, reachSeries, followersSeries }: {
+  days: number; reachSeries: { date: string; value: number }[]; followersSeries: { date: string; value: number }[];
 }) {
   const [show, setShow] = useState({ reach: true, followers: true });
   const data = useMemo(() => {
@@ -684,7 +684,7 @@ function PerformanceCard({ reachSeries, followersSeries }: {
   return (
     <div className="rounded-2xl bg-card p-4 mb-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Desempenho · 30 dias</span>
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Desempenho · {days} dias</span>
         <div className="flex items-center gap-1.5">
           {(Object.keys(PERF_SERIES) as (keyof typeof PERF_SERIES)[]).map((k) => (
             <button key={k} onClick={() => toggle(k)} aria-pressed={show[k]}
@@ -734,8 +734,10 @@ const RANKING_CATEGORIES: { key: "likes" | "comments" | "reach" | "shares" | "sa
 
 /** Melhor publicação em cada categoria, entre as que a aba Conteúdo já
  * carregou (sem nenhuma chamada nova à Meta). */
-function PostRanking({ mediaState }: { mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
-  const rows = (mediaState.media ?? [])
+function PostRanking({ mediaState, days }: { mediaState: ReturnType<typeof useAccountMediaWithInsights>; days: number }) {
+  const cutoff = Date.now() - days * 86400000;
+  const inPeriod = (mediaState.media ?? []).filter((m) => new Date(m.timestamp).getTime() >= cutoff);
+  const rows = inPeriod
     .map((m) => ({ m, r: mediaState.results.get(m.id) }))
     .filter((x): x is { m: InstagramAccountMedia; r: InstagramMediaInsights & { error?: string } } => !!x.r && !x.r.error);
 
@@ -749,9 +751,12 @@ function PostRanking({ mediaState }: { mediaState: ReturnType<typeof useAccountM
   }).filter((w) => w.best);
 
   if (winners.length === 0) {
-    return mediaState.loadingMedia || mediaState.loadingInsights ? (
-      <div className="mb-5 text-[11px] text-foreground/35 flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Calculando o ranking de posts…</div>
-    ) : null;
+    if (mediaState.loadingMedia || mediaState.loadingInsights) {
+      return <div className="mb-5 text-[11px] text-foreground/35 flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Calculando o ranking de posts…</div>;
+    }
+    return mediaState.media && inPeriod.length === 0
+      ? <p className="mb-5 text-[11px] text-foreground/35">Nenhuma publicação nos últimos {days} dias pra montar o ranking.</p>
+      : null;
   }
 
   return (
@@ -759,7 +764,7 @@ function PostRanking({ mediaState }: { mediaState: ReturnType<typeof useAccountM
       <div className="flex items-baseline gap-2 mb-2.5">
         <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Ranking de posts</span>
         <span className="text-[10.5px] text-foreground/35">
-          entre as últimas {mediaState.media?.length ?? 0} publicações
+          {inPeriod.length} publicaç{inPeriod.length === 1 ? "ão" : "ões"} nos últimos {days} dias
           {mediaState.loadingInsights ? " · atualizando…" : ""}
         </span>
       </div>
@@ -795,12 +800,23 @@ function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState 
   overview: InstagramAccountOverview | null; isLoading: boolean; error: unknown;
   history: InstagramFollowerHistory | null; mediaState: ReturnType<typeof useAccountMediaWithInsights>;
 }) {
+  // Período: a Meta entrega a série diária de 30 dias — 7 e 15 dias são um
+  // recorte dela (sem nenhuma chamada nova).
+  const [days, setDays] = useState<7 | 15 | 30>(30);
   if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
   if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
 
   // Derivados do que a Meta já devolve (sem chamada nova): novos seguidores
   // = soma da série diária de follower_count; engajamento = interações ÷ alcance.
-  const newFollowers = data.followersSeries.reduce((n, r) => n + r.value, 0);
+  const sumOf = (xs: { value: number }[]) => xs.reduce((n, r) => n + r.value, 0);
+  const reachSeriesN = data.reachSeries.slice(-days);
+  const followersSeriesN = data.followersSeries.slice(-days);
+  const newFollowers = sumOf(followersSeriesN);
+  const reachN = days === 30 ? data.kpis.reach : sumOf(reachSeriesN);
+  // Variação contra o período anterior de mesmo tamanho (cabe nos 30 dias da série só pra 7 e 15).
+  const prevReach = days === 30 ? null : sumOf(data.reachSeries.slice(-days * 2, -days));
+  const reachChangeN = days === 30 ? data.kpis.reachChangePct : (prevReach ? Math.round(((reachN - prevReach) / prevReach) * 1000) / 10 : null);
+  const only30 = days < 30;
   const engagementRate = data.kpis.reach > 0
     ? `${(Math.round((data.kpis.totalInteractions / data.kpis.reach) * 10000) / 100).toLocaleString("pt-BR")}%`
     : "—";
@@ -812,6 +828,7 @@ function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState 
   // (sem chamada extra), ordenado por visualizações (ou alcance, se o tipo
   // de mídia não tiver "views").
   const topContent = (mediaState.media ?? [])
+    .filter((m) => days === 30 || new Date(m.timestamp).getTime() >= Date.now() - days * 86400000)
     .map((m) => ({ m, r: mediaState.results.get(m.id) }))
     .filter((x): x is { m: InstagramAccountMedia; r: InstagramMediaInsights & { error?: string } } =>
       !!x.r && !x.r.error && (x.r.views != null || x.r.reach != null))
@@ -820,20 +837,33 @@ function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState 
 
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
-        <KpiTile label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} accent="seguidores" icon={<Users size={16} />} />
-        <KpiTile label="Novos seguidores (30d)" value={newFollowers} changePct={null} accent="novos" icon={<UserPlus size={16} />} />
-        <KpiTile label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} accent="alcance" icon={<Eye size={16} />} />
-        <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} accent="visitas" icon={<UserCheck size={16} />} />
-        <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} accent="interacoes" icon={<Heart size={16} />} />
-        <KpiTile label="Taxa de engajamento" value={engagementRate} changePct={null} accent="engajamento" icon={<Percent size={16} />} />
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Período</span>
+        <div className="flex items-center gap-1 rounded-full p-1 border border-foreground/10" role="group" aria-label="Período">
+          {([7, 15, 30] as const).map((d) => (
+            <button key={d} onClick={() => setDays(d)} aria-pressed={days === d}
+              className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${days === d ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.06]"}`}>
+              {d} dias
+            </button>
+          ))}
+        </div>
       </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
+        <KpiTile label="Seguidores" value={data.followersCount} changePct={only30 ? null : data.followersChangePct} accent="seguidores" icon={<Users size={16} />} />
+        <KpiTile label={`Novos seguidores (${days}d)`} value={newFollowers} changePct={null} accent="novos" icon={<UserPlus size={16} />} />
+        <KpiTile label={`Alcance (${days}d)`} value={reachN} changePct={reachChangeN} accent="alcance" icon={<Eye size={16} />} />
+        <KpiTile label={only30 ? "Visitas ao perfil (30d)" : "Visitas ao perfil"} value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} accent="visitas" icon={<UserCheck size={16} />} />
+        <KpiTile label={only30 ? "Interações (30d)" : "Interações"} value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} accent="interacoes" icon={<Heart size={16} />} />
+        <KpiTile label={only30 ? "Engajamento (30d)" : "Taxa de engajamento"} value={engagementRate} changePct={null} accent="engajamento" icon={<Percent size={16} />} />
+      </div>
+
+      {only30 && <p className="text-[10.5px] text-foreground/35 -mt-3 mb-4">Visitas ao perfil, interações e engajamento a Meta entrega só em 30 dias; os demais indicadores seguem o período escolhido.</p>}
 
       {history && <FollowerComparisonCard history={history} />}
 
-      <PerformanceCard reachSeries={data.reachSeries} followersSeries={data.followersSeries} />
+      <PerformanceCard days={days} reachSeries={reachSeriesN} followersSeries={followersSeriesN} />
 
-      <PostRanking mediaState={mediaState} />
+      <PostRanking mediaState={mediaState} days={days} />
 
       {topContent.length > 0 && (
         <div className="mb-5">
