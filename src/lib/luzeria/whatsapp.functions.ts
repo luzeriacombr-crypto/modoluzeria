@@ -15,31 +15,68 @@ async function assertPlatformAdmin(context: any) {
 
 export type WhatsappTemplateOption = { name: string; category: string; body: string; variableCount: number };
 
+/** Quantos dias uma agência fica "protegida" depois de receber uma campanha
+ * no WhatsApp — mandar de novo antes disso é o que mais gera bloqueio/
+ * denúncia e derruba a nota de qualidade do número. */
+const CAMPAIGN_COOLDOWN_DAYS = 3;
+
+export type WhatsappHealth = { quality: "GREEN" | "YELLOW" | "RED" | "UNKNOWN"; limitTier: string | null };
+
 export const getWhatsappSetup = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<{ configured: boolean; templates: WhatsappTemplateOption[]; error: string | null }> => {
+  .handler(async ({ context }): Promise<{ configured: boolean; templates: WhatsappTemplateOption[]; health: WhatsappHealth | null; error: string | null }> => {
     await assertPlatformAdmin(context);
     const wa = await import("./whatsapp.server");
-    if (!wa.whatsappConfigured()) return { configured: false, templates: [], error: null };
+    if (!wa.whatsappConfigured()) return { configured: false, templates: [], health: null, error: null };
+    const health = await wa.getPhoneHealth().catch(() => null);
     try {
-      return { configured: true, templates: await wa.listApprovedTemplates(), error: null };
+      return { configured: true, templates: await wa.listApprovedTemplates(), health, error: null };
     } catch (e: any) {
-      return { configured: true, templates: [], error: e?.message ?? String(e) };
+      return { configured: true, templates: [], health, error: e?.message ?? String(e) };
     }
   });
 
+async function recentlyMessagedOrgIds(db: any, orgIds: string[]): Promise<Set<string>> {
+  const since = new Date(Date.now() - CAMPAIGN_COOLDOWN_DAYS * 86_400_000).toISOString();
+  const { data } = await db
+    .from("whatsapp_messages").select("org_id")
+    .eq("kind", "campaign").neq("status", "failed").gte("created_at", since)
+    .in("org_id", orgIds);
+  return new Set((data ?? []).map((r: any) => r.org_id as string));
+}
+
+/** Quais das agências selecionadas já receberam campanha no WhatsApp nos
+ * últimos dias — o painel avisa antes de disparar. */
+export const getRecentWhatsappRecipients = createServerFn({ method: "POST" })
+  .inputValidator((d: { orgIds: string[] }) => z.object({ orgIds: z.array(z.string().uuid()).max(500) }).parse(d))
+  .middleware([requireActiveProfile])
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context);
+    if (data.orgIds.length === 0) return { orgIds: [] as string[], days: CAMPAIGN_COOLDOWN_DAYS };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const recent = await recentlyMessagedOrgIds(supabaseAdmin, data.orgIds);
+    return { orgIds: Array.from(recent), days: CAMPAIGN_COOLDOWN_DAYS };
+  });
+
 export const sendWhatsappCampaign = createServerFn({ method: "POST" })
-  .inputValidator((d: { orgIds: string[]; templateName: string; extraParams: string[] }) =>
+  .inputValidator((d: { orgIds: string[]; templateName: string; extraParams: string[]; ignoreCooldown?: boolean }) =>
     z.object({
       orgIds: z.array(z.string().uuid()).min(1).max(500),
       templateName: z.string().min(1).max(512),
       extraParams: z.array(z.string().max(1000)).max(9),
+      ignoreCooldown: z.boolean().optional(),
     }).parse(d))
   .middleware([requireActiveProfile])
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
     const wa = await import("./whatsapp.server");
     if (!wa.whatsappConfigured()) throw new Error("O WhatsApp ainda não está configurado.");
+    // Nota vermelha = a Meta está a um passo de limitar/suspender o número.
+    // Disparo em massa aqui só piora — bloqueia até a nota melhorar.
+    const health = await wa.getPhoneHealth().catch(() => null);
+    if (health?.quality === "RED") {
+      throw new Error("A nota de qualidade do número está vermelha. Segure os disparos por alguns dias até ela melhorar.");
+    }
 
     const template = (await wa.listApprovedTemplates()).find((t) => t.name === data.templateName);
     if (!template) throw new Error("Esse modelo não está aprovado (ou não existe) no WhatsApp.");
@@ -63,6 +100,7 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
       .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
       .forEach((p: any) => { if (!ownerNameByOrg.has(p.org_id)) ownerNameByOrg.set(p.org_id, p.name); });
     const optedOut = new Set((optOuts ?? []).map((r: any) => r.phone_key));
+    const recent = data.ignoreCooldown ? new Set<string>() : await recentlyMessagedOrgIds(db, data.orgIds);
 
     const { data: campaign, error: campErr } = await db.from("whatsapp_campaigns").insert({
       template_name: template.name,
@@ -83,6 +121,7 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
       for (let org = queue.shift(); org; org = queue.shift()) {
         if (!wa.toWaDigits(org.whatsapp)) { skipped.push({ orgId: org.id, orgName: org.name, reason: "sem WhatsApp" }); continue; }
         if (optedOut.has(wa.phoneKey(org.whatsapp))) { skipped.push({ orgId: org.id, orgName: org.name, reason: "pediu pra sair" }); continue; }
+        if (recent.has(org.id)) { skipped.push({ orgId: org.id, orgName: org.name, reason: `recebeu nos últimos ${CAMPAIGN_COOLDOWN_DAYS} dias` }); continue; }
         const firstName = ownerNameByOrg.get(org.id)?.trim().split(" ")[0] || "tudo bem";
         const params = [firstName, ...data.extraParams].slice(0, template!.variableCount);
         const r = await wa.sendTemplate(org.whatsapp, template!.name, params, {

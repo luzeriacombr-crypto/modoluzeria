@@ -178,7 +178,25 @@ export async function alertAdmin(params: {
   if (!result.ok) console.error("[whatsapp] falha ao alertar o Junior:", result.error);
 }
 
-export type WaTemplate = { name: string; category: string; body: string; variableCount: number };
+export type WaPhoneHealth = { quality: "GREEN" | "YELLOW" | "RED" | "UNKNOWN"; limitTier: string | null };
+
+/** Nota de qualidade do número (cai quando muita gente bloqueia/denuncia) e
+ * o limite de conversas iniciadas por dia que a Meta liberou. */
+export async function getPhoneHealth(): Promise<WaPhoneHealth> {
+  if (!whatsappConfigured()) return { quality: "UNKNOWN", limitTier: null };
+  const res = await fetch(
+    `${GRAPH}/${process.env.WHATSAPP_PHONE_NUMBER_ID}?fields=quality_rating,messaging_limit_tier`,
+    { headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` } },
+  );
+  const body = await res.json().catch(() => ({}));
+  const q = String(body?.quality_rating ?? "").toUpperCase();
+  return {
+    quality: q === "GREEN" || q === "YELLOW" || q === "RED" ? q : "UNKNOWN",
+    limitTier: body?.messaging_limit_tier ?? null,
+  };
+}
+
+export type WaTemplate ={ name: string; category: string; body: string; variableCount: number };
 
 /** Modelos já aprovados na conta do WhatsApp Business. */
 export async function listApprovedTemplates(): Promise<WaTemplate[]> {

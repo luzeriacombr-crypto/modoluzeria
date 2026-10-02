@@ -4,11 +4,23 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Send } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { getWhatsappSetup, sendWhatsappCampaign, getWhatsappCampaignStatus } from "@/lib/luzeria/whatsapp.functions";
+import { getWhatsappSetup, sendWhatsappCampaign, getWhatsappCampaignStatus, getRecentWhatsappRecipients } from "@/lib/luzeria/whatsapp.functions";
 
 // Preço aproximado da Meta por mensagem no Brasil (só pra dar uma noção
 // antes de disparar — o valor real vem na fatura da Meta).
 const COST_BY_CATEGORY: Record<string, number> = { MARKETING: 0.35, UTILITY: 0.04, AUTHENTICATION: 0.04 };
+
+const QUALITY_LABEL: Record<string, { text: string; color: string; hint: string }> = {
+  GREEN: { text: "Verde", color: "#25D366", hint: "Tudo certo, pode disparar." },
+  YELLOW: { text: "Amarela", color: "#E0A800", hint: "Muita gente bloqueou/denunciou recentemente. Vá com calma: menos disparos e mensagens mais pessoais." },
+  RED: { text: "Vermelha", color: "#E5484D", hint: "Disparos bloqueados até a nota melhorar (alguns dias sem campanha)." },
+  UNKNOWN: { text: "Sem dados ainda", color: "#888", hint: "A Meta ainda não calculou a nota (normal no começo)." },
+};
+
+// Limite de conversas iniciadas por dia que a Meta liberou pro número.
+const LIMIT_LABEL: Record<string, string> = {
+  TIER_50: "50/dia", TIER_250: "250/dia", TIER_1K: "1.000/dia", TIER_10K: "10.000/dia", TIER_100K: "100.000/dia", TIER_UNLIMITED: "ilimitado",
+};
 
 /** Envio de verdade pelo WhatsApp oficial (modelo aprovado na Meta), pras
  * agências selecionadas no painel de Mensagens. {{1}} é sempre o primeiro
@@ -22,7 +34,20 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
   const [templateName, setTemplateName] = useState("");
   const [extra, setExtra] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [ignoreCooldown, setIgnoreCooldown] = useState(false);
   const [result, setResult] = useState<{ campaignId: string; sent: number; failed: { orgName: string; reason: string }[]; skipped: { orgName: string; reason: string }[] } | null>(null);
+
+  // Agências da seleção que já receberam campanha nos últimos dias — puladas
+  // no envio, a menos que o Junior marque "enviar mesmo assim".
+  const { data: recent } = useQuery({
+    queryKey: ["whatsapp-recent-recipients", [...selectedIds].sort().join(",")],
+    queryFn: () => getRecentWhatsappRecipients({ data: { orgIds: selectedIds } }),
+    enabled: !!setup?.configured && selectedIds.length > 0,
+  });
+  const recentCount = recent?.orgIds.length ?? 0;
+  const effectiveCount = ignoreCooldown ? selectedIds.length : selectedIds.length - recentCount;
+  const quality = setup?.health?.quality ?? "UNKNOWN";
+  const blocked = quality === "RED";
 
   const template = setup?.templates.find((t) => t.name === templateName) ?? null;
   const extraCount = Math.max(0, (template?.variableCount ?? 0) - 1);
@@ -64,11 +89,21 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
         .replaceAll("{{1}}", "[primeiro nome]")
         .replace(/\{\{(\d+)\}\}/g, (_, n) => extra[Number(n) - 2]?.replace(/\s*\n+\s*/g, " · ") || `[campo ${n}]`)
     : "";
-  const estimatedCost = template ? selectedIds.length * (COST_BY_CATEGORY[template.category] ?? 0.35) : 0;
+  const estimatedCost = template ? Math.max(0, effectiveCount) * (COST_BY_CATEGORY[template.category] ?? 0.35) : 0;
 
   return (
     <div className="rounded-lg border p-3 space-y-3" style={{ borderColor: "#25D36655" }}>
       <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#25D366" }}>WhatsApp oficial — envio automático</p>
+      {setup.health && (
+        <div className="text-[12px] text-foreground/70 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: QUALITY_LABEL[quality].color }} />
+            Nota do número: <strong style={{ color: QUALITY_LABEL[quality].color }}>{QUALITY_LABEL[quality].text}</strong>
+          </span>
+          {setup.health.limitTier && <span>Limite: <strong>{LIMIT_LABEL[setup.health.limitTier] ?? setup.health.limitTier}</strong></span>}
+          <span className="basis-full text-[11px] text-foreground/45">{QUALITY_LABEL[quality].hint}</span>
+        </div>
+      )}
       {setup.error && <p className="text-[12px] text-red-500">Erro ao buscar os modelos: {setup.error}</p>}
       {setup.templates.length === 0 ? (
         <p className="text-[12px] text-foreground/50">Nenhum modelo aprovado ainda. Crie e aprove no WhatsApp Manager da Meta.</p>
@@ -100,23 +135,32 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
                 <p className="text-[10.5px] text-foreground/35">O WhatsApp não aceita quebra de linha dentro dos campos — os parágrafos viram " · ".</p>
               )}
               <div className="rounded-lg bg-foreground/[0.04] px-3 py-2 text-[12.5px] text-foreground/80 whitespace-pre-wrap">{preview}</div>
+              {recentCount > 0 && (
+                <div className="rounded-lg px-3 py-2 text-[12px]" style={{ backgroundColor: "rgba(224,168,0,0.1)", color: "var(--foreground)" }}>
+                  <strong>{recentCount}</strong> agência{recentCount === 1 ? "" : "s"} da seleção já recebe{recentCount === 1 ? "u" : "ram"} WhatsApp nos últimos {recent?.days ?? 3} dias e {ignoreCooldown ? "vão receber de novo" : "vão ser puladas"} — mandar seguido é o que mais gera bloqueio.
+                  <label className="mt-1.5 flex items-center gap-2 text-[11.5px] text-foreground/60">
+                    <input type="checkbox" checked={ignoreCooldown} onChange={(e) => setIgnoreCooldown(e.target.checked)} className="accent-[#E0A800]" />
+                    Enviar mesmo assim pra essas também
+                  </label>
+                </div>
+              )}
               <p className="text-[11px] text-foreground/45">
-                Custo estimado: ~R$ {estimatedCost.toFixed(2).replace(".", ",")} ({selectedIds.length} × {template.category === "MARKETING" ? "marketing" : "utilidade"}). Quem respondeu SAIR fica de fora sozinho.
+                Custo estimado: ~R$ {estimatedCost.toFixed(2).replace(".", ",")} ({Math.max(0, effectiveCount)} × {template.category === "MARKETING" ? "marketing" : "utilidade"}). Quem respondeu SAIR fica de fora sozinho.
               </p>
               {!confirming ? (
                 <button
                   onClick={() => setConfirming(true)}
-                  disabled={selectedIds.length === 0 || send.isPending}
+                  disabled={effectiveCount <= 0 || send.isPending || blocked}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm text-white disabled:opacity-40"
                   style={{ backgroundColor: "#25D366" }}
                 >
-                  <Send size={14} /> Enviar pelo WhatsApp ({selectedIds.length})
+                  <Send size={14} /> Enviar pelo WhatsApp ({Math.max(0, effectiveCount)})
                 </button>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[12.5px] text-foreground/80">Mandar agora pra {selectedIds.length} agência{selectedIds.length === 1 ? "" : "s"}? Não dá pra desfazer.</span>
+                  <span className="text-[12.5px] text-foreground/80">Mandar agora pra {effectiveCount} agência{effectiveCount === 1 ? "" : "s"}? Não dá pra desfazer.</span>
                   <button
-                    onClick={() => send.mutate({ data: { orgIds: selectedIds, templateName: template.name, extraParams: extra } })}
+                    onClick={() => send.mutate({ data: { orgIds: selectedIds, templateName: template.name, extraParams: extra, ignoreCooldown } })}
                     disabled={send.isPending}
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-sm text-white disabled:opacity-40"
                     style={{ backgroundColor: "#25D366" }}
