@@ -589,9 +589,11 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             (type === "post" ? client.customFields.postsPerWeek : client.customFields.reelsPerWeek) ?? 0;
           return (
             <>
-              {(tab === "posts" || tab === "reels") && contractedVolume(cfg.type) > 0 && (() => {
-                const delivered = deliveredThisMonth(cfg.type);
-                const contracted = contractedVolume(cfg.type);
+              {(tab === "posts" || tab === "reels") && (() => {
+                const countedType = tab === "posts" ? "post" as const : "reel" as const;
+                if (contractedVolume(countedType) <= 0) return null;
+                const delivered = deliveredThisMonth(countedType);
+                const contracted = contractedVolume(countedType);
                 const extra = Math.max(0, delivered - contracted);
                 return (
                   <div className="flex items-center gap-2 mb-2 text-[11px] text-foreground/40">
@@ -600,7 +602,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
                     <span>Esse mês: <strong className="text-foreground/70">{delivered}</strong></span>
                     {extra > 0 && (
                       <span className="px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(255,159,74,0.15)", color: "#FF9F4A" }}>
-                        +{extra} {cfg.type === "post" ? "post" : "reel"}{extra > 1 ? "s" : ""} extra
+                        +{extra} {countedType === "post" ? "post" : "reel"}{extra > 1 ? "s" : ""} extra
                       </span>
                     )}
                   </div>
@@ -812,6 +814,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             {maisSubTab === "docs" && showDocsSubTab && (
               <ClientDocsTab
                 clientId={client.id}
+                isAdmin={isAdmin}
                 aiPlanningEnabled={aiPlanningEnabled}
                 aiPlanningLimited={aiPlanningLimited}
                 aiPlanningUsed={aiPlanningUsed}

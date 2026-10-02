@@ -379,19 +379,14 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
 }
 
 /* ============== CONFIGURAÇÃO (antigo Perfil) ============== */
-function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBriefing }: {
-  client: any; profiles: any[]; canEdit: boolean; isMaster?: boolean; onSave: (patch: Record<string, any>) => void; hideBriefing?: boolean;
+function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
+  client: any; profiles: any[]; canEdit: boolean; isMaster?: boolean; onSave: (patch: Record<string, any>) => void;
 }) {
-  const [niche, setNiche] = useState<string>(client.customFields.niche ?? "");
   const [postsPerWeek, setPostsPerWeek] = useState<string | number>(client.customFields.postsPerWeek ?? 0);
   const [reelsPerWeek, setReelsPerWeek] = useState<string | number>(client.customFields.reelsPerWeek ?? 0);
   const [storiesPerWeek, setStoriesPerWeek] = useState<string | number>(client.customFields.storiesPerWeek ?? 0);
   const [responsible, setResponsible] = useState<string>(client.customFields.fixedResponsibleId ?? "");
   const [reviewDay, setReviewDay] = useState<string>(client.customFields.reviewDay ?? "");
-  const [notes, setNotes] = useState<string>(client.customFields.notes ?? "");
-  const [competitors, setCompetitors] = useState<string>(client.customFields.competitors ?? "");
-  const [contentBriefing, setContentBriefing] = useState<string>(client.customFields.contentBriefing ?? "");
-  const [recentRoteiros, setRecentRoteiros] = useState<string>(client.customFields.recentRoteiros ?? "");
   const [cnpjCpf, setCnpjCpf] = useState<string>(client.cnpjCpf ?? "");
   const [address, setAddress] = useState<string>(client.address ?? "");
   const [legalResponsibleName, setLegalResponsibleName] = useState<string>(client.legalResponsibleName ?? "");
@@ -406,16 +401,11 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBr
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setNiche(client.customFields.niche ?? "");
     setPostsPerWeek(client.customFields.postsPerWeek ?? 0);
     setReelsPerWeek(client.customFields.reelsPerWeek ?? 0);
     setStoriesPerWeek(client.customFields.storiesPerWeek ?? 0);
     setResponsible(client.customFields.fixedResponsibleId ?? "");
     setReviewDay(client.customFields.reviewDay ?? "");
-    setNotes(client.customFields.notes ?? "");
-    setCompetitors(client.customFields.competitors ?? "");
-    setContentBriefing(client.customFields.contentBriefing ?? "");
-    setRecentRoteiros(client.customFields.recentRoteiros ?? "");
     setContractValue(client.contractValue ?? "");
     setPaymentDueDay(client.paymentDueDay ?? "");
     setContractStartDate(client.contractStartDate ?? "");
@@ -459,14 +449,11 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBr
 
   function save() {
     onSave({
-      // House: segmento, concorrentes e briefing são editados no bloco
-      // "Briefing da marca" — não sobrescreve com o valor antigo daqui.
-      ...(hideBriefing ? {} : { niche, competitors, content_briefing: contentBriefing }),
       posts_per_week: Number(postsPerWeek) || 0,
       reels_per_week: Number(reelsPerWeek) || 0,
       stories_per_week: Number(storiesPerWeek) || 0,
       fixed_responsible_id: responsible || null,
-      review_day: reviewDay, notes, recent_roteiros: recentRoteiros,
+      review_day: reviewDay,
       cnpj_cpf: cnpjCpf.trim() || null,
       address: address.trim() || null,
       legal_responsible_name: legalResponsibleName.trim() || null,
@@ -533,9 +520,6 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBr
           </ConfigField>
         </div>
       )}
-      {!hideBriefing && <ConfigField label="Nicho">
-        <input value={niche} disabled={!canEdit} onChange={(e) => setNiche(e.target.value)} className={inp} />
-      </ConfigField>}
       <ConfigField label="Dia de revisão">
         <input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} />
       </ConfigField>
@@ -610,38 +594,9 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave, hideBr
           />
         </ConfigField>
       )}
-      <div className="sm:col-span-2">
-        <ConfigField label="Observações">
-          <textarea value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} rows={3} className={inp + " resize-none"} />
-        </ConfigField>
-      </div>
-      {!hideBriefing && <div className="sm:col-span-2">
-        <ConfigField label="Concorrentes">
-          <textarea
-            value={competitors} disabled={!canEdit} onChange={(e) => setCompetitors(e.target.value)}
-            placeholder={"Um por linha, ex: @perfil_concorrente ou nome da empresa"}
-            rows={3} className={inp + " resize-none"}
-          />
-        </ConfigField>
-      </div>}
-      {!hideBriefing && <div className="sm:col-span-2">
-        <ConfigField label="Briefing / sistema de conteúdo">
-          <textarea
-            value={contentBriefing} disabled={!canEdit} onChange={(e) => setContentBriefing(e.target.value)}
-            placeholder={"Cole aqui o briefing/manual de como criar conteúdo pra esse cliente — alimenta a prévia de planejamento por IA."}
-            rows={5} className={inp + " resize-none"}
-          />
-        </ConfigField>
-      </div>}
-      <div className="sm:col-span-2">
-        <ConfigField label="Roteiros recentes">
-          <textarea
-            value={recentRoteiros} disabled={!canEdit} onChange={(e) => setRecentRoteiros(e.target.value)}
-            placeholder={"Cole os últimos roteiros já escritos pra esse cliente — ajuda a IA a aprender o padrão e o tom já usado."}
-            rows={5} className={inp + " resize-none"}
-          />
-        </ConfigField>
-      </div>
+      <p className="sm:col-span-2 text-[11px] text-foreground/35 -mt-1">
+        Nicho, concorrentes, briefing, observações e roteiros recentes agora ficam em Mais → Docs, junto com os outros documentos do cliente.
+      </p>
       {canEdit && (
         <div className="sm:col-span-2">
           <button onClick={save} className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90"
