@@ -224,7 +224,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
       {activeTab === "geral" && (
         <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
         <FichaCard label={isHouseBrand ? "Configuração da marca" : "Configuração do cliente"} wide>
-          <ClientConfigBlock client={client} hideBriefing={isHouseBrand} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
+          <ClientConfigBlock client={client} profiles={profiles} canEdit={isAdmin} isMaster={isMaster && !(me?.disabledFeatures ?? []).includes("client_finance")} onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
         </FichaCard>
         {isAdmin && (
           <FichaCard label="Stories">
