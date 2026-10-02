@@ -1237,7 +1237,10 @@ export const createDefaultDriveRootFolder = createServerFn({ method: "POST" })
   .handler(async ({ context }) => withDriveOrg(context.orgId, async () => {
     await assertMaster(context.supabase, context.userId);
     const name = "Modo Criador";
-    const id = (await findChildFolderByName("root", name)) ?? (await driveCreateFolder(name, "root"));
+    // Reaproveitar pasta existente é só conveniência: no acesso limitado a
+    // busca pode falhar ou não enxergar nada, e isso não pode impedir de criar.
+    const existing = await findChildFolderByName("root", name).catch(() => null);
+    const id = existing ?? (await driveCreateFolder(name, "root"));
     const { error } = await context.supabase
       .from("app_settings")
       .upsert({ key: rootFolderSettingKey(context.orgId), value: { id, name } });
