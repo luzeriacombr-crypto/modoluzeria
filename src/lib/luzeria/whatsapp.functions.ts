@@ -87,12 +87,15 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
 
-    const [{ data: orgs }, { data: masterRoles }, { data: profiles }, { data: optOuts }] = await Promise.all([
+    const [{ data: orgs }, { data: masterRoles }, { data: profiles }, { data: optOuts }, { data: clientRows }] = await Promise.all([
       db.from("orgs").select("id, name, whatsapp").in("id", data.orgIds),
       db.from("user_roles").select("user_id").eq("role", "master"),
       db.from("profiles").select("id, org_id, name, created_at").in("org_id", data.orgIds),
       db.from("whatsapp_opt_outs").select("phone_key"),
+      db.from("clients").select("org_id").eq("archived", false).neq("category", "Ex-clientes").in("org_id", data.orgIds),
     ]);
+    const clientsByOrg = new Map<string, number>();
+    (clientRows ?? []).forEach((c: any) => clientsByOrg.set(c.org_id, (clientsByOrg.get(c.org_id) ?? 0) + 1));
     const masterIds = new Set((masterRoles ?? []).map((r: any) => r.user_id));
     const ownerNameByOrg = new Map<string, string>();
     (profiles ?? [])
@@ -123,7 +126,10 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
         if (optedOut.has(wa.phoneKey(org.whatsapp))) { skipped.push({ orgId: org.id, orgName: org.name, reason: "pediu pra sair" }); continue; }
         if (recent.has(org.id)) { skipped.push({ orgId: org.id, orgName: org.name, reason: `recebeu nos últimos ${CAMPAIGN_COOLDOWN_DAYS} dias` }); continue; }
         const firstName = ownerNameByOrg.get(org.id)?.trim().split(" ")[0] || "tudo bem";
-        const params = [firstName, ...data.extraParams].slice(0, template!.variableCount);
+        // "{clientes}" vira "2 clientes" por agência (usado pelo modelo ativacao_poucos_clientes).
+        const n = clientsByOrg.get(org.id) ?? 0;
+        const extras = data.extraParams.map((p) => p.replaceAll("{clientes}", `${n} cliente${n === 1 ? "" : "s"}`));
+        const params = [firstName, ...extras].slice(0, template!.variableCount);
         const r = await wa.sendTemplate(org.whatsapp, template!.name, params, {
           kind: "campaign", orgId: org.id, campaignId: campaign.id,
         });

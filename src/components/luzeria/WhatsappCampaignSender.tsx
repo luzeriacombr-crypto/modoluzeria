@@ -25,7 +25,17 @@ const LIMIT_LABEL: Record<string, string> = {
 /** Envio de verdade pelo WhatsApp oficial (modelo aprovado na Meta), pras
  * agências selecionadas no painel de Mensagens. {{1}} é sempre o primeiro
  * nome do responsável; as outras variáveis do modelo são preenchidas aqui. */
-export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedIds: string[]; defaultText: string }) {
+// Cada campanha pronta tem um modelo de marketing próprio na Meta, com o
+// texto fixo (a Meta não aceita parágrafos/tópicos dentro de variável, então o
+// "comunicado" genérico não serve pra esses textos longos). `extra` preenche
+// {{2}}, {{3}}… — "{clientes}" vira "2 clientes" por agência no envio.
+const PRESET_TEMPLATES: Record<string, { name: string; extra: string[] }> = {
+  noClients: { name: "ativacao_sem_clientes", extra: [] },
+  fewClients: { name: "ativacao_poucos_clientes", extra: ["{clientes}"] },
+  noTeam: { name: "ativacao_equipe", extra: [] },
+};
+
+export function WhatsappCampaignSender({ selectedIds, defaultText, presetKey }: { selectedIds: string[]; defaultText: string; presetKey?: string | null }) {
   const { data: setup, isLoading } = useQuery({
     queryKey: ["whatsapp-setup"],
     queryFn: () => getWhatsappSetup(),
@@ -66,10 +76,24 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
   const template = setup?.templates.find((t) => t.name === templateName) ?? null;
   const extraCount = Math.max(0, (template?.variableCount ?? 0) - 1);
 
+  const preset = presetKey ? PRESET_TEMPLATES[presetKey] ?? null : null;
+  const presetApproved = !!preset && !!setup?.templates.some((t) => t.name === preset.name);
+  // Texto fixo do modelo da campanha: nada pra digitar, só conferir e enviar.
+  const fixed = !!preset && templateName === preset.name;
+
+  // Trocou de campanha pronta: escolhe sozinho o modelo dela (se já aprovado).
+  useEffect(() => {
+    if (!preset) return;
+    setTemplateName(presetApproved ? preset.name : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKey, presetApproved]);
+
   useEffect(() => {
     if (!template) return;
     // {{2}} já vem com o texto da mensagem do painel, pra não digitar duas vezes.
-    setExtra(Array.from({ length: extraCount }, (_, i) => (i === 0 ? defaultText : "")));
+    setExtra(fixed && preset
+      ? preset.extra
+      : Array.from({ length: extraCount }, (_, i) => (i === 0 ? defaultText : "")));
     setConfirming(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateName]);
@@ -101,7 +125,11 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
   const preview = template
     ? template.body
         .replaceAll("{{1}}", "[primeiro nome]")
-        .replace(/\{\{(\d+)\}\}/g, (_, n) => extra[Number(n) - 2]?.replace(/\s*\n+\s*/g, " · ") || `[campo ${n}]`)
+        .replace(/\{\{(\d+)\}\}/g, (_, n) => {
+          const v = extra[Number(n) - 2];
+          if (v === "{clientes}") return "[nº de clientes]";
+          return v?.replace(/\s*\n+\s*/g, " · ") || `[campo ${n}]`;
+        })
     : "";
   const estimatedCost = template ? Math.max(0, effectiveCount) * (COST_BY_CATEGORY[template.category] ?? 0.35) : 0;
 
@@ -134,6 +162,14 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
         <p className="text-[12px] text-foreground/50">Nenhum modelo aprovado ainda. Crie e aprove no WhatsApp Manager da Meta.</p>
       ) : (
         <>
+          {preset && !presetApproved && (
+            <p className="text-[12px] rounded-lg px-3 py-2" style={{ backgroundColor: "rgba(224,168,0,0.1)" }}>
+              O modelo desta campanha (<code>{preset.name}</code>) ainda está em análise na Meta. Assim que for aprovado, ele entra sozinho aqui.
+            </p>
+          )}
+          {fixed && (
+            <p className="text-[11.5px] text-foreground/50">Modelo escolhido automaticamente pra esta campanha: <code>{preset!.name}</code>. O texto é fixo, então não tem nada pra digitar.</p>
+          )}
           <select
             value={templateName} onChange={(e) => setTemplateName(e.target.value)}
             className="w-full px-3 py-2 bg-foreground/[0.08] border border-foreground/15 rounded-lg text-foreground text-sm"
@@ -146,7 +182,7 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
 
           {template && (
             <>
-              {extra.map((v, i) => (
+              {!fixed && extra.map((v, i) => (
                 <div key={i}>
                   <p className="text-[11px] text-foreground/50 mb-1">Campo {`{{${i + 2}}}`}</p>
                   <textarea
@@ -156,7 +192,7 @@ export function WhatsappCampaignSender({ selectedIds, defaultText }: { selectedI
                   />
                 </div>
               ))}
-              {extraCount > 0 && (
+              {!fixed && extraCount > 0 && (
                 <p className="text-[10.5px] text-foreground/35">O WhatsApp não aceita quebra de linha dentro dos campos — os parágrafos viram " · ".</p>
               )}
               <div className="rounded-lg bg-foreground/[0.04] px-3 py-2 text-[12.5px] text-foreground/80 whitespace-pre-wrap">{preview}</div>

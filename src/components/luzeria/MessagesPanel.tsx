@@ -352,7 +352,7 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
               </div>
 
               <div className="mt-3">
-                <WhatsappCampaignSender selectedIds={selectedIds} defaultText={body.replace(/^Oi[^\n]*\n+/, "").replaceAll("{nome}", "").replaceAll("{clientes}", "seus clientes")} />
+                <WhatsappCampaignSender selectedIds={selectedIds} presetKey={mode} defaultText={body.replace(/^Oi[^\n]*\n+/, "").replaceAll("{nome}", "").replaceAll("{clientes}", "seus clientes")} />
               </div>
             </div>
           )}
