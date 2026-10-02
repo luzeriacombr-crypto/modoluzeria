@@ -182,21 +182,21 @@ export function AdminDashboard() {
           style={{ background: "rgb(var(--lz-hero-blob-b-rgb))" }} />
 
 
-        <div className="relative grid md:grid-cols-[1fr_auto] gap-8 p-6 md:p-8 items-center">
+        <div className="relative grid md:grid-cols-[1fr_auto] gap-6 p-5 md:px-8 md:py-6 items-center">
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
               style={{ backgroundColor: "var(--lz-hero-badge-bg)", color: "var(--lz-accent-ink)" }}>
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
-              className="mt-3 text-foreground font-extrabold text-[40px] md:text-[56px] leading-none tracking-[-0.035em]"
+              className="mt-3 text-foreground font-extrabold text-[34px] md:text-[44px] leading-none tracking-[-0.035em]"
             >
               ENTREGAS
             </h1>
             <p className="mt-2 italic text-foreground/70 text-sm md:text-base">{message}</p>
 
             {/* Month selector */}
-            <div className="mt-5 inline-flex items-center gap-1 rounded-full backdrop-blur p-1 border border-foreground/10 mx-auto md:mx-0"
+            <div className="mt-4 inline-flex items-center gap-1 rounded-full backdrop-blur p-1 border border-foreground/10 mx-auto md:mx-0"
               style={{ backgroundColor: "var(--lz-hero-pill-bg)" }}>
               <button onClick={() => selectMonth(shiftMonth(selectedMonthKey, -1))}
                 className="h-8 w-8 rounded-full hover:bg-foreground/10 text-foreground/70 flex items-center justify-center transition">
@@ -222,12 +222,13 @@ export function AdminDashboard() {
         {(() => {
           const missing = (t?.planned ?? 0) - (t?.done ?? 0);
           return (
-            <div className="relative grid grid-cols-3 mx-6 md:mx-8 border-t border-foreground/10">
+            <div className="relative grid grid-cols-3 mx-5 md:mx-8 border-t border-foreground/10">
               <MetricStat tone={PALETTE.lime} label="Clientes ativos" value={t?.clients ?? 0} hint="não arquivados"
                 info="Quantidade de clientes ativos (não arquivados) na agência." />
               <MetricStat tone={PALETTE.blue} label="Meta do mês" value={t?.planned ?? 0}
-                hint={missing > 0 ? `faltam ${missing} · ver lista →` : "meta batida"} hintTone={missing > 0 ? "#FF6B5A" : undefined}
-                onHintClick={missing > 0 ? () => { setFilterMode("metric"); setSelectedFilter("pending"); } : undefined}
+                hint={missing > 0 ? `faltam ${missing}` : "meta batida"} hintTone={missing > 0 ? "#FF6B5A" : undefined}
+                action={missing > 0 ? "ver lista →" : undefined}
+                onActionClick={missing > 0 ? () => { setFilterMode("metric"); setSelectedFilter("pending"); } : undefined}
                 info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado. Clique em 'ver lista' pra ver o que ainda falta." />
               <MetricStat tone={PALETTE.lime} valueColor="var(--lz-accent-ink)" label="Entregues" value={t?.done ?? 0} hint={`${overall}% da meta`}
                 onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
@@ -697,26 +698,27 @@ function formatFinalized(iso: string) {
 }
 
 function MetricStat({
-  label, value, tone, valueColor, onClick, info, hint, hintTone, onHintClick,
-}: { label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string; hint?: string; hintTone?: string; onHintClick?: () => void }) {
+  label, value, tone, valueColor, onClick, info, hint, hintTone, action, onActionClick,
+}: { label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string; hint?: string; hintTone?: string; action?: string; onActionClick?: () => void }) {
   const animated = useCountUp(typeof value === "number" ? value : 0);
   const display = typeof value === "number" ? Math.round(animated) : value;
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      className={`px-3 md:px-6 py-5 border-l border-foreground/10 first:border-l-0 first:pl-1.5 ${onClick ? "cursor-pointer" : ""}`}>
-      <div className="flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.14em] font-bold text-foreground/60">
+      className={`px-3 md:px-6 py-3.5 border-l border-foreground/10 first:border-l-0 text-center ${onClick ? "cursor-pointer" : ""}`}>
+      <div className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.14em] font-bold text-foreground/60">
         <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: tone }} />
         {label}
         {info && <InfoTip text={info} />}
       </div>
-      <div className="mt-2.5 text-[34px] md:text-[46px] font-extrabold leading-none tracking-[-0.045em] tabular-nums"
+      <div className="mt-2 text-[28px] md:text-[34px] font-extrabold leading-none tracking-[-0.04em] tabular-nums"
         style={{ color: valueColor ?? "var(--foreground)" }}>
         {display}
       </div>
-      {hint && (onHintClick
-        ? <button type="button" onClick={(e) => { e.stopPropagation(); onHintClick(); }} className="mt-2 text-xs font-semibold hover:underline" style={{ color: hintTone }}>{hint}</button>
-        : <div className="mt-2 text-xs font-medium" style={{ color: hintTone ?? "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>{hint}</div>)}
+      {hint && <div className="mt-1.5 text-xs font-medium" style={{ color: hintTone ?? "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>{hint}</div>}
+      {action && onActionClick && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onActionClick(); }} className="mt-0.5 text-xs font-semibold text-foreground/70 hover:text-foreground hover:underline">{action}</button>
+      )}
     </div>
   );
 }
@@ -731,7 +733,7 @@ function GrowBar({ pct, gradient, className = "" }: { pct: number; gradient: str
 }
 
 function BigDonut({ percent, done, total }: { percent: number; done: number; total: number }) {
-  const box = 232, size = 196, stroke = 14, r = (size - stroke) / 2, mid = box / 2;
+  const box = 188, size = 156, stroke = 12, r = (size - stroke) / 2, mid = box / 2;
   const c = 2 * Math.PI * r;
   const animatedPercent = useCountUp(percent);
   const dash = { strokeDasharray: c, strokeDashoffset: c * (1 - animatedPercent / 100) };
@@ -746,7 +748,7 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
           <filter id="bigdonut-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" /></filter>
         </defs>
         {/* Anel pontilhado por fora, girando muito devagar */}
-        <circle className="lz-donut-spin" cx={mid} cy={mid} r={r + 19} fill="none" stroke="var(--foreground)" strokeOpacity={0.24} strokeWidth={1.4} strokeLinecap="round" strokeDasharray="1 8" />
+        <circle className="lz-donut-spin" cx={mid} cy={mid} r={r + 15} fill="none" stroke="var(--foreground)" strokeOpacity={0.24} strokeWidth={1.4} strokeLinecap="round" strokeDasharray="1 8" />
         <g transform={`rotate(-90 ${mid} ${mid})`}>
           <circle cx={mid} cy={mid} r={r} stroke="color-mix(in srgb, var(--foreground) 7%, transparent)" strokeWidth={stroke} fill="none" />
           <circle className="lz-donut-glow" cx={mid} cy={mid} r={r} stroke="url(#bigdonut)" strokeWidth={stroke + 2} fill="none" filter="url(#bigdonut-blur)"
@@ -756,8 +758,8 @@ function BigDonut({ percent, done, total }: { percent: number; done: number; tot
         </g>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-[56px] font-extrabold tabular-nums leading-none tracking-[-0.05em] text-foreground">{Math.round(animatedPercent)}<span className="text-[26px] tracking-normal text-foreground/55 ml-0.5">%</span></div>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/55 font-bold mt-2">Entregue</div>
+        <div className="text-[44px] font-extrabold tabular-nums leading-none tracking-[-0.05em] text-foreground">{Math.round(animatedPercent)}<span className="text-[20px] tracking-normal text-foreground/55 ml-0.5">%</span></div>
+        <div className="text-[9px] uppercase tracking-[0.2em] text-foreground/55 font-bold mt-1.5">Entregue</div>
         <div className="text-xs text-foreground/50 mt-1"><span className="font-bold text-[var(--lz-accent-ink)]">{done}</span> / {total}</div>
       </div>
     </div>
@@ -919,8 +921,8 @@ function HealthCard({ icon, tone, label, value, sub, valueColor, onClick, info }
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      className={`px-6 py-3.5 border-l border-foreground/8 max-md:odd:border-l-0 max-md:odd:pl-1.5 md:first:border-l-0 md:first:pl-1.5 text-left w-full ${onClick ? "cursor-pointer" : ""}`}>
-      <div className="flex items-center justify-between gap-1.5">
+      className={`px-6 py-3.5 border-l border-foreground/8 max-md:odd:border-l-0 md:first:border-l-0 text-center w-full ${onClick ? "cursor-pointer" : ""}`}>
+      <div className="flex items-center justify-center gap-1.5">
         <div className="flex items-center gap-2 text-xs font-medium text-foreground/60">
           <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: tone }} />
           {label}
