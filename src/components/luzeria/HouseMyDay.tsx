@@ -1,6 +1,7 @@
 // House (Fase 2) — "Meu dia": a home da pessoa da equipe. Checklist do dia,
 // barras das metas mínimas, próximos conteúdos com prazo e o "+ Lead"
 // (esse fica fixo em todas as telas da House, ver HouseLeads.tsx).
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -195,6 +196,7 @@ function ChecklistCard({ day }: { day: MyDay }) {
 function UpcomingCard({ day }: { day: MyDay }) {
   const navigate = useNavigate();
   const { selectMonth, openItem } = useUI();
+  const goToItem = useGoToItem();
   const { data: profiles = [] } = useQuery(profilesQO());
   const byId = new Map(profiles.map((p) => [p.id, p]));
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
@@ -202,9 +204,7 @@ function UpcomingCard({ day }: { day: MyDay }) {
   const todayKey = day.todayKey;
 
   function open(it: MyDay["upcoming"][number]) {
-    navigate({ to: "/cliente/$clientId", params: { clientId: it.clientId } });
-    selectMonth(it.monthKey);
-    setTimeout(() => openItem(it.id), 30);
+    goToItem({ itemId: it.id, clientId: it.clientId, monthKey: it.monthKey, type: it.type, status: it.status, openPanel: true });
   }
 
   return (
@@ -385,6 +385,7 @@ function UnassignedCard() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { selectMonth, openItem } = useUI();
+  const goToItem = useGoToItem();
   const listFn = useServerFn(listUnassignedItems);
   const { brandParam } = useHouseBrand();
   const { data: items = [] } = useQuery({ queryKey: ["house-unassigned", brandParam ?? "all"], queryFn: () => listFn({ data: { brandId: brandParam } }), staleTime: 60_000 });
@@ -396,7 +397,7 @@ function UnassignedCard() {
       <ul className="space-y-1">
         {items.map((it) => (
           <li key={it.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-foreground/[0.03]">
-            <button onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: it.clientId } }); selectMonth(it.monthKey); setTimeout(() => openItem(it.id), 30); }}
+            <button onClick={() => goToItem({ itemId: it.id, clientId: it.clientId, monthKey: it.monthKey, type: it.type, status: it.status, openPanel: true })}
               className="flex-1 min-w-0 text-left text-sm text-foreground/85 truncate">
               {it.title || "Sem título"}
               {it.dueDate && <span className="text-[11px] text-foreground/40"> · {it.dueDate.slice(8, 10)}/{it.dueDate.slice(5, 7)}</span>}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { ChevronLeft, ChevronRight, X, Inbox, Image as ImageIcon } from "lucide-react";
 import { calendarItemsQO, itemFilesQO, driveThumbnailQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
@@ -77,6 +78,7 @@ export function CalendarioPage() {
 export function CalendarioContent() {
   const { selectedMonthKey, selectMonth, openItem, flash } = useUI();
   const navigate = useNavigate();
+  const goTo = useGoToItem();
   const monthKey = selectedMonthKey || currentMonthKey();
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const [hover, setHover] = useState<{ item: CalendarItem; top: number; left: number; placeAbove: boolean } | null>(null);
@@ -113,11 +115,8 @@ export function CalendarioContent() {
     return map;
   }, [items]);
 
-  function goToItem(clientId: string, itemMonthKey: string, itemId: string) {
-    navigate({ to: "/cliente/$clientId", params: { clientId } });
-    selectMonth(itemMonthKey);
-    setTimeout(() => { openItem(itemId); flash(itemId); }, 50);
-    setTimeout(() => flash(null), 2050);
+  function goToItem(it: { clientId: string; monthKey: string; id: string; type?: string; status?: string }) {
+    goTo({ itemId: it.id, clientId: it.clientId, monthKey: it.monthKey, type: it.type, status: it.status, openPanel: true });
   }
 
   const today = todayKey();
@@ -180,7 +179,7 @@ export function CalendarioContent() {
                   {visible.map((it) => (
                     <button
                       key={it.id}
-                      onClick={() => goToItem(it.clientId, it.monthKey, it.id)}
+                      onClick={() => goToItem(it)}
                       onMouseEnter={(e) => showHover(it, e.currentTarget)}
                       onMouseLeave={() => setHover(null)}
                       className="w-full text-left px-1.5 py-1 rounded text-[10.5px] leading-tight truncate transition hover:opacity-80"
@@ -242,7 +241,7 @@ export function CalendarioContent() {
                 {dayList.map((it) => (
                   <li key={it.id}>
                     <button
-                      onClick={() => { setDayOpen(null); goToItem(it.clientId, it.monthKey, it.id); }}
+                      onClick={() => { setDayOpen(null); goToItem(it); }}
                       onMouseEnter={(e) => showHover(it, e.currentTarget)}
                       onMouseLeave={() => setHover(null)}
                       className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors"

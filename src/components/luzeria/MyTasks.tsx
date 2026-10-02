@@ -11,6 +11,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw, Crown, Medal, Flame, GripVertical } from "lucide-react";
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
@@ -319,6 +320,7 @@ export function MyTasks() {
   const tasks = allTasks.filter((t: any) => t.status !== "FINALIZADO" && t.status !== "CONCLUIDO");
   const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
+  const goToItem = useGoToItem();
   const isMeView = !isAdmin || !viewAs || viewAs === me?.id;
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
   const whatsappRemindersEnabled = !disabledFeatures.has("whatsapp_reminders");
@@ -525,12 +527,7 @@ export function MyTasks() {
                 sub={<><span style={{ color: p.clientColor }}>{p.clientName}</span> · {p.type === "post" && p.postFormat
                   ? (POST_FORMAT_LABEL[p.postFormat as keyof typeof POST_FORMAT_LABEL] ?? p.postFormat)
                   : (CONTENT_TYPE_LABEL[p.type as keyof typeof CONTENT_TYPE_LABEL] ?? p.type)}</>}
-                onClick={() => {
-                  navigate({ to: "/cliente/$clientId", params: { clientId: p.clientId } });
-                  selectMonth(p.monthKey);
-                  setTimeout(() => { openItem(p.id); flash(p.id); }, 30);
-                  setTimeout(() => flash(null), 2050);
-                }} />
+                onClick={() => goToItem({ itemId: p.id, clientId: p.clientId, monthKey: p.monthKey, type: p.type, openPanel: true })} />
             ))}
           </RailCard>
         
@@ -587,10 +584,7 @@ export function MyTasks() {
                 sub={<><span style={{ color: m.clientColor }}>{m.clientName}</span> · {CONTENT_TYPE_LABEL[m.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item"} {String(m.idx).padStart(2, "0")}</>}
                 onClick={() => {
                   markMentionRead.mutate({ data: { mentionId: m.mentionId } });
-                  navigate({ to: "/cliente/$clientId", params: { clientId: m.clientId } });
-                  selectMonth(m.monthKey);
-                  setTimeout(() => { openItem(m.itemId); flash(m.itemId); }, 30);
-                  setTimeout(() => flash(null), 2050);
+                  goToItem({ itemId: m.itemId, clientId: m.clientId, monthKey: m.monthKey, type: m.type, status: m.status, openPanel: true });
                 }} />
             ))}
           </RailCard>
@@ -687,7 +681,7 @@ export function MyTasks() {
                   <div className="grid gap-2 lz-stagger">
                     {g.items.map((t: any) => (
                       <TaskRow key={t.id} t={t} showStage={g.showStage} labelOverrides={labelOverrides}
-                        onOpen={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }} />
+                        onOpen={() => goToItem({ itemId: t.id, clientId: t.clientId, monthKey: t.monthKey, type: t.type, status: t.status, openPanel: true })} />
                     ))}
                   </div>
                 )}
@@ -1178,15 +1172,12 @@ function ActivityCountsWidget({ monthKey, userId }: { monthKey: string; userId: 
     enabled: openType !== null,
   });
   const items = finalizations.filter((f: any) => f.type === openType);
-  const { selectMonth, openItem, flash } = useUI();
-  const navigate = useNavigate();
+  const goToItem = useGoToItem();
 
   if (entries.length === 0) return null;
 
   function openActivity(itemId: string, clientId: string, itemMonthKey: string) {
-    navigate({ to: "/cliente/$clientId", params: { clientId } });
-    selectMonth(itemMonthKey);
-    setTimeout(() => { openItem(itemId); flash(itemId); }, 30);
+    goToItem({ itemId, clientId, monthKey: itemMonthKey, type: openType, status: "FINALIZADO", openPanel: true });
   }
 
   return (
@@ -1286,15 +1277,14 @@ function WorkStatsWidget({ monthKey, userId }: { monthKey: string; userId: strin
   const [open, setOpen] = useState<WorkTypeKey | null>(null);
   const { selectMonth, openItem, openFicha, flash } = useUI();
   const navigate = useNavigate();
+  const goToItem = useGoToItem();
 
   if (!stats) return null;
   const types = (Object.keys(WORK_TYPE_META) as WorkTypeKey[]).filter((k) => stats[k].done > 0);
   if (types.length === 0) return null;
 
   function openVideo(itemId: string, clientId: string) {
-    navigate({ to: "/cliente/$clientId", params: { clientId } });
-    selectMonth(monthKey);
-    setTimeout(() => { openItem(itemId); flash(itemId); }, 30);
+    goToItem({ itemId, clientId, monthKey, type: "gravacao", openPanel: true });
   }
 
   const days = daysElapsedInMonth(monthKey);

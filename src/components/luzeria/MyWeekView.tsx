@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { myWeekQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { getStatusMeta, CONTENT_TYPE_LABEL, type Status } from "@/lib/luzeria/types";
@@ -25,6 +26,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
   const { data: items = [] } = useQuery(myWeekQO(iso(start), iso(end), userId));
   const { selectMonth, openItem } = useUI();
   const navigate = useNavigate();
+  const goToItem = useGoToItem();
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const byDay: Record<string, typeof items> = {};
@@ -62,7 +64,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
                 <div className="text-[10px] text-foreground/20 mt-3">—</div>
               ) : list.map((t) => (
                 <button key={t.id}
-                  onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
+                  onClick={() => goToItem({ itemId: t.id, clientId: t.clientId, monthKey: t.monthKey, type: t.type, status: t.status, openPanel: true })}
                   className="w-full mb-1.5 text-left rounded-md p-2 bg-background/60 hover:bg-background transition-colors border border-foreground/4">
                   <div className="flex items-center gap-1.5 mb-1">
                     {(() => {
@@ -88,7 +90,7 @@ export function MyWeekView({ userId }: { userId?: string }) {
           <div className="bg-card rounded-lg divide-y divide-white/[0.04]">
             {noDate.map((t) => (
               <button key={t.id}
-                onClick={() => { navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId } }); selectMonth(t.monthKey); setTimeout(() => openItem(t.id), 30); }}
+                onClick={() => goToItem({ itemId: t.id, clientId: t.clientId, monthKey: t.monthKey, type: t.type, status: t.status, openPanel: true })}
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/[0.03] text-left">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.clientColor }} />
                 <span className="text-[10px] uppercase font-bold tracking-wider text-foreground/50">{t.clientName}</span>

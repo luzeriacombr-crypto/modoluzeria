@@ -3027,7 +3027,7 @@ export const listNotifications = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("notifications")
-      .select("*, content_items(month_id, months(client_id, key))")
+      .select("*, content_items(type, status, month_id, months(client_id, key))")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false }).limit(50);
     return (data ?? []).map((n: any) => ({
@@ -3035,6 +3035,8 @@ export const listNotifications = createServerFn({ method: "GET" })
       message: n.message, read: n.read, createdAt: n.created_at,
       clientId: n.client_id ?? n.content_items?.months?.client_id ?? null,
       monthKey: n.content_items?.months?.key ?? null,
+      itemType: (n.content_items?.type ?? null) as string | null,
+      itemStatus: (n.content_items?.status ?? null) as string | null,
       photoClientId: n.photo_client_id ?? null,
       whatsappPhone: n.whatsapp_phone ?? null,
     }));

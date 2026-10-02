@@ -8,7 +8,7 @@ import {
 import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, profilesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
-import { useNavigate } from "@tanstack/react-router";
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
 import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
@@ -495,21 +495,11 @@ function MemberDetailPanel({
     memberRole === "master" ? "Adm Master" :
     memberRole === "setor" ? "Adm de Setor" : "Membro";
 
-  const navigate = useNavigate();
-  const { selectMonth, flash } = useUI();
-  // Clicar numa demanda leva até o cliente, na aba certa e no mês dela, e
-  // pisca o card (pedido do Junior, 02/10).
+  const goTo = useGoToItem();
+  // Clicar numa demanda leva até o cliente, na aba e no mês dela, e pisca o card.
   function goToItem(t: { itemId: string; type: string; clientId: string; monthKey?: string }) {
-    const finalizedTab = me?.finalizadosSeparateTab && (t.type === "post" || t.type === "reel");
-    const tab = finalizedTab ? "finalizados"
-      : t.type === "post" ? "posts" : t.type === "reel" ? "reels" : t.type === "story" ? "stories" : "mais";
     onClose();
-    navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId }, search: { tab } });
-    if (t.monthKey) selectMonth(t.monthKey);
-    // Espera o cliente/aba montarem, rola até o card e só então pisca.
-    [350, 900].forEach((ms) => setTimeout(() => document.getElementById(`item-${t.itemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), ms));
-    setTimeout(() => flash(t.itemId), 650);
-    setTimeout(() => flash(null), 2300);
+    goTo({ ...t, status: "FINALIZADO" });
   }
 
   const [period, setPeriod] = useState<Period>(initialPeriod);

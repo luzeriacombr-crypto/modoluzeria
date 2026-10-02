@@ -1,3 +1,4 @@
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ export function NotificationsBell() {
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const { selectMonth, openItem, flash, openFicha, openStageComposer, setSupportChatOpen } = useUI();
+  const goToItem = useGoToItem();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -108,10 +110,7 @@ export function NotificationsBell() {
                     window.open(waLink(n.whatsappPhone, n.message) ?? undefined, "_blank", "noopener,noreferrer");
                   }
                   if (n.clientId && n.monthKey && n.itemId) {
-                    navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId } });
-                    selectMonth(n.monthKey);
-                    setTimeout(() => { openItem(n.itemId); flash(n.itemId); }, 50);
-                    setTimeout(() => flash(null), 2050);
+                    goToItem({ itemId: n.itemId, clientId: n.clientId, monthKey: n.monthKey, type: n.itemType, status: n.itemStatus, openPanel: true });
                   } else if (n.type === "tutorial_nudge") {
                     navigate({ to: "/ajuda", search: { tab: "tutoriais" } });
                   } else if (n.type === "bug_report_new") {

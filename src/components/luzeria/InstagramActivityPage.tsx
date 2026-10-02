@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { useServerFn } from "@tanstack/react-start";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
@@ -1493,6 +1494,7 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
 }) {
   const navigate = useNavigate();
   const { selectMonth, openItem, flash } = useUI();
+  const goTo = useGoToItem();
   const [expandido, setExpandido] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const [colunas, setColunas] = useState(5);
@@ -1518,10 +1520,7 @@ function ActivitySection({ label, icon, items, thumbs, dateOf, datePrefix }: {
   const escondidos = items.length - visiveis.length;
 
   function goToItem(item: InstagramActivityItem) {
-    navigate({ to: "/cliente/$clientId", params: { clientId: item.clientId } });
-    selectMonth(item.monthKey);
-    setTimeout(() => { openItem(item.id); flash(item.id); }, 50);
-    setTimeout(() => flash(null), 2050);
+    goTo({ itemId: item.id, clientId: item.clientId, monthKey: item.monthKey, type: item.type, openPanel: true });
   }
 
   return (
