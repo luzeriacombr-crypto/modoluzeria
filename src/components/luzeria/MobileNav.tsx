@@ -52,9 +52,9 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
   const house = isHouse(me);
   const canCreateClient = isAdmin && (!house || isMaster);
   const homePath = house ? "/meu-dia" : "/minhas-tarefas";
-  // Segundo botão da barra: Dashboard (agência), Painel do dono (gestor da
-  // House) ou Projetos (equipe da House).
-  const secondPath = !house ? "/admin" : isAdmin ? "/painel" : "/projetos";
+  // Segundo botão da barra: Dashboard (agência e gestor da House) ou
+  // Projetos (equipe da House).
+  const secondPath = !house || isAdmin ? "/admin" : "/projetos";
   // House com uma marca só: o botão da barra inferior vai direto pra ela.
   const houseBrands = house ? clients.filter((c) => !c.archived) : [];
   const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;

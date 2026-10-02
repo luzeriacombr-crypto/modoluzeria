@@ -1,9 +1,9 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMe } from "@/lib/luzeria/queries";
 import { isHouse } from "@/lib/luzeria/house";
-import { HouseOwnerPanel } from "@/components/luzeria/HouseOwnerPanel";
 
-// Painel do dono (House): visão do mês numa tela só. Só gestor/Adm Setor.
+// O antigo "Painel do dono" virou seção do Dashboard (mesma tela da agência).
+// A rota fica só pra links antigos.
 export const Route = createFileRoute("/_authenticated/painel")({
   component: PainelPage,
   ssr: false,
@@ -12,7 +12,6 @@ export const Route = createFileRoute("/_authenticated/painel")({
 function PainelPage() {
   const me = useMe().data;
   if (!me) return null;
-  if (!isHouse(me)) return <Navigate to="/admin" replace />;
-  if (me.role === "member") return <Navigate to="/meu-dia" replace />;
-  return <HouseOwnerPanel />;
+  if (isHouse(me) && me.role === "member") return <Navigate to="/meu-dia" replace />;
+  return <Navigate to="/admin" replace />;
 }

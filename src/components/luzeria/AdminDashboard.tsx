@@ -14,6 +14,8 @@ import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
 import { SetupChecklist } from "./SetupChecklist";
 import { InfoTip } from "./InfoTip";
+import { isHouse, term } from "@/lib/luzeria/house";
+import { HouseDashboardSections } from "./HouseOwnerPanel";
 
 type Period = "month" | "3m" | "6m" | "year";
 const PERIOD_LABEL: Record<Period, string> = {
@@ -223,13 +225,13 @@ export function AdminDashboard() {
           const missing = (t?.planned ?? 0) - (t?.done ?? 0);
           return (
             <div className="relative grid grid-cols-3 mx-5 md:mx-8 border-t border-foreground/10">
-              <MetricStat tone={PALETTE.lime} label="Clientes ativos" value={t?.clients ?? 0} hint="não arquivados"
-                info="Quantidade de clientes ativos (não arquivados) na agência." />
+              <MetricStat tone={PALETTE.lime} label={isHouse(me) ? "Marcas ativas" : "Clientes ativos"} value={t?.clients ?? 0} hint="não arquivados"
+                info={isHouse(me) ? "Quantidade de marcas ativas (não arquivadas) na empresa." : "Quantidade de clientes ativos (não arquivados) na agência."} />
               <MetricStat tone={PALETTE.blue} label="Meta do mês" value={t?.planned ?? 0}
                 hint={missing > 0 ? `faltam ${missing}` : "meta batida"} hintTone={missing > 0 ? "#FF6B5A" : undefined}
                 action={missing > 0 ? "ver lista →" : undefined}
                 onActionClick={missing > 0 ? () => { setFilterMode("metric"); setSelectedFilter("pending"); } : undefined}
-                info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado. Clique em 'ver lista' pra ver o que ainda falta." />
+                info={`Total de itens planejados pra esse mês, somando ${isHouse(me) ? "todas as marcas ativas" : "todos os clientes ativos"}. É a meta de entregas do período selecionado. Clique em 'ver lista' pra ver o que ainda falta.`} />
               <MetricStat tone={PALETTE.lime} valueColor="var(--lz-accent-ink)" label="Entregues" value={t?.done ?? 0} hint={`${overall}% da meta`}
                 onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
                 info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />
@@ -247,6 +249,9 @@ export function AdminDashboard() {
           onOpenRework={() => { setFilterMode("health"); setSelectedFilter("rework"); }}
         />
       )}
+
+      {/* House: blocos de marketing (metas, leads, alcance, tráfego pago…) na mesma tela. */}
+      {isHouse(me) && isAdmin && <HouseDashboardSections monthKey={selectedMonthKey} />}
 
       {/* Top members */}
       <div className="mb-12 relative">
@@ -358,7 +363,7 @@ export function AdminDashboard() {
       {/* Clients table */}
       <div className="mb-12">
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-[11px] uppercase tracking-[0.14em] text-foreground/60 font-bold">Clientes</span>
+          <span className="text-[11px] uppercase tracking-[0.14em] text-foreground/60 font-bold">{term(me, "Clientes")}</span>
           <span className="text-[11px] text-foreground/35">{formatMonth(selectedMonthKey)}</span>
           <span className="h-px flex-1 bg-foreground/8" />
         </div>
@@ -366,7 +371,7 @@ export function AdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-foreground/40">
-                <th className="text-left px-5 py-2 font-semibold">Cliente</th>
+                <th className="text-left px-5 py-2 font-semibold">{term(me, "Cliente")}</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Posts</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">Reels</th>
                 <th className="text-left md:text-center px-3 py-2 font-semibold">
@@ -419,7 +424,7 @@ export function AdminDashboard() {
                 );
               })}
               {sortedClients.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-foreground/40 text-sm">Nenhum cliente.</td></tr>
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-foreground/40 text-sm">{isHouse(me) ? "Nenhuma marca." : "Nenhum cliente."}</td></tr>
               )}
             </tbody>
           </table>

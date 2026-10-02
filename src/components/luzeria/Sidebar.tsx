@@ -294,14 +294,11 @@ export function Sidebar({
               <NavButton key="minhas-demandas" icon={<LayoutDashboard size={15} />} label={homeLabel}
                 active={pathname === homePath} onClick={() => navigate({ to: homePath })} />
             ), meta: { icon: <LayoutDashboard size={17} />, label: homeLabel, active: pathname === homePath, kind: "button", onClick: () => navigate({ to: homePath }) } },
-            // House: o "Dashboard" de agência vira o Painel do dono (só gestor).
-            ...(!house ? [{ id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
+            // Dashboard: a mesma tela pra agência e House (a House ganha blocos extras de marketing).
+            ...(!house || isAdmin ? [{ id: "dashboard", label: navLabel("dashboard", "Dashboard"), node: (
               <NavButton key="dashboard" icon={<BarChart2 size={15} />} label={navLabel("dashboard", "Dashboard")}
                 active={pathname === "/admin"} onClick={() => navigate({ to: "/admin" })} />
-            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button" as const, onClick: () => navigate({ to: "/admin" }) } }] : isAdmin ? [{ id: "painel", label: navLabel("painel", "Painel"), node: (
-              <NavButton key="painel" icon={<BarChart2 size={15} />} label={navLabel("painel", "Painel")}
-                active={pathname === "/painel"} onClick={() => navigate({ to: "/painel" })} />
-            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("painel", "Painel"), active: pathname === "/painel", kind: "button" as const, onClick: () => navigate({ to: "/painel" }) } }] : []),
+            ), meta: { icon: <BarChart2 size={17} />, label: navLabel("dashboard", "Dashboard"), active: pathname === "/admin", kind: "button" as const, onClick: () => navigate({ to: "/admin" }) } }] : []),
             singleBrandId ? { id: "clientes", label: clientesLabel, meta: { icon: <Users size={17} />, label: clientesLabel, active: clientsActive, kind: "button" as const, onClick: () => navigate({ to: "/cliente/$clientId", params: { clientId: singleBrandId } }) }, node: (
               <div key="clientes" className="relative">
                 <NavButton icon={<Users size={15} />} label={clientesLabel} active={clientsActive}

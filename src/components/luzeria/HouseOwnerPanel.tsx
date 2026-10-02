@@ -33,11 +33,13 @@ export function MonthSwitcher({ monthKey, onChange }: { monthKey: string; onChan
   );
 }
 
-export function HouseOwnerPanel() {
+/** Blocos de marketing da House dentro do Dashboard (mesma tela da agência):
+ * metas, leads, alcance, tráfego pago, projetos, ranking e relatório. O mês
+ * vem do seletor do próprio Dashboard. */
+export function HouseDashboardSections({ monthKey }: { monthKey: string }) {
   const me = useMe().data;
   const navigate = useNavigate();
   const fetchPanel = useServerFn(getOwnerPanel);
-  const [monthKey, setMonthKey] = useState(() => houseDateKey().slice(0, 7));
   const [configOpen, setConfigOpen] = useState(false);
   const { brandParam } = useHouseBrand();
   const { data, isLoading, error } = useQuery({
@@ -48,19 +50,16 @@ export function HouseOwnerPanel() {
   const isMaster = me?.role === "master";
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-6xl mx-auto pb-28">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">Painel do dono</div>
-          <h1 className="text-[28px] md:text-[32px] font-bold text-foreground tracking-tight mt-0.5">Visão do mês</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthSwitcher monthKey={monthKey} onChange={setMonthKey} />
-          {isMaster && (
-            <button onClick={() => setConfigOpen(true)} title="Metas de leads e variável"
-              className="h-10 w-10 rounded-full flex items-center justify-center bg-card border border-foreground/[0.06] text-foreground/60 hover:text-foreground"><Settings2 size={16} /></button>
-          )}
-        </div>
+    <section className="mb-12" data-tour="house-dashboard-sections">
+      <div className="flex items-center gap-3 flex-wrap mb-4">
+        <h2 className="text-[11px] uppercase font-bold tracking-[0.14em] text-foreground/60">Resultados de marketing</h2>
+        <span className="hidden md:block h-px flex-1 bg-foreground/8" />
+        {isMaster && (
+          <button onClick={() => setConfigOpen(true)} title="Metas e variável"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border border-foreground/10 text-foreground/60 hover:text-foreground">
+            <Settings2 size={13} /> Metas
+          </button>
+        )}
       </div>
 
       <HouseBrandSwitcher className="mt-4" />
@@ -92,7 +91,7 @@ export function HouseOwnerPanel() {
         </div>
       )}
       {configOpen && data && <TargetsModal settings={data.settings} onClose={() => setConfigOpen(false)} />}
-    </div>
+    </section>
   );
 }
 

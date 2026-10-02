@@ -205,9 +205,9 @@ const HOUSE_STEPS: Step[] = [
     id: "painel",
     eyebrow: "Visão do dono",
     icon: BarChart3,
-    title: "Painel do dono",
-    desc: "As metas do mês, leads por origem, alcance e seguidores, tráfego pago, projetos em andamento e o ranking da equipe. No fim do mês, o relatório sai daqui, com PDF.",
-    to: "/painel",
+    title: "Dashboard",
+    desc: "As entregas do mês de todas as marcas e, logo abaixo, os resultados de marketing: metas, leads por origem, alcance e seguidores, tráfego pago, projetos e o ranking da equipe. No fim do mês, o relatório sai daqui, com PDF.",
+    to: "/admin",
     roles: ["master"],
   },
   {
