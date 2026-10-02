@@ -528,6 +528,12 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       <ConfigField label="Dia de revisão">
         <input value={reviewDay} disabled={!canEdit} onChange={(e) => setReviewDay(e.target.value)} className={inp} />
       </ConfigField>
+      <ConfigField label="Responsável fixo">
+        <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>
+          <option value="">—</option>
+          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </ConfigField>
       <ConfigField label="Posts / mês">
         <input type="number" value={postsPerWeek} disabled={!canEdit} onChange={(e) => setPostsPerWeek(e.target.value)} className={inp} />
       </ConfigField>
@@ -536,12 +542,6 @@ function ClientConfigBlock({ client, profiles, canEdit, isMaster, onSave }: {
       </ConfigField>
       <ConfigField label="Stories / mês">
         <input type="number" value={storiesPerWeek} disabled={!canEdit} onChange={(e) => setStoriesPerWeek(e.target.value)} className={inp} />
-      </ConfigField>
-      <ConfigField label="Responsável fixo">
-        <select value={responsible} disabled={!canEdit} onChange={(e) => setResponsible(e.target.value)} className={inp}>
-          <option value="">—</option>
-          {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
       </ConfigField>
       <ConfigField label="CNPJ ou CPF">
         <input value={cnpjCpf} disabled={!canEdit} onChange={(e) => setCnpjCpf(e.target.value)} placeholder="Pra preencher o contrato" className={inp} />
