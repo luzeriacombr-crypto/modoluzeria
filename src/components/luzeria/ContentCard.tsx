@@ -90,6 +90,7 @@ export function ContentCard({
       onDragLeave={draggable ? onDragLeave : undefined}
       onDrop={draggable ? onDrop : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
+      id={`item-${item.id}`}
       className={`group relative flex flex-col rounded-xl overflow-hidden border bg-card hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
       style={{ ...EASE, cursor: draggable ? "grab" : "pointer", opacity: isDragging ? 0.4 : 1, outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none", outlineOffset: isOver ? "-2px" : 0 }}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}
@@ -333,6 +334,7 @@ export function ContentListRow({
       onDragLeave={draggable ? onDragLeave : undefined}
       onDrop={draggable ? onDrop : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
+      id={`item-${item.id}`}
       className={`group flex items-center gap-3 px-3 py-2 rounded-lg border bg-card hover:bg-card transition-colors cursor-pointer ${flashed ? "lz-flash" : ""} ${selectMode && selected ? "border-[rgb(var(--lz-brand-rgb))]" : "border-foreground/6 hover:border-foreground/15"}`}
       style={{ cursor: draggable ? "grab" : "pointer", opacity: isDragging ? 0.4 : 1, outline: isOver ? "2px solid rgb(var(--lz-brand-rgb))" : "none", outlineOffset: isOver ? "-2px" : 0 }}
       onClick={() => (selectMode ? onToggleSelect?.() : openItem(item.id, navList))}

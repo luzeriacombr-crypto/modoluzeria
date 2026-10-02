@@ -8,6 +8,7 @@ import {
 import { adminDashboardQO, memberFinalizationsQO, topMembersQO, topMembersByGoalQO, useMe, reportExtrasQO, orgCostSettingsQO, profilesQO } from "@/lib/luzeria/queries";
 import { CONTENT_TYPE_LABEL } from "@/lib/luzeria/types";
 import { useUI } from "@/lib/luzeria/ui-store";
+import { useNavigate } from "@tanstack/react-router";
 import { formatMonth, shortMonth } from "@/lib/luzeria/utils";
 import { useCountUp, useGrowIn } from "@/lib/luzeria/animation-hooks";
 import { Avatar } from "./Avatar";
@@ -494,6 +495,23 @@ function MemberDetailPanel({
     memberRole === "master" ? "Adm Master" :
     memberRole === "setor" ? "Adm de Setor" : "Membro";
 
+  const navigate = useNavigate();
+  const { selectMonth, flash } = useUI();
+  // Clicar numa demanda leva até o cliente, na aba certa e no mês dela, e
+  // pisca o card (pedido do Junior, 02/10).
+  function goToItem(t: { itemId: string; type: string; clientId: string; monthKey?: string }) {
+    const finalizedTab = me?.finalizadosSeparateTab && (t.type === "post" || t.type === "reel");
+    const tab = finalizedTab ? "finalizados"
+      : t.type === "post" ? "posts" : t.type === "reel" ? "reels" : t.type === "story" ? "stories" : "mais";
+    onClose();
+    navigate({ to: "/cliente/$clientId", params: { clientId: t.clientId }, search: { tab } });
+    if (t.monthKey) selectMonth(t.monthKey);
+    // Espera o cliente/aba montarem, rola até o card e só então pisca.
+    [350, 900].forEach((ms) => setTimeout(() => document.getElementById(`item-${t.itemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), ms));
+    setTimeout(() => flash(t.itemId), 650);
+    setTimeout(() => flash(null), 2300);
+  }
+
   const [period, setPeriod] = useState<Period>(initialPeriod);
   const [filter, setFilter] = useState<"all" | "post" | "reel" | "outros" | "gravacao" | "roteiro" | "sistema">("all");
 
@@ -616,7 +634,9 @@ function MemberDetailPanel({
               const typeLabel = (CONTENT_TYPE_LABEL[t.type as keyof typeof CONTENT_TYPE_LABEL] ?? "Item").toUpperCase();
               return (
                 <li key={t.itemId + t.finalizedAt}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors">
+                  onClick={() => goToItem(t)}
+                  title="Abrir no cliente"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-foreground/[0.03] hover:bg-foreground/[0.06] transition-colors cursor-pointer">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"

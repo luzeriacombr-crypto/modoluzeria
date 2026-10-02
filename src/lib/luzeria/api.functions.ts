@@ -3939,6 +3939,7 @@ export const getMemberFinalizations = createServerFn({ method: "GET" })
       title: r.content_items.title as string,
       activityQuantity: (r.content_items.activity_quantity ?? null) as number | null,
       finalizedAt: r.finalized_at as string,
+      monthKey: r.content_items.months.key as string,
       clientId: r.content_items.months.clients.id as string,
       clientName: r.content_items.months.clients.name as string,
       clientColor: r.content_items.months.clients.color as string,
