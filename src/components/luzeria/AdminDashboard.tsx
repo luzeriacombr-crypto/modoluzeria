@@ -519,7 +519,9 @@ function MemberDetailPanel({
     const avgHoursByType = costSettings.avgHoursByType ?? {};
     return list.reduce((sum, t) => {
       const weight = t.type === "gravacao" && (t.activityQuantity ?? 0) > 0 ? (t.activityQuantity as number) : 1;
-      return sum + weight * (avgHoursByType[t.type] ?? 1);
+      // Post e reel têm duas etapas (planejar + design/edição) — soma as duas.
+      const extra = t.type === "post" ? (avgHoursByType.post_design ?? 0) : t.type === "reel" ? (avgHoursByType.reel_edit ?? 0) : 0;
+      return sum + weight * (avgHoursByType[t.type] ?? 1) + extra;
     }, 0);
   }, [list, costSettings]);
   const estimatedTimeLabel = useMemo(() => {

@@ -6,9 +6,22 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
 import { InfoTip } from "./InfoTip";
 
-const EFFORT_TYPES: ContentType[] = ["post", "reel", "story", "gravacao", "outros"];
-/** Reel aqui é o tempo de edição, contado por reel editado (custo do editor). */
-const effortLabel = (t: ContentType) => (t === "reel" ? "Editar reels" : CONTENT_TYPE_LABEL[t]);
+/** Tempo médio por etapa. Post e reels têm duas: planejar (custo dos
+ * responsáveis marcados no item) e design/edição (custo do Editor marcado). */
+const EFFORT_GROUPS: { title: string; rows: { key: string; label: string; hint?: string }[] }[] = [
+  { title: "Post", rows: [
+    { key: "post", label: "Planejar post", hint: "responsável" },
+    { key: "post_design", label: "Criar design de post", hint: "editor" },
+  ] },
+  { title: "Reels", rows: [
+    { key: "reel", label: "Planejar reels", hint: "responsável" },
+    { key: "reel_edit", label: "Editar reels", hint: "editor" },
+  ] },
+  { title: "Story", rows: [{ key: "story", label: "Story" }] },
+  { title: "Gravação", rows: [{ key: "gravacao", label: "Gravação" }] },
+  { title: "Outro", rows: [{ key: "outros", label: "Outro" }] },
+];
+const EFFORT_KEYS = EFFORT_GROUPS.flatMap((g) => g.rows.map((r) => r.key));
 const DAYS_OPTIONS = [30, 90, 180] as const;
 const SORT_OPTIONS = [
   { id: "margin", label: "Pior margem" },
@@ -34,15 +47,18 @@ function formatHours(h: number): string {
 
 const HOURS_STEP = 0.25;
 
-function HoursStepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function HoursStepper({ label, hint, value, onChange }: { label: string; hint?: string; value: number; onChange: (v: number) => void }) {
   const set = (v: number) => onChange(Math.min(24, Math.max(0, Math.round(v * 4) / 4)));
   const btn = "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-foreground/55 hover:text-foreground hover:bg-foreground/8 disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
   return (
-    <div className="rounded-xl border border-foreground/8 bg-foreground/[0.02] px-3 py-3">
-      <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-2">{label}</div>
-      <div className="flex items-center justify-between gap-1">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-foreground/85 truncate">{label}</div>
+        {hint && <div className="text-[10.5px] text-foreground/35">custo do {hint}</div>}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
         <button type="button" aria-label={`Diminuir ${label}`} className={btn} disabled={value <= 0} onClick={() => set(value - HOURS_STEP)}><Minus size={14} /></button>
-        <div className="text-base font-extrabold text-foreground tabular-nums">{formatHours(value)}</div>
+        <div className="w-14 text-center text-base font-extrabold text-foreground tabular-nums">{formatHours(value)}</div>
         <button type="button" aria-label={`Aumentar ${label}`} className={btn} onClick={() => set(value + HOURS_STEP)}><Plus size={14} /></button>
       </div>
     </div>
@@ -71,7 +87,7 @@ function CostSettingsForm() {
       data: {
         hourlyCost: hourlyCost === "" ? null : Number(hourlyCost),
         avgHoursByType: Object.fromEntries(
-          EFFORT_TYPES.map((t) => [t, Number(avgHours[t]) || 0]),
+          EFFORT_KEYS.map((k) => [k, Number(avgHours[k]) || 0]),
         ),
       },
     });
@@ -79,7 +95,7 @@ function CostSettingsForm() {
 
   const summary = [
     hourlyCost === "" ? "Custo-hora não definido" : `${money(Number(hourlyCost))}/h`,
-    ...EFFORT_TYPES.map((t) => `${effortLabel(t)} ${formatHours(Number(avgHours[t]) || 0)}`),
+    ...EFFORT_GROUPS.flatMap((g) => g.rows.map((r) => `${r.label} ${formatHours(Number(avgHours[r.key]) || 0)}`)),
   ].join(" · ");
 
   return (
@@ -106,12 +122,17 @@ function CostSettingsForm() {
           <div>
             <label className="text-xs text-foreground/50 mb-2 inline-flex items-center gap-1">
               Tempo médio por tipo de conteúdo
-              <InfoTip text="Quanto tempo, em média, sua equipe leva pra produzir cada tipo de item (ajuste de 15 em 15 minutos). Em reels, conta o tempo de edição e o custo é da pessoa marcada como Editor de cada reel. Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
+              <InfoTip text="Quanto tempo, em média, sua equipe leva pra produzir cada tipo de item (ajuste de 15 em 15 minutos). Em posts e reels são duas etapas: planejar (custo de quem está como responsável) e design/edição (custo de quem está marcado como Editor). Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {EFFORT_TYPES.map((t) => (
-                <HoursStepper key={t} label={effortLabel(t)} value={Number(avgHours[t]) || 0}
-                  onChange={(v) => setAvgHours((prev) => ({ ...prev, [t]: v }))} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {EFFORT_GROUPS.map((g) => (
+                <div key={g.title} className="rounded-xl border border-foreground/8 bg-foreground/[0.02] px-4 py-3 space-y-2.5">
+                  {g.rows.length > 1 && <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40">{g.title}</div>}
+                  {g.rows.map((r) => (
+                    <HoursStepper key={r.key} label={r.label} hint={r.hint} value={Number(avgHours[r.key]) || 0}
+                      onChange={(v) => setAvgHours((prev) => ({ ...prev, [r.key]: v }))} />
+                  ))}
+                </div>
               ))}
             </div>
           </div>

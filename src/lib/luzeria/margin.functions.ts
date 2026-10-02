@@ -48,6 +48,29 @@ export const setOrgCostSettings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Post e reel têm duas etapas com tempos e responsáveis diferentes (pedido
+ * do Junior, 02/10): "planejar" (custo dividido entre os responsáveis
+ * marcados no item) e "criar design / editar" (custo do Editor marcado no
+ * item). Sem responsável ou editor marcado, cai em quem finalizou. As
+ * chaves novas em avg_hours_by_type são post_design e reel_edit (se
+ * ausentes valem 0, então nada muda até a agência preencher). */
+type EffortPart = { payers: string[]; hours: number; role: "plan" | "edit" | "all" };
+function effortParts(
+  it: { type: string; editor_id?: string | null; activity_quantity?: number | null },
+  assigneeIds: string[], finalizerId: string, avg: Record<string, number>,
+): EffortPart[] {
+  if (it.type === "post" || it.type === "reel") {
+    const plan = avg[it.type] ?? 1;
+    const prod = avg[it.type === "post" ? "post_design" : "reel_edit"] ?? 0;
+    return [
+      { payers: assigneeIds.length > 0 ? assigneeIds : [finalizerId], hours: plan, role: "plan" },
+      { payers: [it.editor_id || finalizerId], hours: prod, role: "edit" },
+    ];
+  }
+  const weight = it.type === "gravacao" && (it.activity_quantity ?? 0) > 0 ? (it.activity_quantity as number) : 1;
+  return [{ payers: [finalizerId], hours: weight * (avg[it.type] ?? 1), role: "all" }];
+}
+
 export const getClientMargins = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { days: 30 | 90 | 180 }) =>
@@ -76,7 +99,7 @@ export const getClientMargins = createServerFn({ method: "GET" })
     const start = new Date(Date.now() - data.days * 86400000);
     const { data: finals, error: finalsErr } = await context.supabase
       .from("finalizations")
-      .select("user_id, content_items!inner(type, editor_id, activity_quantity, months!inner(client_id))")
+      .select("user_id, content_items!inner(id, type, editor_id, activity_quantity, months!inner(client_id), item_assignees(user_id))")
       .gte("finalized_at", start.toISOString())
       .not("item_id", "is", null);
     if (finalsErr) throw new Error(finalsErr.message);
@@ -90,19 +113,21 @@ export const getClientMargins = createServerFn({ method: "GET" })
       const clientId = it?.months?.client_id;
       if (!clientId) return;
       const weight = it.type === "gravacao" && it.activity_quantity > 0 ? it.activity_quantity : 1;
-      const hoursPerUnit = avgHoursByType[it.type] ?? 1;
-      const hours = weight * hoursPerUnit;
-      hoursByClient.set(clientId, (hoursByClient.get(clientId) ?? 0) + hours);
+      const assignees = ((it.item_assignees ?? []) as { user_id: string }[]).map((a) => a.user_id);
+      const parts = effortParts(it, assignees, f.user_id, avgHoursByType);
       deliveredByClient.set(clientId, (deliveredByClient.get(clientId) ?? 0) + weight);
-      // Reel: o custo é de quem editou (campo "Editor" do reel), não de quem
-      // clicou em finalizar — pedido do Junior, 02/10. Sem editor marcado,
-      // cai em quem finalizou, como antes.
-      const payerId = it.type === "reel" && it.editor_id ? it.editor_id : f.user_id;
-      const rate = hourlyCostByUser.get(payerId) ?? hourlyCost;
-      if (rate != null) {
-        anyRateAvailable = true;
-        costByClient.set(clientId, (costByClient.get(clientId) ?? 0) + hours * rate);
-      }
+      parts.forEach((part) => {
+        if (part.hours <= 0) return;
+        hoursByClient.set(clientId, (hoursByClient.get(clientId) ?? 0) + part.hours);
+        const share = part.hours / part.payers.length;
+        part.payers.forEach((payer) => {
+          const rate = hourlyCostByUser.get(payer) ?? hourlyCost;
+          if (rate != null) {
+            anyRateAvailable = true;
+            costByClient.set(clientId, (costByClient.get(clientId) ?? 0) + share * rate);
+          }
+        });
+      });
     });
 
     // Avulsos são trabalhos pontuais — depois que todos os posts/reels dele
@@ -188,15 +213,19 @@ export const getClientMarginBreakdown = createServerFn({ method: "GET" })
     const start = new Date(Date.now() - data.days * 86400000);
     const { data: rows, error } = await context.supabase
       .from("finalizations")
-      .select("user_id, finalized_at, content_items!inner(id, idx, type, title, editor_id, activity_quantity, months!inner(client_id))")
+      .select("user_id, finalized_at, content_items!inner(id, idx, type, title, editor_id, activity_quantity, months!inner(client_id), item_assignees(user_id))")
       .gte("finalized_at", start.toISOString())
       .eq("content_items.months.client_id", data.clientId)
       .not("item_id", "is", null)
       .order("finalized_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const payerOf = (r: any): string => (r.content_items?.type === "reel" && r.content_items?.editor_id ? r.content_items.editor_id : r.user_id);
-    const userIds = [...new Set((rows ?? []).map(payerOf))];
+    const partsOf = (r: any) => effortParts(
+      r.content_items,
+      ((r.content_items?.item_assignees ?? []) as { user_id: string }[]).map((x) => x.user_id),
+      r.user_id, avgHoursByType,
+    ).filter((p) => p.hours > 0);
+    const userIds = [...new Set((rows ?? []).flatMap((r: any) => partsOf(r).flatMap((p) => p.payers)))];
     const nameByUser = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: profiles } = await context.supabase.from("profiles").select("id, name").in("id", userIds);
@@ -205,15 +234,21 @@ export const getClientMarginBreakdown = createServerFn({ method: "GET" })
 
     return (rows ?? []).map((r: any) => {
       const it = r.content_items;
-      const weight = it.type === "gravacao" && it.activity_quantity > 0 ? it.activity_quantity : 1;
-      const hours = weight * (avgHoursByType[it.type] ?? 1);
+      const parts = partsOf(r);
+      const hours = parts.reduce((sum, p) => sum + p.hours, 0);
+      const nameOf = (id: string) => nameByUser.get(id) ?? "—";
+      // Post/reel com as duas etapas mostra os dois responsáveis, ex:
+      // "Ana (planejar) · Bruno (editar)".
+      const userName = parts.length > 1
+        ? parts.map((p) => `${p.payers.map(nameOf).join(", ")} (${p.role === "plan" ? "planejar" : it.type === "post" ? "design" : "editar"})`).join(" · ")
+        : (parts[0] ? parts[0].payers.map(nameOf).join(", ") : nameOf(r.user_id));
       return {
         itemId: it.id as string,
         itemIdx: it.idx as number,
         itemTitle: it.title as string,
         itemType: it.type as string,
-        userId: payerOf(r) as string,
-        userName: nameByUser.get(payerOf(r)) ?? "—",
+        userId: (parts[0]?.payers[0] ?? r.user_id) as string,
+        userName,
         hours: Math.round(hours * 10) / 10,
         finalizedAt: r.finalized_at as string,
       };
