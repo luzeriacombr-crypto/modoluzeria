@@ -20,7 +20,7 @@ export function ClientProfileBriefing({ client, canEdit, hideBriefing, onSave }:
     try { flagged = sessionStorage.getItem("lz:scroll-briefing") === "1"; sessionStorage.removeItem("lz:scroll-briefing"); } catch { /* ignora */ }
     if (!flagged) return;
     setOpen(true);
-    const t = setTimeout(() => document.getElementById("perfil-briefing")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+    const t = setTimeout(() => document.getElementById(hideBriefing ? "house-briefing" : "perfil-briefing")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
     return () => clearTimeout(t);
   }, []);
 

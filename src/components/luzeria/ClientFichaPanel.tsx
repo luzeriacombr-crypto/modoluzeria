@@ -221,7 +221,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         ))}
       </div>
 
-      {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing clientId={clientId} />}
+      {activeTab === "geral" && isHouseBrand && <div id="house-briefing" className="scroll-mt-4"><HouseBrandBriefing clientId={clientId} /></div>}
       {activeTab === "geral" && (
         <ClientProfileBriefing client={client} canEdit={isAdmin} hideBriefing={isHouseBrand}
           onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />

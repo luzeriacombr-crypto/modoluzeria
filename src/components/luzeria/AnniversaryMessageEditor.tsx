@@ -13,7 +13,7 @@ export function AnniversaryMessageEditor() {
   useEffect(() => { setText(me?.orgAnniversaryMessage ?? DEFAULT_ANNIVERSARY_MESSAGE); }, [me?.orgAnniversaryMessage]);
   if (me?.role !== "master") return null;
 
-  const preview = renderAnniversaryMessage(text, { nome: "Amaro", anos: 1, agencia: me.orgName ?? "agência" });
+  const preview = renderAnniversaryMessage(text, { nome: "Amaro", anos: 1, agencia: me.orgName ?? (me.accountType === "house" ? "house" : "agência") });
   const unchanged = text.trim() === (me.orgAnniversaryMessage ?? DEFAULT_ANNIVERSARY_MESSAGE).trim();
 
   function save() {
@@ -30,7 +30,7 @@ export function AnniversaryMessageEditor() {
         <PartyPopper size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold text-foreground">Mensagem de aniversário de casa</div>
-          <div className="text-[11px] text-foreground/45">O texto que cada membro vê em Minhas Demandas no dia em que completa mais um ano de agência.</div>
+          <div className="text-[11px] text-foreground/45">O texto que cada membro vê em Minhas Demandas no dia em que completa mais um ano de {me.accountType === "house" ? "house" : "agência"}.</div>
         </div>
         {open ? <ChevronDown size={14} className="text-foreground/40 shrink-0" /> : <ChevronRight size={14} className="text-foreground/40 shrink-0" />}
       </button>

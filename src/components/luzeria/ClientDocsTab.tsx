@@ -9,7 +9,7 @@ import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi, useMe } from "@/lib
 import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { setClientAiPlanningEnabled } from "@/lib/luzeria/ai-planning.functions";
-import { isHouse } from "@/lib/luzeria/house";
+import { isHouse, term } from "@/lib/luzeria/house";
 import { CLIENT_DOC_TYPE_LABEL, CLIENT_DOC_PROMPT, type ClientDocType } from "@/lib/luzeria/client-doc-templates";
 import { parseMarkdownLite, groupByH2, displayRoteiroTitle, type MdBlock } from "@/lib/luzeria/markdown-lite";
 import { formatClientDocWithAI, type ClientDoc } from "@/lib/luzeria/client-docs.functions";
@@ -172,7 +172,7 @@ export function ClientDocsTab({
       <div className="flex flex-wrap gap-2 mb-5">
         <button onClick={goToBriefing}
           className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border border-foreground/10 text-foreground/75 hover:text-foreground hover:border-foreground/25 transition">
-          <ClipboardList size={13} /> Editar ficha do cliente
+          <ClipboardList size={13} /> Editar ficha {term(me, "doCliente")}
         </button>
         {me?.role === "master" && (
           <button onClick={goToKnowledge}
@@ -190,7 +190,9 @@ export function ClientDocsTab({
         {guideOpen && (
           <div className="flex flex-col gap-3 mt-3">
             {[
-              <>Preencha o <span className="text-foreground font-medium">Perfil &amp; Briefing</span> na Ficha do cliente (nicho, concorrentes, briefing) e mantenha a <span className="text-foreground font-medium">Base de conhecimento</span> da agência em dia — é o que a IA lê pra conhecer esse cliente e o jeito de criar conteúdo da agência.</>,
+              isHouse(me)
+                ? <>Preencha o <span className="text-foreground font-medium">Briefing da marca</span> na Ficha da marca (segmento, concorrentes, briefing) e mantenha a <span className="text-foreground font-medium">Base de conhecimento</span> da house em dia — é o que a IA lê pra conhecer a marca e o jeito de criar conteúdo da house.</>
+                : <>Preencha o <span className="text-foreground font-medium">Perfil &amp; Briefing</span> na Ficha do cliente (nicho, concorrentes, briefing) e mantenha a <span className="text-foreground font-medium">Base de conhecimento</span> da agência em dia — é o que a IA lê pra conhecer esse cliente e o jeito de criar conteúdo da agência.</>,
               <>Pra montar o próximo mês, clique em <span className="text-foreground font-medium">Gerar prévia de planejamento com IA</span>. Revise cada sugestão e salve como Planejamento ou aprove direto pros Roteiros de um mês.</>,
               <>Já tem o material bruto do cliente? Escolha <span className="text-foreground font-medium">Roteiros</span> ou <span className="text-foreground font-medium">Planejamento / Relatório</span>, clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material (ou use <span className="text-foreground font-medium">Copiar modelo</span> numa IA que você já assina). Revise o texto e clique em <span className="text-foreground font-medium">Salvar</span>.</>,
               approvalLinkHidden

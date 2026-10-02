@@ -2,6 +2,7 @@
 // barras das metas mínimas, próximos conteúdos com prazo e o "+ Lead"
 // (esse fica fixo em todas as telas da House, ver HouseLeads.tsx).
 import { useGoToItem } from "@/lib/luzeria/go-to-item";
+import { AnniversaryCard } from "@/components/luzeria/AnniversaryCard";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ export function HouseMyDay() {
 
   return (
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto pb-28">
+      <AnniversaryCard />
       <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">Meu dia</div>
       <h1 className="text-[28px] md:text-[32px] font-bold text-foreground tracking-tight leading-tight mt-1">
         {firstName ? `Bom trabalho hoje, ${firstName}!` : "Meu dia"}

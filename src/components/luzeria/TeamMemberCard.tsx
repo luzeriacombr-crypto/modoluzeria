@@ -39,8 +39,32 @@ const ROLE_COLOR: Record<Role, { bg: string; color: string }> = {
   master: { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" },
 };
 
+/** "6 anos, 11 meses e 12 dias" a partir da data de entrada (aaaa-mm-dd). */
+export function tenureDetailed(joinedAt: string | null | undefined): string | null {
+  if (!joinedAt) return null;
+  const [y, m, d] = joinedAt.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const now = new Date();
+  let years = now.getFullYear() - y;
+  let months = now.getMonth() + 1 - m;
+  let days = now.getDate() - d;
+  if (days < 0) {
+    months -= 1;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); // dias do mês anterior
+  }
+  if (months < 0) { years -= 1; months += 12; }
+  if (years < 0) return null;
+  const parts = [
+    years ? `${years} ${years === 1 ? "ano" : "anos"}` : "",
+    months ? `${months} ${months === 1 ? "mês" : "meses"}` : "",
+    days ? `${days} ${days === 1 ? "dia" : "dias"}` : "",
+  ].filter(Boolean);
+  if (parts.length === 0) return "hoje é o primeiro dia";
+  return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} e ${parts[parts.length - 1]}`;
+}
+
 /** "há 8 meses" / "há 1 ano e 2 meses" a partir da data de entrada. */
-export function tenureLabel(joinedAt: string | null | undefined): string | null {
+export function tenureLabel(joinedAt: string | null | undefined, house = false): string | null {
   if (!joinedAt) return null;
   const [y, m, d] = joinedAt.split("-").map(Number);
   const now = new Date();
@@ -51,13 +75,14 @@ export function tenureLabel(joinedAt: string | null | undefined): string | null 
   const years = Math.floor(months / 12), rest = months % 12;
   const yp = years ? `${years} ${years === 1 ? "ano" : "anos"}` : "";
   const mp = rest ? `${rest} ${rest === 1 ? "mês" : "meses"}` : "";
-  return `na agência há ${[yp, mp].filter(Boolean).join(" e ")}`;
+  return `na ${house ? "house" : "agência"} há ${[yp, mp].filter(Boolean).join(" e ")}`;
 }
 
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
 export function TeamMemberCard({ profile }: { profile: Profile }) {
   const [open, setOpen] = useState(false);
+  const house = isHouse(useMe().data);
   const { data: cargos = [] } = useQuery(cargosQO());
   const cargoNames = (profile.cargoIds ?? [])
     .map((id) => cargos.find((c) => c.id === id)?.name)
@@ -97,7 +122,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
           </div>
         </div>
         <div className="h-px bg-foreground/6" />
-        <div className="text-[11px] text-foreground/35 group-hover:text-foreground/60 transition-colors">{tenureLabel(profile.joinedAt) ?? "Clique pra editar"}</div>
+        <div className="text-[11px] text-foreground/35 group-hover:text-foreground/60 transition-colors">{tenureLabel(profile.joinedAt, house) ?? "Clique pra editar"}</div>
       </button>
       {open && <TeamMemberModal profile={profile} onClose={() => setOpen(false)} />}
     </>
@@ -153,6 +178,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
   const [uploading, setUploading] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const [joinedDraft, setJoinedDraft] = useState(profile.joinedAt ?? "");
   const fileRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState("");
 
@@ -232,7 +258,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
 
   const currentCargo = cargos.find((c) => c.id === selectedCargoIds[0]);
   const roleStyle = ROLE_COLOR[profile.role];
-  const tenure = tenureLabel(profile.joinedAt);
+  const tenure = tenureLabel(profile.joinedAt, house);
   const card = "rounded-2xl border border-foreground/8 bg-foreground/[0.02] p-4";
   const label = "flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5";
   const field = "w-full bg-background border border-foreground/10 rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] disabled:opacity-50 disabled:cursor-not-allowed";
@@ -274,7 +300,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           <div>
             <label className={label}>
               Função
-              <InfoTip text="Membro: só vê e mexe no que for atribuído a ele. Adm Setor: pode ter permissões extras configuradas por cargo. Adm Master: acesso total à agência." />
+              <InfoTip text={`Membro: só vê e mexe no que for atribuído a ele. Adm Setor: pode ter permissões extras configuradas por cargo. Adm Master: acesso total à ${house ? "house" : "agência"}.`} />
             </label>
             <select data-tour="member-role-select" value={profile.role} disabled={isSelf}
               onChange={(e) => setUserRole.mutate({ data: { userId: profile.id, role: e.target.value as Role } }, {
@@ -304,16 +330,22 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           {me?.role === "master" && (
             <div>
               <label className={label}>
-                Entrou na agência em
+                Entrou na {house ? "house" : "agência"} em
                 <InfoTip text="Aparece no card da Equipe e, no dia em que a pessoa completa 1 ano (e a cada aniversário), ela recebe uma mensagem de agradecimento em Minhas Demandas." />
               </label>
-              <input type="date" defaultValue={profile.joinedAt ?? ""}
+              <input type="date" value={joinedDraft}
+                onChange={(e) => setJoinedDraft(e.target.value)}
                 onBlur={(e) => {
                   const v = e.target.value || null;
                   if (v === (profile.joinedAt ?? null)) return;
                   setMemberJoinedAt.mutate({ data: { userId: profile.id, joinedAt: v } }, { onSuccess: () => toast.success("Data de entrada salva.") });
                 }}
                 className={field} />
+              {tenureDetailed(joinedDraft) && (
+                <div className="mt-1.5 text-[12.5px] font-semibold" style={{ color: "var(--lz-accent-ink)" }}>
+                  {tenureDetailed(joinedDraft)} de {house ? "house" : "agência"}
+                </div>
+              )}
             </div>
           )}
         </section>

@@ -28,7 +28,7 @@ export function AnniversaryCard() {
 
   const first = me.name.trim().split(" ")[0];
   const nome = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-  const agencia = me.orgName ?? "agência";
+  const agencia = me.orgName ?? (me.accountType === "house" ? "house" : "agência");
   const message = renderAnniversaryMessage(me.orgAnniversaryMessage, { nome, anos: years, agencia });
   const headline = yearsLabel(years);
 
