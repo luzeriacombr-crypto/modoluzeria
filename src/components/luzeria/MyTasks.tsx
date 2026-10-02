@@ -208,9 +208,13 @@ function CustomizeLayoutModal({ layout, available, onChange, onReset, onSetTeamD
   );
 }
 
+/** Cores de estado usadas pelos widgets da home — antes cada um inventava a
+ * sua (vermelho em 2 tons, verde em 2, laranja em 3). */
+const TONE = { danger: "#FF5A47", warn: "#F5A623", success: "#5BA88A", info: "#4A9EFF" } as const;
+
 const RANK_INFO = [
   { Icon: Crown, color: "#D7FF3F", msg: "Você está em primeiro lugar, parabéns!" },
-  { Icon: Medal, color: "#4A9EFF", msg: "Você está em segundo lugar, vamos em frente!" },
+  { Icon: Medal, color: TONE.info, msg: "Você está em segundo lugar, vamos em frente!" },
   { Icon: Flame, color: "#A78BFA", msg: "Você está em terceiro lugar, ótimo ritmo!" },
 ];
 
@@ -232,7 +236,7 @@ function RankBadge({ position }: { position: number }) {
       </button>
       {open && (
         <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] whitespace-normal rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
-          style={{ background: "#fff", color: "#0D0D0D" }}>
+          style={{ background: "var(--card)", color: "var(--foreground)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}>
           {info.msg}
         </span>
       )}
@@ -275,11 +279,11 @@ function AgencyRankBadge({ rank, streakDays }: { rank: number; streakDays: numbe
           <path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8L6 21l1.6-7L2.2 9.2l7.1-.6L12 2z" />
         </svg>
         <span className="text-[12.5px] font-bold">Top {rank}</span>
-        {veteran && <Flame size={11} style={{ color: "#FF9B54" }} />}
+        {veteran && <Flame size={11} style={{ color: TONE.warn }} />}
       </button>
       {open && (
         <span role="tooltip" className="absolute left-0 top-full mt-2 z-30 w-max max-w-[240px] whitespace-normal rounded-xl px-3 py-2 text-[12.5px] font-semibold leading-snug shadow-2xl"
-          style={{ background: "#fff", color: "#0D0D0D" }}>
+          style={{ background: "var(--card)", color: "var(--foreground)", border: "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)" }}>
           {msg}
         </span>
       )}
@@ -397,9 +401,9 @@ export function MyTasks() {
     return true;
   });
   const dueGroups = [
-    { id: "due:late", label: "Atrasadas", color: "#FF4444", test: (d: number | null) => d !== null && d < 0 },
-    { id: "due:today", label: "Hoje", color: "#F5A623", test: (d: number | null) => d === 0 },
-    { id: "due:week", label: "Esta semana", color: "#4A9EFF", test: (d: number | null) => d !== null && d > 0 && d <= 6 },
+    { id: "due:late", label: "Atrasadas", color: TONE.danger, test: (d: number | null) => d !== null && d < 0 },
+    { id: "due:today", label: "Hoje", color: TONE.warn, test: (d: number | null) => d === 0 },
+    { id: "due:week", label: "Esta semana", color: TONE.info, test: (d: number | null) => d !== null && d > 0 && d <= 6 },
     { id: "due:later", label: "Mais pra frente", color: "#8A8A8A", test: (d: number | null) => d !== null && d > 6 },
     { id: "due:none", label: "Sem prazo", color: "#8A8A8A", test: (d: number | null) => d === null },
   ].map((g) => ({
@@ -452,7 +456,7 @@ export function MyTasks() {
               className="text-left rounded-2xl bg-card border px-4 py-3.5 transition hover:-translate-y-0.5"
               style={{ borderColor: on ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 7%, transparent)", boxShadow: on ? "0 0 0 1px rgb(var(--lz-brand-rgb)) inset" : undefined }}>
               <span className="block text-[30px] font-extrabold leading-none tabular-nums tracking-tight text-foreground"
-                style={{ color: "danger" in k && k.danger && k.n > 0 ? "#FF5A47" : undefined }}>{k.n}</span>
+                style={{ color: "danger" in k && k.danger && k.n > 0 ? TONE.danger : undefined }}>{k.n}</span>
               <span className="block mt-1.5 text-[11.5px] font-medium text-foreground/60">{k.label}</span>
             </button>
           );
@@ -556,14 +560,14 @@ export function MyTasks() {
 ) : null,
     payments: canFinanceiro && isMeView && upcomingPayments.length > 0 ? (
 <>
-          <RailCard icon={<Wallet size={11} />} iconBg="rgba(91,168,138,0.18)" iconColor="#5BA88A"
+          <RailCard icon={<Wallet size={11} />} iconBg="rgba(91,168,138,0.18)" iconColor={TONE.success}
             label="Pagamentos próximos" count={upcomingPayments.length}
             open={isSectionOpen("upcoming-payments")} onToggle={() => toggleSection("upcoming-payments")}>
             {upcomingPayments.map((p) => (
               <RailRow key={p.id}
                 title={p.name} titleColor={p.color}
                 sub={new Date(p.nextDueDate + "T00:00:00").toLocaleDateString("pt-BR")}
-                trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: "#F5A623" }}>
+                trail={<span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(245,166,35,0.14)", color: TONE.warn }}>
                   {p.daysUntil < 0 ? `Atrasado ${Math.abs(p.daysUntil)}d` : p.daysUntil === 0 ? "Vence hoje" : `em ${p.daysUntil}d`}</span>}
                 onClick={() => navigate({ to: "/financeiro", search: { aba: "entradas" } })} />
             ))}
@@ -710,9 +714,7 @@ export function MyTasks() {
 
   return (
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-5xl mx-auto relative" data-tour="my-tasks">
-      {/* Luz sutil vindo do canto superior direito — único elemento da
-          direção visual nova que o Junior aprovou (27/09/2026); o resto
-          (fonte serifada, KPIs sem card) voltou como estava. */}
+      {/* Luz sutil vindo do canto superior direito (decoração da home). */}
       <div
         aria-hidden
         className="pointer-events-none absolute"
@@ -1053,8 +1055,8 @@ function AgendaRail() {
       <div className="flex items-center gap-2 mb-3">
         <span className="rounded-md p-1" style={{ backgroundColor: "rgba(var(--lz-brand-light-rgb),0.18)", color: "var(--lz-accent-ink)" }}><CalendarClock size={11} /></span>
         <h2 className="text-[11.5px] uppercase font-semibold tracking-wide text-foreground/60">Agenda</h2>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full" style={{ color: "#5BC48A", background: "rgba(91,196,138,0.14)" }}>
-          <i className="w-1.5 h-1.5 rounded-full" style={{ background: "#5BC48A" }} />Google Agenda
+        <span className="ml-auto inline-flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-0.5 rounded-full" style={{ color: TONE.success, background: "rgba(91,196,138,0.14)" }}>
+          <i className="w-1.5 h-1.5 rounded-full" style={{ background: TONE.success }} />Google Agenda
         </span>
       </div>
       <div className="grid grid-cols-7 gap-1 mb-4">
@@ -1082,8 +1084,8 @@ function AgendaRail() {
             return (
               <div key={ev.id}>
                 {i === nextIdx && (
-                  <div className="grid grid-cols-[44px_1fr] gap-2.5 items-center mb-2 text-[10px] font-extrabold tracking-wider" style={{ color: "#FF5A47" }}>
-                    <span>AGORA</span><span className="h-[2px] rounded" style={{ background: "#FF5A47" }} />
+                  <div className="grid grid-cols-[44px_1fr] gap-2.5 items-center mb-2 text-[10px] font-extrabold tracking-wider" style={{ color: TONE.danger }}>
+                    <span>AGORA</span><span className="h-[2px] rounded" style={{ background: TONE.danger }} />
                   </div>
                 )}
                 <button onClick={() => setOpenEvent(ev)} className={`w-full grid grid-cols-[44px_minmax(0,1fr)] gap-2.5 text-left group ${past ? "opacity-50" : ""}`}>
@@ -1098,7 +1100,7 @@ function AgendaRail() {
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] text-foreground/55">
                       {!ev.allDay && ev.end && <span className="tabular-nums">{fmtTime(ev.start)} – {fmtTime(ev.end)}</span>}
                       {ev.attendees?.length > 0 && <span className="inline-flex items-center gap-1"><Users size={10} />{ev.attendees.length === 1 ? ev.attendees[0] : `${ev.attendees[0]} +${ev.attendees.length - 1}`}</span>}
-                      {ev.meetLink && <span className="inline-flex items-center gap-1 font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#6FA4FF", background: "rgba(111,164,255,0.14)" }}><VideoIcon size={10} />Meet</span>}
+                      {ev.meetLink && <span className="inline-flex items-center gap-1 font-bold px-1.5 py-0.5 rounded-full" style={{ color: "#7EB3FF", background: "rgba(111,164,255,0.14)" }}><VideoIcon size={10} />Meet</span>}
                       {ev.location && <span className="inline-flex items-center gap-1 truncate max-w-[140px]"><MapPin size={10} />{String(ev.location).split(",")[0]}</span>}
                     </span>
                   </span>
@@ -1268,10 +1270,10 @@ const GRID_COLS_CLASS: Record<number, string> = {
 };
 const WORK_TYPE_META: Record<WorkTypeKey, { label: string; color: string; icon: (size: number) => React.ReactNode }> = {
   reels: { label: "Reels editados", color: "var(--lz-accent-ink)", icon: (s) => <Film size={s} /> },
-  posts: { label: "Posts editados", color: "#4A9EFF", icon: (s) => <ImageIcon size={s} /> },
+  posts: { label: "Posts editados", color: TONE.info, icon: (s) => <ImageIcon size={s} /> },
   gravacao: { label: "Gravações concluídas", color: "#B392F0", icon: (s) => <Video size={s} /> },
-  roteiro: { label: "Roteiros concluídos", color: "#5BA88A", icon: (s) => <FileText size={s} /> },
-  publicacoes: { label: "Publicações finalizadas", color: "#FF8C42", icon: (s) => <Send size={s} /> },
+  roteiro: { label: "Roteiros concluídos", color: TONE.success, icon: (s) => <FileText size={s} /> },
+  publicacoes: { label: "Publicações finalizadas", color: TONE.warn, icon: (s) => <Send size={s} /> },
 };
 
 /** Card duplo (feito/meta + média por dia) repetido por tipo de trabalho
@@ -1405,7 +1407,7 @@ function DailyTaskCard({
       className="rounded-lg p-4 flex items-center gap-3 transition-opacity"
       style={{
         backgroundColor: missed ? "rgba(255,68,68,0.08)" : "rgba(var(--lz-brand-light-rgb),0.1)",
-        borderLeft: `3px solid ${missed ? "#FF4444" : "rgb(var(--lz-brand-rgb))"}`,
+        borderLeft: `3px solid ${missed ? TONE.danger : "rgb(var(--lz-brand-rgb))"}`,
         opacity: done ? 0.5 : 1,
       }}
     >
@@ -1413,7 +1415,7 @@ function DailyTaskCard({
         className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
         style={{
           backgroundColor: missed ? "rgba(255,68,68,0.2)" : "rgba(var(--lz-brand-light-rgb),0.2)",
-          color: missed ? "#FF4444" : "var(--lz-accent-ink)",
+          color: missed ? TONE.danger : "var(--lz-accent-ink)",
         }}
       >
         {icon}

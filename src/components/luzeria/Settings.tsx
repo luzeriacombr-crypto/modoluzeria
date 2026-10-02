@@ -161,18 +161,10 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           (id === "team" && (tab === "report" || tab === "auditoria")) ||
           (id === "cliente" && (tab === "margem" || tab === "journey")) ||
           (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos"));
-        const current = tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id;
         return (
           <>
-            {/* Celular: caixa de seleção em vez de abas roláveis */}
-            <div className="md:hidden mb-6" data-tour="settings-tabs-mobile">
-              <select id="settings-tab-select" aria-label="Seção de configurações" value={current}
-                onChange={(e) => setTab(e.target.value as any)}
-                className="w-full rounded-md border border-foreground/15 bg-card text-foreground text-sm font-bold uppercase tracking-wider px-4 py-3">
-                {tabItems.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-            </div>
-            <div className="hidden md:flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden" data-tour="settings-tabs">
+            {/* Mesma barra de abas (rolável na horizontal) em qualquer tamanho de tela — antes o celular caía num <select> nativo sem estilo (auditoria visual, 02/10). */}
+            <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar" data-tour="settings-tabs">
               {tabItems.map((t) => {
                 const active = isActive(t.id);
                 return (
@@ -1600,7 +1592,7 @@ function BillingSection() {
                   const info = INVOICE_STATUS_LABEL[inv.status] ?? { label: inv.status, color: "var(--foreground)" };
                   const link = inv.receiptUrl ?? inv.invoiceUrl;
                   return (
-                    <div key={inv.id} className="flex items-center justify-between gap-3 bg-black/20 rounded-md px-3 py-2">
+                    <div key={inv.id} className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ background: "color-mix(in srgb, var(--foreground) 4%, transparent)" }}>
                       <div className="text-xs text-foreground/70">
                         {inv.paymentDate
                           ? new Date(inv.paymentDate + "T12:00:00").toLocaleDateString("pt-BR")
@@ -2018,7 +2010,7 @@ function OrgBrandingSection({
         </p>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="rounded-xl p-4 bg-black/20 space-y-3">
+          <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-3">
             <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
               <Moon size={11} /> Logo · modo escuro
             </div>
@@ -2044,7 +2036,7 @@ function OrgBrandingSection({
               </div>
             </div>
           </div>
-          <div className="rounded-xl p-4 bg-black/20 space-y-3">
+          <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-3">
             <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
               <Sun size={11} /> Logo · modo claro <span className="text-foreground/25 font-semibold normal-case tracking-normal">(opcional)</span>
             </div>
@@ -2077,7 +2069,7 @@ function OrgBrandingSection({
         </p>
 
         {orgLogoUrl && (
-          <div className="rounded-xl p-4 bg-black/20 space-y-4">
+          <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-4">
             <div className="flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">Ajuste fino da logo na barra lateral</div>
               {(logoSizeAdjustPx !== 0 || logoPositionAdjustPx !== 0) && (
@@ -2120,7 +2112,7 @@ function OrgBrandingSection({
           </div>
         )}
 
-        <div className="rounded-xl p-4 bg-black/20 space-y-4">
+        <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-4">
           <Field label="Nome da agência">
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="lz-input" />
           </Field>
@@ -2138,7 +2130,7 @@ function OrgBrandingSection({
           <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
             <Palette size={11} /> Identidade visual
           </div>
-          <div className="rounded-xl p-4 bg-black/20 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-xl p-4 bg-foreground/[0.04] grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ColorPickerField label="Cor principal" value={colorPrimary} onChange={setColorPrimary} presets={BRAND_PRESETS} />
             <ColorPickerField label="Cor clara (fundos suaves)" value={colorPrimaryLight} onChange={setColorPrimaryLight} presets={BRAND_LIGHT_PRESETS} />
             <ColorPickerField label="Cor da barra lateral" value={colorSidebar} onChange={setColorSidebar} presets={SIDEBAR_PRESETS} />
@@ -2150,7 +2142,7 @@ function OrgBrandingSection({
           </p>
         </div>
 
-        <div className="rounded-xl p-4 bg-black/20 space-y-4">
+        <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={advancedMode} onChange={(e) => setAdvancedMode(e.target.checked)} />
@@ -2241,7 +2233,7 @@ function OrgBrandingSection({
           </div>
         </div>
 
-        <div className="rounded-xl p-4 bg-black/20 space-y-3">
+        <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">Cantos dos cards e painéis</label>
             <span className="text-xs font-bold" style={{ color: "var(--lz-accent-ink)" }}>{radius}px</span>
@@ -2257,7 +2249,7 @@ function OrgBrandingSection({
           </div>
         </div>
 
-        <div className="rounded-xl p-4 bg-black/20 space-y-3">
+        <div className="rounded-xl p-4 bg-foreground/[0.04] space-y-3">
           <label className="block text-[11px] uppercase tracking-wide text-foreground/40 font-semibold">
             Degradê do cabeçalho do Dashboard
           </label>
