@@ -255,20 +255,19 @@ export function AdminDashboard() {
             Top membros <span className="font-medium normal-case tracking-normal text-foreground/35">{PERIOD_LABEL[period]} · {periodRangeLabel(period, selectedMonthKey)}</span>
           </h2>
           <span className="hidden md:block h-px flex-1 bg-foreground/8" />
-          <div className="flex items-center gap-4 flex-wrap text-xs">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 rounded-full p-1 border border-foreground/10" role="group" aria-label="Tipo de ranking">
               {(["meta", "geral"] as const).map((m) => (
                 <button key={m} onClick={() => setRankingMode(m)} aria-pressed={rankingMode === m}
-                  className={`py-1 border-b-[1.5px] font-semibold transition-colors ${rankingMode === m ? "text-foreground border-[var(--lz-accent-ink)]" : "text-foreground/40 border-transparent hover:text-foreground"}`}>
+                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${rankingMode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.06]"}`}>
                   {m === "meta" ? "Por meta" : "Geral"}
                 </button>
               ))}
             </div>
-            <span className="h-3.5 w-px bg-foreground/10" />
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 rounded-full p-1 border border-foreground/10" role="group" aria-label="Período">
               {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
                 <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p}
-                  className={`py-1 border-b-[1.5px] font-semibold transition-colors ${period === p ? "text-foreground border-[var(--lz-accent-ink)]" : "text-foreground/40 border-transparent hover:text-foreground"}`}>
+                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D]" : "text-foreground/55 hover:text-foreground hover:bg-foreground/[0.06]"}`}>
                   {PERIOD_LABEL[p]}
                 </button>
               ))}
@@ -276,7 +275,7 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="space-y-2 relative lz-stagger">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 relative lz-stagger">
           {rankingRows.map((r, i) => {
             const rankColor =
               i === 0 ? PALETTE.lime :
@@ -315,12 +314,12 @@ export function AdminDashboard() {
             );
           })}
           {rankingRows.length === 0 && noGoalRows.length === 0 && (
-            <div className="text-foreground/40 text-sm text-center py-8">
+            <div className="md:col-span-2 text-foreground/40 text-sm text-center py-8">
               {rankingMode === "meta" ? "Nenhuma meta definida para o período." : "Sem finalizações no período."}
             </div>
           )}
           {rankingMode === "meta" && noGoalRows.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-foreground/6">
+            <div className="md:col-span-2 mt-4 pt-4 border-t border-foreground/6">
               <div className="flex items-center gap-1.5 mb-2 text-[10px] uppercase font-bold tracking-wider text-foreground/40">
                 <Target size={11} /> Sem meta definida
               </div>
