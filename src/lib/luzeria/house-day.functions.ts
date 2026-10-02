@@ -7,7 +7,7 @@ import {
   LEAD_ORIGINS, LEAD_STATUSES, type ChecklistCadence, type LeadOrigin, type LeadStatus,
 } from "./house-checklists";
 import type { BrandInfo, BrandGoals } from "./house-brands";
-import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brands.server";
+import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brand-access";
 
 const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 

@@ -1615,7 +1615,7 @@ export type InstagramAccountOverview = {
  * ser chamado tanto pelo server fn autenticado quanto pelo público (link
  * de compartilhamento), sem duplicar toda a lógica de chamadas à Graph
  * API. Quem chama já validou a autorização (admin+org OU token público). */
-async function fetchInstagramOverview(supabase: any, clientId: string): Promise<InstagramAccountOverview> {
+export async function fetchInstagramOverview(supabase: any, clientId: string): Promise<InstagramAccountOverview> {
     const creds = await getClientInstagramCreds(supabase, clientId);
     const tok = encodeURIComponent(creds.access_token);
     const acct = creds.instagram_business_account_id;

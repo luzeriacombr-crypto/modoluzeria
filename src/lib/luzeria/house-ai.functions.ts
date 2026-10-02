@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 import { BRAND_BRIEFING_FIELDS, composeBriefingText, type BrandBriefing, type StoryIdea } from "./house-brand";
 import { houseDateKey, LEAD_ORIGIN_LABEL } from "./house-checklists";
-import { getHouseBrands, pickWriteBrand, pickBrands, brandFilter } from "./house-brands.server";
+import { getHouseBrands, pickWriteBrand, pickBrands, brandFilter } from "./house-brand-access";
 
 /** Marca de trabalho: a pedida (se a pessoa tem acesso a ela), senão a principal. */
 async function houseBrand(context: { supabase: any; orgId: string }, brandId?: string | null) {

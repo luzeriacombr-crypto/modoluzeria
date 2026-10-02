@@ -7,14 +7,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { AlertTriangle, Trophy, ChevronLeft, ChevronRight, FileText, FolderKanban, Instagram, Settings2, Target, Users, Wallet, X } from "lucide-react";
+import { AlertTriangle, Megaphone, Trash2, Trophy, ChevronLeft, ChevronRight, FileText, FolderKanban, Instagram, Settings2, Target, Users, Wallet, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useMe } from "@/lib/luzeria/queries";
-import { getOwnerPanel, saveHouseTargets, type OwnerPanel } from "@/lib/luzeria/house-owner.functions";
+import { getOwnerPanel, saveHouseTargets, getHouseReach, listAdSpend, addAdSpend, deleteAdSpend, type OwnerPanel } from "@/lib/luzeria/house-owner.functions";
 import { getTeamRanking, RANKING_POINTS } from "@/lib/luzeria/house-team.functions";
 import { Avatar } from "./Avatar";
 import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
-import { HouseBrandSwitcher } from "./HouseBrandSwitcher";
+import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
 import { houseDateKey, LEAD_ORIGINS, LEAD_ORIGIN_LABEL } from "@/lib/luzeria/house-checklists";
 import { monthLabel, shiftMonth, PROJECT_TEMPLATES } from "@/lib/luzeria/house-projects";
 
@@ -75,6 +75,10 @@ export function HouseOwnerPanel() {
             <OriginCard data={data} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
+            <ReachCard monthKey={monthKey} brandParam={brandParam} />
+            <AdsCard data={data} monthKey={monthKey} brandParam={brandParam} isMaster={isMaster} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
             <ProjectsCard data={data} onOpen={(id) => navigate({ to: "/projetos", search: { id } as any })} />
             <LateChecklistsCard data={data} />
           </div>
@@ -88,6 +92,114 @@ export function HouseOwnerPanel() {
         </div>
       )}
       {configOpen && data && <TargetsModal settings={data.settings} onClose={() => setConfigOpen(false)} />}
+    </div>
+  );
+}
+
+function ReachCard({ monthKey, brandParam }: { monthKey: string; brandParam?: string }) {
+  const fn = useServerFn(getHouseReach);
+  const { data: rows = [], isLoading } = useQuery({ queryKey: ["house-reach", monthKey, brandParam ?? "all"], queryFn: () => fn({ data: { monthKey, brandId: brandParam } }), staleTime: 5 * 60_000 });
+  return (
+    <Card icon={<Instagram size={14} />} title="Alcance e seguidores"
+      right={<span className="text-[10px] text-foreground/40">alcance: últimos 30 dias</span>}>
+      {isLoading ? <div className="text-sm text-foreground/40">Buscando no Instagram…</div> : rows.length === 0 ? (
+        <div className="text-sm text-foreground/45">Nenhuma marca.</div>
+      ) : (
+        <ul className="space-y-4">
+          {rows.map((r) => (
+            <li key={r.brandId}>
+              {rows.length > 1 && <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/55 mb-1.5">{r.name}</div>}
+              {!r.connected && r.followers == null ? (
+                <div className="text-sm text-foreground/45">Instagram não conectado. Conecte na ficha da marca pra ver alcance e seguidores.</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div>
+                    <div className="text-xs text-foreground/55">Seguidores</div>
+                    <div className="text-2xl font-extrabold tabular-nums text-foreground">{r.followers ?? "—"}</div>
+                    <div className="text-[10.5px] text-foreground/45">
+                      {r.followersChange == null ? "variação do mês aparece quando houver 2 retratos"
+                        : `${r.followersChange >= 0 ? "+" : ""}${r.followersChange} no mês`}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-foreground/55">Alcance (30 dias)</div>
+                    <div className="text-2xl font-extrabold tabular-nums text-foreground">{r.reach30 ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-foreground/55">Visitas ao perfil</div>
+                    <div className="text-lg font-bold tabular-nums text-foreground">{r.profileViews30 ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-foreground/55">Interações</div>
+                    <div className="text-lg font-bold tabular-nums text-foreground">{r.interactions30 ?? "—"}</div>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function AdsCard({ data, monthKey, brandParam, isMaster }: { data: OwnerPanel; monthKey: string; brandParam?: string; isMaster: boolean }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listAdSpend);
+  const addFn = useServerFn(addAdSpend);
+  const delFn = useServerFn(deleteAdSpend);
+  const { writeBrandId, multi } = useHouseBrand();
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [pick, setPick] = useState<string | undefined>(undefined);
+  const { data: spend = [] } = useQuery({ queryKey: ["house-ad-spend", monthKey, brandParam ?? "all"], queryFn: () => listFn({ data: { monthKey, brandId: brandParam } }) });
+  const refresh = () => { qc.invalidateQueries({ queryKey: ["house-ad-spend"] }); qc.invalidateQueries({ queryKey: ["house-owner-panel"] }); qc.invalidateQueries({ queryKey: ["house-report"] }); };
+  const add = useMutation({
+    mutationFn: () => addFn({ data: { monthKey, brandId: pick ?? brandParam ?? writeBrandId, amountCents: Math.round((Number(amount.replace(",", ".")) || 0) * 100), note: note.trim() || undefined } }),
+    onSuccess: () => { setAmount(""); setNote(""); refresh(); toast.success("Investimento lançado."); },
+    onError: (e: any) => toastFriendlyError(e, "Não consegui lançar"),
+  });
+  const del = useMutation({ mutationFn: (id: string) => delFn({ data: { id } }), onSuccess: refresh, onError: (e: any) => toastFriendlyError(e, "Não consegui apagar") });
+  const ads = data.ads;
+  const valid = (Number(amount.replace(",", ".")) || 0) > 0;
+  return (
+    <Card icon={<Megaphone size={14} />} title="Tráfego pago"
+      right={<span className="text-[10px] text-foreground/40">lead de anúncio: origem "Anúncio" no lead</span>}>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <Stat label="Investido" value={ads ? money(ads.spendCents) : "—"} />
+        <Stat label="Leads de anúncio" value={String(ads?.leads ?? 0)} />
+        <Stat label="Custo por lead" value={ads?.costPerLeadCents != null ? money(ads.costPerLeadCents) : "—"} />
+        <Stat label="Custo por agendamento" value={ads?.costPerScheduledCents != null ? money(ads.costPerScheduledCents) : "—"} />
+      </div>
+      {spend.length > 0 && (
+        <ul className="mt-4 space-y-1">
+          {spend.map((r) => (
+            <li key={r.id} className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 hover:bg-foreground/[0.04]">
+              <span className="flex-1 min-w-0 truncate text-foreground/80">{multi ? `${r.clientName} · ` : ""}{r.note || "Anúncios"}</span>
+              <span className="font-semibold tabular-nums text-foreground">{money(r.amountCents)}</span>
+              {isMaster && <button onClick={() => del.mutate(r.id)} aria-label="Apagar lançamento" className="p-1 rounded text-foreground/40 hover:text-red-400"><Trash2 size={13} /></button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {isMaster && (
+        <form className="mt-4 flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); if (valid) add.mutate(); }}>
+          {multi && !brandParam && <div className="basis-full"><HouseBrandSelect value={pick} onChange={setPick} /></div>}
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="Valor (R$)" className="lz-input w-28" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Campanha (opcional)" className="lz-input flex-1 min-w-[140px]" />
+          <button type="submit" disabled={!valid || add.isPending} className="px-3.5 py-2 rounded-md text-xs font-bold disabled:opacity-40"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>Lançar</button>
+        </form>
+      )}
+    </Card>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-foreground/55">{label}</div>
+      <div className="text-xl font-extrabold tabular-nums text-foreground">{value}</div>
     </div>
   );
 }
@@ -229,7 +341,7 @@ function OriginCard({ data }: { data: OwnerPanel }) {
       ) : (
         <ul className="space-y-2.5">
           {entries.map(({ o, n }) => (
-            <li key={o} className="grid grid-cols-[130px_1fr_32px] items-center gap-3" title={`${LEAD_ORIGIN_LABEL[o]}: ${n}`}>
+            <li key={o} className="grid grid-cols-[170px_1fr_32px] items-center gap-3" title={`${LEAD_ORIGIN_LABEL[o]}: ${n}`}>
               <span className="text-sm text-foreground/75 truncate">{LEAD_ORIGIN_LABEL[o]}</span>
               <div className="h-5 rounded-md bg-foreground/[0.05] overflow-hidden">
                 <div className="h-full rounded-md" style={{ width: `${(n / max) * 100}%`, background: "rgb(var(--lz-brand-rgb))" }} />

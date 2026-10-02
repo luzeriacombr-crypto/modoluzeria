@@ -103,6 +103,32 @@ export async function buildHouseReportPdf(input: {
   row("Compareceram", `${n.leads.attended} (${pct(n.leads.attendRate)} dos agendados)`);
   for (const o of LEAD_ORIGINS) if (n.leads.byOrigin[o]) row(`   ${LEAD_ORIGIN_LABEL[o]}`, String(n.leads.byOrigin[o]));
 
+  if (n.byBrand && n.byBrand.length > 1) {
+    heading("Por marca");
+    for (const b of n.byBrand) {
+      row(b.name, `${b.leads} lead(s), ${b.scheduled} agendado(s)`, `stories ${b.stories.done}/${b.stories.goal}, posts ${b.posts.done}/${b.posts.goal}`);
+    }
+  }
+
+  if (n.reach && n.reach.some((r) => r.connected || r.followers != null)) {
+    heading("Alcance e seguidores");
+    for (const r of n.reach) {
+      if (!r.connected && r.followers == null) { row(r.name, "Instagram não conectado"); continue; }
+      const change = r.followersChange == null ? "" : ` (${r.followersChange >= 0 ? "+" : ""}${r.followersChange} no mês)`;
+      row(r.name, `${r.followers ?? "-"} seguidores${change}`,
+        r.reach30 != null ? `alcance 30 dias: ${r.reach30} | visitas ao perfil: ${r.profileViews30 ?? "-"} | interações: ${r.interactions30 ?? "-"}` : undefined);
+    }
+  }
+
+  if (n.ads && (n.ads.spendCents > 0 || n.ads.leads > 0)) {
+    heading("Tráfego pago");
+    row("Investido em anúncios", money(n.ads.spendCents));
+    row("Leads de anúncio", String(n.ads.leads));
+    row("Agendamentos de anúncio", String(n.ads.scheduled));
+    row("Custo por lead", n.ads.costPerLeadCents == null ? "-" : money(n.ads.costPerLeadCents));
+    row("Custo por agendamento", n.ads.costPerScheduledCents == null ? "-" : money(n.ads.costPerScheduledCents));
+  }
+
   if (n.variable) {
     const v = n.variable;
     heading("Variável");

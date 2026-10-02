@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 import { houseDateKey } from "./house-checklists";
 import { DEMAND_KINDS, shiftMonth, type DemandKind } from "./house-projects";
-import { getHouseBrands, pickBrands, pickWriteBrand, brandFilter } from "./house-brands.server";
+import { getHouseBrands, pickBrands, pickWriteBrand, brandFilter } from "./house-brand-access";
 
 const spStart = (dateKey: string) => new Date(`${dateKey}T03:00:00.000Z`).toISOString();
 

@@ -82,13 +82,14 @@ export function checklistDueLabel(item: { cadence: ChecklistCadence; dueWeekday:
 
 /* ===== Leads ===== */
 
-export const LEAD_ORIGINS = ["story", "caixinha", "comentario", "direct", "outro"] as const;
+export const LEAD_ORIGINS = ["story", "caixinha", "comentario", "direct", "anuncio", "outro"] as const;
 export type LeadOrigin = (typeof LEAD_ORIGINS)[number];
 export const LEAD_ORIGIN_LABEL: Record<LeadOrigin, string> = {
   story: "Resposta de story",
   caixinha: "Caixinha",
   comentario: "Comentário",
   direct: "Direct",
+  anuncio: "Anúncio (tráfego pago)",
   outro: "Outro",
 };
 

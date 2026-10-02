@@ -185,6 +185,45 @@ function NumbersSection({ report }: { report: MonthlyReport }) {
           ))}
         </div>
       )}
+      {n.byBrand && n.byBrand.length > 1 && (
+        <div className="mt-5">
+          <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 mb-2">Por marca</div>
+          <ul className="space-y-1">
+            {n.byBrand.map((b) => (
+              <li key={b.brandId} className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm py-1.5 border-b border-foreground/[0.06]">
+                <span className="font-semibold text-foreground">{b.name}</span>
+                <span className="text-xs text-foreground/65 tabular-nums">stories {b.stories.done}/{b.stories.goal} · posts {b.posts.done}/{b.posts.goal} · {b.leads} leads · {b.scheduled} agendados</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {n.reach && n.reach.some((r) => r.connected || r.followers != null) && (
+        <div className="mt-5">
+          <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 mb-2">Alcance e seguidores</div>
+          <ul className="space-y-1">
+            {n.reach.map((r) => (
+              <li key={r.brandId} className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm py-1.5 border-b border-foreground/[0.06]">
+                <span className="font-semibold text-foreground">{r.name}</span>
+                <span className="text-xs text-foreground/65 tabular-nums">
+                  {r.followers ?? "—"} seguidores{r.followersChange != null ? ` (${r.followersChange >= 0 ? "+" : ""}${r.followersChange} no mês)` : ""}
+                  {r.reach30 != null ? ` · alcance 30d ${r.reach30} · visitas ${r.profileViews30 ?? "—"}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {n.ads && (n.ads.spendCents > 0 || n.ads.leads > 0) && (
+        <div className="mt-5">
+          <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/50 mb-2">Tráfego pago</div>
+          <div className="text-sm text-foreground/80 tabular-nums">
+            Investido <strong>{money(n.ads.spendCents)}</strong> · {n.ads.leads} lead(s) de anúncio · {n.ads.scheduled} agendamento(s)
+            {n.ads.costPerLeadCents != null && <> · custo por lead <strong>{money(n.ads.costPerLeadCents)}</strong></>}
+            {n.ads.costPerScheduledCents != null && <> · por agendamento <strong>{money(n.ads.costPerScheduledCents)}</strong></>}
+          </div>
+        </div>
+      )}
       {n.variable && (
         <div className="mt-5 rounded-xl p-4 flex flex-wrap items-center gap-x-6 gap-y-2" style={{ background: "rgba(var(--lz-brand-rgb),0.08)", border: "1px solid rgba(var(--lz-brand-rgb),0.25)" }}>
           <span className="flex items-center gap-2 text-sm font-semibold text-foreground"><Wallet size={15} style={{ color: "var(--lz-accent-ink)" }} /> Variável</span>

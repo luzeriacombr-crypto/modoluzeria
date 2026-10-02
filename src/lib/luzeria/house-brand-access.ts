@@ -1,7 +1,5 @@
-// House com várias marcas — lado servidor: quais marcas a pessoa enxerga
-// (respeita o acesso por marca: o select de clients já passa pela RLS
-// has_client_access, então quem é restrito só recebe as marcas liberadas)
-// e as metas de cada uma. Server-only.
+// House com várias marcas: quais marcas a pessoa enxerga (respeita o acesso por
+// marca: o select de clients já passa pela RLS has_client_access) e as metas de cada uma.
 import { DEFAULT_BRAND_GOALS, type BrandGoals, type BrandInfo } from "./house-brands";
 
 export async function getHouseBrands(context: { supabase: any; orgId: string }): Promise<{ brands: BrandInfo[]; mainId: string | null }> {

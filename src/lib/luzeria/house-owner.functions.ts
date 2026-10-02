@@ -11,7 +11,8 @@ import {
   type ProjectTemplateId, type ProjectStatus, type VariableWeights,
 } from "./house-projects";
 import type { BrandInfo, BrandGoals } from "./house-brands";
-import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brands.server";
+import type { BrandReach } from "./house-reach.server";
+import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brand-access";
 
 const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 const monthKeySchema = z.string().regex(/^\d{4}-\d{2}$/);
@@ -89,10 +90,18 @@ export type MonthNumbers = {
     total: number; goal: number; scheduled: number; scheduledGoal: number; attended: number;
     byOrigin: Record<LeadOrigin, number>; scheduleRate: number | null; attendRate: number | null;
   };
+  /** Tráfego pago: investimento lançado + leads que vieram de anúncio. */
+  ads?: {
+    spendCents: number; leads: number; scheduled: number;
+    costPerLeadCents: number | null; costPerScheduledCents: number | null;
+    byBrand: { brandId: string; name: string; spendCents: number; leads: number }[];
+  };
+  /** Alcance e seguidores por marca (só quando pedido: chama o Instagram). */
+  reach?: BrandReach[];
   variable: null | { weights: VariableWeights; maxCents: number; scores: { goals: number; leads: number; scheduled: number }; totalPct: number; valueCents: number };
 };
 
-async function computeMonthNumbers(supabase: any, orgId: string, brands: BrandInfo[], monthKey: string): Promise<MonthNumbers> {
+async function computeMonthNumbers(supabase: any, orgId: string, brands: BrandInfo[], monthKey: string, withReach = false): Promise<MonthNumbers> {
   const todayKey = houseDateKey();
   const b = monthBounds(monthKey, todayKey);
   const fromIso = spStart(b.first);
@@ -208,6 +217,24 @@ async function computeMonthNumbers(supabase: any, orgId: string, brands: BrandIn
   ];
   const goalsPct = parts.length ? parts.reduce((a, v) => a + v, 0) / parts.length : 0;
 
+  // Tráfego pago.
+  const { data: spendRows } = await supabase.from("house_ad_spend").select("client_id, amount_cents")
+    .eq("org_id", orgId).eq("month_key", monthKey).in("client_id", brandIds);
+  const spendCents = ((spendRows ?? []) as any[]).reduce((n, r) => n + r.amount_cents, 0);
+  const adLeads = leads.filter((l) => l.origin === "anuncio");
+  const adScheduled = adLeads.filter((l) => l.agendou_at).length;
+  const ads: NonNullable<MonthNumbers["ads"]> = {
+    spendCents, leads: adLeads.length, scheduled: adScheduled,
+    costPerLeadCents: spendCents > 0 && adLeads.length > 0 ? Math.round(spendCents / adLeads.length) : null,
+    costPerScheduledCents: spendCents > 0 && adScheduled > 0 ? Math.round(spendCents / adScheduled) : null,
+    byBrand: brands.map((br) => ({
+      brandId: br.id, name: br.name,
+      spendCents: ((spendRows ?? []) as any[]).filter((r) => r.client_id === br.id).reduce((n, r) => n + r.amount_cents, 0),
+      leads: adLeads.filter((l) => (l.client_id ?? mainId) === br.id).length,
+    })),
+  };
+  const reach = withReach ? await (await import("./house-reach.server")).computeBrandReach(brands, b.first, b.last, b.isCurrent) : undefined;
+
   const leadsGoal = totalGoals.leadsGoalMonth;
   const scheduledGoal = totalGoals.scheduledGoalMonth;
   let variable: MonthNumbers["variable"] = null;
@@ -220,7 +247,7 @@ async function computeMonthNumbers(supabase: any, orgId: string, brands: BrandIn
   }
 
   return {
-    monthKey, isCurrent: b.isCurrent, goalsPct, byBrand: perBrand,
+    monthKey, isCurrent: b.isCurrent, goalsPct, byBrand: perBrand, ads, reach,
     stories: { done: storiesDone, goal: storiesGoal, pct: storiesPct, source: storiesSource, trackedDays },
     posts: { done: postsDone, goal: postsGoal, pct: postsPct, source: postsSource },
     planning: { targetMonth, deadline, delivered: !!deliveredAt, onTime, deliveredAt, applies: planningApplies },
@@ -289,6 +316,61 @@ export const getOwnerPanel = createServerFn({ method: "GET" })
         weights: { ...DEFAULT_VARIABLE_WEIGHTS, ...(s?.variable_weights ?? {}) },
       },
     };
+  });
+
+/** Alcance e seguidores por marca — separado do painel porque chama o
+ * Instagram (mais lento): a tela carrega os números e depois este cartão. */
+export const getHouseReach = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthKey: string; brandId?: string }) => z.object({ monthKey: monthKeySchema, brandId: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }): Promise<BrandReach[]> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const b = monthBounds(data.monthKey, houseDateKey());
+    return (await import("./house-reach.server")).computeBrandReach(selected, b.first, b.last, b.isCurrent);
+  });
+
+/* ============== Investimento em anúncios ============== */
+
+export type AdSpendRow = { id: string; clientId: string; clientName: string; monthKey: string; amountCents: number; note: string | null };
+
+export const listAdSpend = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthKey: string; brandId?: string }) => z.object({ monthKey: monthKeySchema, brandId: z.string().optional() }).parse(d))
+  .handler(async ({ data, context }): Promise<AdSpendRow[]> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const { data: rows, error } = await (context.supabase as any).from("house_ad_spend").select("*")
+      .eq("org_id", context.orgId).eq("month_key", data.monthKey).in("client_id", selected.map((x) => x.id)).order("created_at");
+    if (error) throw new Error(error.message);
+    const name = new Map(brands.map((x) => [x.id, x.name]));
+    return ((rows ?? []) as any[]).map((r) => ({ id: r.id, clientId: r.client_id, clientName: name.get(r.client_id) ?? "", monthKey: r.month_key, amountCents: r.amount_cents, note: r.note ?? null }));
+  });
+
+export const addAdSpend = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { monthKey: string; brandId?: string; amountCents: number; note?: string }) =>
+    z.object({ monthKey: monthKeySchema, brandId: z.string().uuid().optional(), amountCents: z.number().int().min(0).max(1_000_000_000), note: z.string().trim().max(200).optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context);
+    const { brands } = await getHouseBrands(context);
+    const brand = pickWriteBrand(brands, data.brandId);
+    const { error } = await (context.supabase as any).from("house_ad_spend").insert({
+      org_id: context.orgId, client_id: brand.id, month_key: data.monthKey, amount_cents: data.amountCents,
+      note: data.note || null, created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteAdSpend = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context);
+    const { error } = await (context.supabase as any).from("house_ad_spend").delete().eq("id", data.id).eq("org_id", context.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const saveHouseTargets = createServerFn({ method: "POST" })
@@ -361,7 +443,7 @@ export const getMonthlyReport = createServerFn({ method: "GET" })
     const { data: r } = await db.from("monthly_reports").select("*").eq("org_id", context.orgId).eq("month_key", data.monthKey).maybeSingle();
     // Enviado = números congelados no envio; rascunho = sempre ao vivo.
     const numbers = r?.status === "enviado" && r.numbers ? (r.numbers as MonthNumbers)
-      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
+      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey, true);
     return {
       monthKey: data.monthKey,
       whatWorked: r?.what_worked ?? "", learned: r?.learned ?? "", nextChanges: r?.next_changes ?? "",
@@ -390,7 +472,7 @@ export const saveMonthlyReport = createServerFn({ method: "POST" })
       row.status = "enviado";
       row.submitted_by = context.userId;
       row.submitted_at = new Date().toISOString();
-      row.numbers = await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
+      row.numbers = await computeMonthNumbers(db, context.orgId, brands, data.monthKey, true);
     }
     if (data.reopen) {
       await assertMaster(context);
@@ -429,7 +511,7 @@ export const exportMonthlyReportPdf = createServerFn({ method: "POST" })
     const db: any = context.supabase;
     const { data: r } = await db.from("monthly_reports").select("*").eq("org_id", context.orgId).eq("month_key", data.monthKey).maybeSingle();
     const numbers = r?.status === "enviado" && r.numbers ? (r.numbers as MonthNumbers)
-      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
+      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey, true);
     const { buildHouseReportPdf } = await import("./house-report-pdf.server");
     const bytes = await buildHouseReportPdf({
       orgName, monthKey: data.monthKey, numbers,
