@@ -340,15 +340,32 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </>
       )}
 
+      {/* Resumo por Função — cada nível com a própria cor (mesmas cores do card). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        {([
+          { role: "member" as const, label: "Membro", hint: "Só vê o que é dele", dot: "#C7C9CC" },
+          { role: "setor" as const, label: "Adm Setor", hint: "Visão ampliada por área", dot: "#8FC2FF" },
+          { role: "master" as const, label: "Adm Master", hint: "Acesso total, inclusive financeiro", dot: "rgb(var(--lz-brand-rgb))" },
+        ]).map((r) => (
+          <div key={r.role} className="rounded-2xl border border-foreground/8 bg-card px-5 py-4 flex items-center gap-4">
+            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: r.dot }} />
+            <div className="min-w-0">
+              <div className="text-2xl font-extrabold text-foreground tabular-nums leading-none">{active.filter((p) => p.role === r.role).length}</div>
+              <div className="text-[12px] text-foreground/50 mt-1.5"><span className="font-semibold text-foreground/70">{r.label}</span> — {r.hint}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3">
         Equipe ativa <span className="text-foreground/30">({active.length})</span>
       </h2>
-      <div data-tour="team-active-list" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lz-stagger">
+      <div data-tour="team-active-list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 lz-stagger">
         {active.map((p) => <TeamMemberCard key={p.id} profile={p} />)}
       </div>
 
       <p className="text-[11px] text-foreground/30 mt-4">
-        Clique num membro pra ver mais opções (resetar senha, ver demandas, ativo/inativo, remover). Novos cadastros ficam pendentes até a aprovação de um Administrador Master. E-mails pré-cadastrados na equipe inicial entram já aprovados com a função correta.
+        Clique num membro pra ver mais opções: cargos, restringir clientes, resetar senha, ver demandas, ativar/desativar ou remover.
       </p>
 
       <div className="mt-10 pt-6 border-t border-foreground/6">

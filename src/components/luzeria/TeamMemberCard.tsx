@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { KeyRound, ListChecks, Trash2, Mail } from "lucide-react";
+import { KeyRound, ListChecks, Trash2, Mail, Briefcase } from "lucide-react";
 import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
   type Profile, type Role, type WorkSchedule,
@@ -52,27 +52,36 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex flex-col items-center gap-2 p-4 rounded-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 text-center"
-        style={{ ...glassCardStyle(), ...EASE }}
+        className="group flex flex-col gap-3.5 p-[18px] rounded-2xl border border-foreground/8 bg-card text-left hover:border-foreground/20 hover:-translate-y-0.5 transition-all duration-200"
+        style={EASE}
       >
-        <div className="relative">
-          <Avatar profile={profile} size={56} />
-          {!profile.active && (
-            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-card flex items-center justify-center">
-              <span className="h-2 w-2 rounded-full bg-foreground/30" />
-            </span>
-          )}
+        <div className="flex items-start justify-between gap-2">
+          <div className="relative shrink-0">
+            <Avatar profile={profile} size={48} />
+            {!profile.active && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-card flex items-center justify-center">
+                <span className="h-2 w-2 rounded-full bg-foreground/30" />
+              </span>
+            )}
+          </div>
+          <span
+            className="rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
+            style={profile.active
+              ? { backgroundColor: roleStyle.bg, color: roleStyle.color, boxShadow: `inset 0 0 0 1px ${roleStyle.color}33` }
+              : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
+          >
+            {ROLE_LABEL[profile.role]}
+          </span>
         </div>
-        <div className="text-sm font-semibold text-foreground truncate w-full">{profile.name}</div>
-        {cargoNames && <div className="text-[11px] text-foreground/40 truncate w-full -mt-1">{cargoNames}</div>}
-        <span
-          className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-          style={profile.active
-            ? { backgroundColor: roleStyle.bg, color: roleStyle.color }
-            : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
-        >
-          {ROLE_LABEL[profile.role]}
-        </span>
+        <div className="min-w-0">
+          <div className="text-[15px] font-bold text-foreground truncate">{profile.name}</div>
+          <div className="text-[12px] text-foreground/40 truncate mt-0.5 flex items-center gap-1.5">
+            <Briefcase size={11} className="shrink-0" />
+            {cargoNames || "Sem cargo definido"}
+          </div>
+        </div>
+        <div className="h-px bg-foreground/6" />
+        <div className="text-[11px] text-foreground/30 group-hover:text-foreground/55 transition-colors">Clique pra editar</div>
       </button>
       {open && <TeamMemberModal profile={profile} onClose={() => setOpen(false)} />}
     </>

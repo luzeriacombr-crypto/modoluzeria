@@ -251,7 +251,7 @@ export function MemberGoalsTab() {
           const prog: any = progressByUser.get(p.id);
           const dirty = isDirty(p.id, row);
           return (
-            <div key={p.id} className="bg-card rounded-lg p-4">
+            <div key={p.id} className="bg-card border border-foreground/8 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar profile={p} size={32} />
