@@ -17,7 +17,7 @@ import {
   addAssignee, addContentItem, createClient, deleteClient, deleteItem, deleteContentItems, duplicateMonth, setNotifyStoriesInTasks, setWhatsappGroupLink,
   getMe, getMonth, getProductivity, getMyActivityCounts, listClients, listMonthKeys, listMyTasks, listNotifications,
   listProfiles, markNotificationRead, removeAssignee, setItemStatus,
-  setUserActive, setUserRole, setExcludeFromRanking, setHideGoalsWidget, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
+  setUserActive, setUserRole, setExcludeFromRanking, setHideGoalsWidget, setMemberJoinedAt, deleteUser, updateClient, updateItem, updateMyProfile, adminUpdateMemberAvatar,
   listMemberPay, setMemberPay,
   setItemEditor, setItemReelType, setItemPostFormat,
   getCleaning, upsertCleaningCell, setCleaningDone, updateCleaningNote, getMyToday,
@@ -1092,6 +1092,7 @@ export function useApi() {
     setUserRole: useMutation({ mutationFn: useServerFn(setUserRole), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }), onError: fail("Não consegui mudar a função.") }),
     setUserActive: useMutation({ mutationFn: useServerFn(setUserActive), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }), onError: fail("Não consegui mudar o status do membro.") }),
     setExcludeFromRanking: useMutation({ mutationFn: useServerFn(setExcludeFromRanking), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
+    setMemberJoinedAt: useMutation({ mutationFn: useServerFn(setMemberJoinedAt), onSuccess: () => { qc.invalidateQueries({ queryKey: ["profiles"] }); qc.invalidateQueries({ queryKey: ["me"] }); } }),
     setHideGoalsWidget: useMutation({ mutationFn: useServerFn(setHideGoalsWidget), onSuccess: () => qc.invalidateQueries({ queryKey: ["profiles"] }) }),
     setMemberPay: useMutation({
       mutationFn: useServerFn(setMemberPay),

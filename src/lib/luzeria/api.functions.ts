@@ -80,7 +80,7 @@ export const listProfiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking, client_access_restricted, hide_goals_widget")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, exclude_from_ranking, client_access_restricted, hide_goals_widget, joined_at")
       .order("name");
     if (error) throw new Error(error.message);
     const { data: roles } = await context.supabase.from("user_roles").select("user_id, role");
@@ -121,6 +121,7 @@ export const listProfiles = createServerFn({ method: "GET" })
       tourCompletedAt: p.tour_completed_at ?? null,
       excludeFromRanking: p.exclude_from_ranking ?? false,
       hideGoalsWidget: p.hide_goals_widget ?? false,
+      joinedAt: p.joined_at ?? null,
       cargoIds: cargoIdsByProfile.get(p.id) ?? [],
       clientAccessRestricted: p.client_access_restricted ?? false,
       clientAccessIds: clientAccessByProfile.get(p.id) ?? [],
@@ -143,7 +144,7 @@ export const getMe = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile } = await (context.supabase as any)
       .from("profiles")
-      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, whatsapp_community_seen_at, org_id, exclude_from_ranking, hide_goals_widget, default_landing")
+      .select("id, name, color, icon, active, avatar_url, onboarded_at, tour_completed_at, whatsapp_community_seen_at, org_id, exclude_from_ranking, hide_goals_widget, default_landing, joined_at")
       .eq("id", context.userId).maybeSingle();
     const { data: roleRow } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId).maybeSingle();
@@ -217,6 +218,7 @@ export const getMe = createServerFn({ method: "GET" })
       color: profile.color, icon: profile.icon, active: profile.active,
       excludeFromRanking: (profile as any).exclude_from_ranking ?? false,
       hideGoalsWidget: (profile as any).hide_goals_widget ?? false,
+      joinedAt: (profile as any).joined_at ?? null,
       role,
       avatarPath: profile.avatar_url ?? null,
       avatarUrl: profile.avatar_url ? signed.get(profile.avatar_url) ?? null : null,
@@ -1547,6 +1549,19 @@ export const setHideGoalsWidget = createServerFn({ method: "POST" })
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("profiles")
       .update({ hide_goals_widget: data.hideGoalsWidget }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setMemberJoinedAt = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { userId: string; joinedAt: string | null }) =>
+    z.object({ userId: z.string().uuid(), joinedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await (context.supabase as any).from("profiles")
+      .update({ joined_at: data.joinedAt }).eq("id", data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

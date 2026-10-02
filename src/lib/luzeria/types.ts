@@ -332,6 +332,8 @@ export interface Profile {
   /** Admin ocultou a barra "Meta do mês" na home de Minhas Demandas
    * desse membro (ex: alguém que não tem meta e acha a barra poluição). */
   hideGoalsWidget?: boolean;
+  /** Data de entrada na agência (YYYY-MM-DD), editada pelo Adm Master. */
+  joinedAt?: string | null;
   /** Public/signed URL of the uploaded avatar image, or null. */
   avatarUrl?: string | null;
   /** Path inside the `avatars` bucket (raw value stored in DB). */

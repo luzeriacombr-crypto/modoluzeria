@@ -38,6 +38,21 @@ const ROLE_COLOR: Record<Role, { bg: string; color: string }> = {
   master: { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" },
 };
 
+/** "há 8 meses" / "há 1 ano e 2 meses" a partir da data de entrada. */
+export function tenureLabel(joinedAt: string | null | undefined): string | null {
+  if (!joinedAt) return null;
+  const [y, m, d] = joinedAt.split("-").map(Number);
+  const now = new Date();
+  let months = (now.getFullYear() - y) * 12 + (now.getMonth() + 1 - m);
+  if (now.getDate() < d) months -= 1;
+  if (months < 0) return null;
+  if (months < 1) return "entrou este mês";
+  const years = Math.floor(months / 12), rest = months % 12;
+  const yp = years ? `${years} ${years === 1 ? "ano" : "anos"}` : "";
+  const mp = rest ? `${rest} ${rest === 1 ? "mês" : "meses"}` : "";
+  return `na agência há ${[yp, mp].filter(Boolean).join(" e ")}`;
+}
+
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
 export function TeamMemberCard({ profile }: { profile: Profile }) {
@@ -81,7 +96,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
           </div>
         </div>
         <div className="h-px bg-foreground/6" />
-        <div className="text-[11px] text-foreground/30 group-hover:text-foreground/55 transition-colors">Clique pra editar</div>
+        <div className="text-[11px] text-foreground/35 group-hover:text-foreground/60 transition-colors">{tenureLabel(profile.joinedAt) ?? "Clique pra editar"}</div>
       </button>
       {open && <TeamMemberModal profile={profile} onClose={() => setOpen(false)} />}
     </>
@@ -91,7 +106,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
   const house = isHouse(me);
-  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess, setMemberJoinedAt } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
   useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
@@ -244,6 +259,22 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
               <option value="master">Adm Master</option>
             </select>
           </div>
+
+          {me?.role === "master" && (
+            <div>
+              <label className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-1.5">
+                Entrou na agência em
+                <InfoTip text="Aparece no card da Equipe e, quando a pessoa completa 1 ano (e a cada aniversário), ela recebe uma mensagem de agradecimento em Minhas Demandas." />
+              </label>
+              <input type="date" defaultValue={profile.joinedAt ?? ""}
+                onBlur={(e) => {
+                  const v = e.target.value || null;
+                  if (v === (profile.joinedAt ?? null)) return;
+                  setMemberJoinedAt.mutate({ data: { userId: profile.id, joinedAt: v } }, { onSuccess: () => toast.success("Data de entrada salva.") });
+                }}
+                className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-foreground/70">
             <input type="checkbox" checked={profile.active} disabled={isSelf}
