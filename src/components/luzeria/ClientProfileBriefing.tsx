@@ -13,6 +13,17 @@ export function ClientProfileBriefing({ client, canEdit, hideBriefing, onSave }:
   const [contentBriefing, setContentBriefing] = useState<string>(client.customFields.contentBriefing ?? "");
   const [recentRoteiros, setRecentRoteiros] = useState<string>(client.customFields.recentRoteiros ?? "");
 
+  // Atalho "Editar ficha do cliente" (aba Roteiros & Planejamento): abre este
+  // bloco e rola até ele.
+  useEffect(() => {
+    let flagged = false;
+    try { flagged = sessionStorage.getItem("lz:scroll-briefing") === "1"; sessionStorage.removeItem("lz:scroll-briefing"); } catch { /* ignora */ }
+    if (!flagged) return;
+    setOpen(true);
+    const t = setTimeout(() => document.getElementById("perfil-briefing")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     setNiche(client.customFields.niche ?? "");
     setNotes(client.customFields.notes ?? "");
@@ -32,7 +43,7 @@ export function ClientProfileBriefing({ client, canEdit, hideBriefing, onSave }:
   const inp = "w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] transition-colors disabled:opacity-60 resize-none";
 
   return (
-    <div className="rounded-xl p-5 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
+    <div id="perfil-briefing" className="rounded-xl p-5 mb-5 scroll-mt-4" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 6%, transparent)" }}>
       <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2.5 text-left">
         <User size={16} className="shrink-0" style={{ color: "var(--lz-accent-ink)" }} />
         <div className="flex-1 min-w-0">

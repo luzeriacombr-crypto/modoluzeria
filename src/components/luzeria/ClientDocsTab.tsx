@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown, ArrowUpDown, GripVertical, User } from "lucide-react";
+import { Copy, Trash2, Pencil, ChevronDown, ChevronRight, FileText, Layers, Sparkles, Share2, Check, RefreshCw, FileDown, ArrowUpDown, GripVertical, User, BookOpen, ClipboardList } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { clientDocsQO, roteiroStatusesQO, clientsQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { openAiPlanningModal } from "@/lib/luzeria/ai-planning-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
@@ -47,6 +48,15 @@ export function ClientDocsTab({
   const qc = useQueryClient();
   const [checkingAiPlanning, setCheckingAiPlanning] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const navigate = useNavigate();
+  // Atalhos: levam direto pro lugar onde se edita o que a IA lê.
+  function goToBriefing() {
+    try { sessionStorage.setItem("lz:scroll-briefing", "1"); } catch { /* sem sessionStorage: abre a Ficha e pronto */ }
+    navigate({ to: "/cliente/$clientId", params: { clientId }, search: { tab: "ficha" } });
+  }
+  function goToKnowledge() {
+    navigate({ to: "/configuracoes", search: { tab: "knowledge" } });
+  }
   const [activeType, setActiveType] = useState<ClientDocType>("roteiro");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -158,6 +168,19 @@ export function ClientDocsTab({
           <div className="text-[11px] text-foreground/45">Lê o histórico, arquivos de marca e concorrentes pra montar uma prévia do próximo mês.</div>
         </div>
       </button>
+      {/* Atalhos pra onde se edita o que a IA lê */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <button onClick={goToBriefing}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border border-foreground/10 text-foreground/75 hover:text-foreground hover:border-foreground/25 transition">
+          <ClipboardList size={13} /> Editar ficha do cliente
+        </button>
+        {me?.role === "master" && (
+          <button onClick={goToKnowledge}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border border-foreground/10 text-foreground/75 hover:text-foreground hover:border-foreground/25 transition">
+            <BookOpen size={13} /> Editar base de conhecimento
+          </button>
+        )}
+      </div>
       {/* Tutorial — recolhido por padrão (a maioria já sabe como funciona) */}
       <div className="rounded-xl p-4 mb-5" style={{ background: "var(--card)", border: "1px solid color-mix(in srgb, var(--foreground) 8%, transparent)" }}>
         <button onClick={() => setGuideOpen((v) => !v)} className="w-full flex items-center gap-2.5 text-left">
@@ -167,7 +190,7 @@ export function ClientDocsTab({
         {guideOpen && (
           <div className="flex flex-col gap-3 mt-3">
             {[
-              <>Preencha o <span className="text-foreground font-medium">Perfil &amp; Briefing</span> na Ficha do cliente (nicho, concorrentes, briefing) — é o que a IA lê pra conhecer esse cliente.</>,
+              <>Preencha o <span className="text-foreground font-medium">Perfil &amp; Briefing</span> na Ficha do cliente (nicho, concorrentes, briefing) e mantenha a <span className="text-foreground font-medium">Base de conhecimento</span> da agência em dia — é o que a IA lê pra conhecer esse cliente e o jeito de criar conteúdo da agência.</>,
               <>Pra montar o próximo mês, clique em <span className="text-foreground font-medium">Gerar prévia de planejamento com IA</span>. Revise cada sugestão e salve como Planejamento ou aprove direto pros Roteiros de um mês.</>,
               <>Já tem o material bruto do cliente? Escolha <span className="text-foreground font-medium">Roteiros</span> ou <span className="text-foreground font-medium">Planejamento / Relatório</span>, clique em <span className="text-foreground font-medium">Formatar com IA</span> e cole o material (ou use <span className="text-foreground font-medium">Copiar modelo</span> numa IA que você já assina). Revise o texto e clique em <span className="text-foreground font-medium">Salvar</span>.</>,
               approvalLinkHidden
