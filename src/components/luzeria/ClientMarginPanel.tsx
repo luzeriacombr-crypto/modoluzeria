@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, TrendingDown, Info, X } from "lucide-react";
+import { Loader2, TrendingDown, Info, X, ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
 import { orgCostSettingsQO, clientMarginsQO, clientMarginBreakdownQO, useApi } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
@@ -20,11 +20,39 @@ const money = (v: number | null) =>
 
 const inp = "w-full bg-card border border-foreground/8 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] focus:ring-1 focus:ring-[rgb(var(--lz-brand-rgb))] transition-colors";
 
+/** 0,5 → "30 min", 1 → "1h", 1,5 → "1h30". */
+function formatHours(h: number): string {
+  const total = Math.round((Number.isFinite(h) ? h : 0) * 60);
+  if (total <= 0) return "0";
+  const hh = Math.floor(total / 60);
+  const mm = total % 60;
+  if (hh === 0) return `${mm} min`;
+  return mm === 0 ? `${hh}h` : `${hh}h${String(mm).padStart(2, "0")}`;
+}
+
+const HOURS_STEP = 0.25;
+
+function HoursStepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const set = (v: number) => onChange(Math.min(24, Math.max(0, Math.round(v * 4) / 4)));
+  const btn = "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-foreground/55 hover:text-foreground hover:bg-foreground/8 disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
+  return (
+    <div className="rounded-xl border border-foreground/8 bg-foreground/[0.02] px-3 py-3">
+      <div className="text-[10px] uppercase font-semibold tracking-wider text-foreground/40 mb-2">{label}</div>
+      <div className="flex items-center justify-between gap-1">
+        <button type="button" aria-label={`Diminuir ${label}`} className={btn} disabled={value <= 0} onClick={() => set(value - HOURS_STEP)}><Minus size={14} /></button>
+        <div className="text-base font-extrabold text-foreground tabular-nums">{formatHours(value)}</div>
+        <button type="button" aria-label={`Aumentar ${label}`} className={btn} onClick={() => set(value + HOURS_STEP)}><Plus size={14} /></button>
+      </div>
+    </div>
+  );
+}
+
 function CostSettingsForm() {
   const { data: settings, isLoading } = useQuery(orgCostSettingsQO());
   const api = useApi();
   const [hourlyCost, setHourlyCost] = useState<string | number>("");
   const [avgHours, setAvgHours] = useState<Record<string, string | number>>({});
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!settings) return;
@@ -47,40 +75,51 @@ function CostSettingsForm() {
     });
   }
 
+  const summary = [
+    hourlyCost === "" ? "Custo-hora não definido" : `${money(Number(hourlyCost))}/h`,
+    ...EFFORT_TYPES.map((t) => `${CONTENT_TYPE_LABEL[t]} ${formatHours(Number(avgHours[t]) || 0)}`),
+  ].join(" · ");
+
   return (
-    <div className="bg-card border border-foreground/7 rounded-xl p-4 space-y-4">
-      <h3 className="text-sm font-semibold text-foreground">Custo-hora padrão</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-foreground/50 mb-1 inline-flex items-center gap-1">
-            Custo-hora (R$)
-            <InfoTip text="Cada colaborador pode ter seu próprio custo-hora, calculado a partir do salário e da escala cadastrados em Configurações → Equipe (clique no card da pessoa). Esse valor aqui é só a reserva: usado quando alguém ainda não tem remuneração cadastrada." />
-          </label>
-          <input type="number" min="0" step="0.01" value={hourlyCost}
-            onChange={(e) => setHourlyCost(e.target.value)} placeholder="Não definido" className={inp} />
+    <div className="bg-card border border-foreground/7 rounded-xl p-4">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2.5 text-left">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-foreground">Alterar custo por hora</div>
+          <div className="text-[11px] text-foreground/45 truncate">{summary}</div>
         </div>
-      </div>
-      <div>
-        <label className="text-xs text-foreground/50 mb-2 inline-flex items-center gap-1">
-          Média de horas por tipo de conteúdo
-          <InfoTip text="Quantas horas, em média, sua equipe leva pra produzir cada tipo de item. Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {EFFORT_TYPES.map((t) => (
-            <div key={t}>
-              <label className="text-[11px] text-foreground/40 block mb-1">{CONTENT_TYPE_LABEL[t]}</label>
-              <input type="number" min="0" step="0.1" value={avgHours[t] ?? ""}
-                onChange={(e) => setAvgHours((prev) => ({ ...prev, [t]: e.target.value }))}
-                className={inp} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <button onClick={save} disabled={api.setOrgCostSettings.isPending}
-        className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-        style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
-        {api.setOrgCostSettings.isPending ? "Salvando…" : "Salvar custo-hora"}
+        {open ? <ChevronDown size={14} className="text-foreground/40 shrink-0" /> : <ChevronRight size={14} className="text-foreground/40 shrink-0" />}
       </button>
+      {open && (
+        <div className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-foreground/50 mb-1 inline-flex items-center gap-1">
+                Custo-hora (R$)
+                <InfoTip text="Cada colaborador pode ter seu próprio custo-hora, calculado a partir do salário e da escala cadastrados em Configurações → Equipe (clique no card da pessoa). Esse valor aqui é só a reserva: usado quando alguém ainda não tem remuneração cadastrada." />
+              </label>
+              <input type="number" min="0" step="0.01" value={hourlyCost}
+                onChange={(e) => setHourlyCost(e.target.value)} placeholder="Não definido" className={inp} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-foreground/50 mb-2 inline-flex items-center gap-1">
+              Tempo médio por tipo de conteúdo
+              <InfoTip text="Quanto tempo, em média, sua equipe leva pra produzir cada tipo de item (ajuste de 15 em 15 minutos). Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {EFFORT_TYPES.map((t) => (
+                <HoursStepper key={t} label={CONTENT_TYPE_LABEL[t]} value={Number(avgHours[t]) || 0}
+                  onChange={(v) => setAvgHours((prev) => ({ ...prev, [t]: v }))} />
+              ))}
+            </div>
+          </div>
+          <button onClick={save} disabled={api.setOrgCostSettings.isPending}
+            className="rounded-md px-4 py-2 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>
+            {api.setOrgCostSettings.isPending ? "Salvando…" : "Salvar custo-hora"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
