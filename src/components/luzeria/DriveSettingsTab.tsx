@@ -227,7 +227,10 @@ export function DriveSettingsTab() {
       qc.invalidateQueries({ queryKey: ["setup-checklist"] });
       setManualStep(3);
     } catch (e: any) {
-      toastFriendlyError(e, "Falha ao criar a pasta");
+      // Erro do Google/Drive (só o gestor vê essa tela): mostra o motivo real
+      // em vez de só "falha", pra dar pra resolver sem caçar log.
+      const detail = String(e?.message ?? "").trim();
+      toast.error(/drive|google|permiss|escopo|token/i.test(detail) ? `Falha ao criar a pasta: ${detail.slice(0, 260)}` : "Falha ao criar a pasta");
     } finally {
       setSavingRoot(false);
     }
