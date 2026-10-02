@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { KeyRound, ListChecks, Trash2, Mail, Briefcase, Camera } from "lucide-react";
+import { KeyRound, ListChecks, Trash2, Mail, Briefcase, Camera, Pencil, Plus, Check, X } from "lucide-react";
 import {
   WEEK_DAYS, WEEK_DAY_LABEL, defaultWorkSchedule, computeMonthlyHourlyCost,
   type Profile, type Role, type WorkSchedule,
@@ -132,18 +132,46 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
   const house = isHouse(me);
-  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess, setMemberJoinedAt } = useApi();
+  const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, upsertCargo, deleteCargo, setProfileClientAccess, setMemberJoinedAt } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
   useEffect(() => { setSelectedCargoIds(profile.cargoIds ?? []); }, [profile.cargoIds]);
 
-  // Um cargo só por pessoa na tela (pedido do Junior, 02/10) — escolher aqui
-  // substitui qualquer outro que a pessoa já tivesse.
-  function pickCargo(cargoId: string) {
-    const next = cargoId ? [cargoId] : [];
+  // Cargos acumulam (uma pessoa pode ser Editor + Videomaker) — caixas de
+  // seleção, e a agência cria/renomeia/apaga os cargos dela aqui mesmo.
+  function toggleCargo(cargoId: string) {
+    const next = selectedCargoIds.includes(cargoId)
+      ? selectedCargoIds.filter((id) => id !== cargoId)
+      : [...selectedCargoIds, cargoId];
     setSelectedCargoIds(next);
     setProfileCargos.mutate({ data: { profileId: profile.id, cargoIds: next } }, {
-      onSuccess: () => toast.success("Cargo atualizado."),
+      onError: () => setSelectedCargoIds(profile.cargoIds ?? []),
+    });
+  }
+  const [newCargo, setNewCargo] = useState("");
+  const [addingCargo, setAddingCargo] = useState(false);
+  const [editingCargoId, setEditingCargoId] = useState<string | null>(null);
+  const [editingCargoName, setEditingCargoName] = useState("");
+  function createCargo() {
+    const name = newCargo.trim();
+    if (!name) return;
+    upsertCargo.mutate({ data: { name, permissions: [] } }, {
+      onSuccess: () => { setNewCargo(""); setAddingCargo(false); toast.success("Cargo criado."); },
+      onError: (e: any) => toastFriendlyError(e, "Não consegui criar o cargo"),
+    });
+  }
+  function renameCargo(c: { id: string; permissions: string[] }) {
+    const name = editingCargoName.trim();
+    if (!name) { setEditingCargoId(null); return; }
+    upsertCargo.mutate({ data: { id: c.id, name, permissions: c.permissions as any } }, {
+      onSuccess: () => setEditingCargoId(null),
+      onError: (e: any) => toastFriendlyError(e, "Não consegui renomear o cargo"),
+    });
+  }
+  async function removeCargo(c: { id: string; name: string }) {
+    if (!(await requestConfirm(`Apagar o cargo "${c.name}"? Ele sai de todas as pessoas que o têm.`, { danger: true }))) return;
+    deleteCargo.mutate({ data: { id: c.id } }, {
+      onSuccess: () => setSelectedCargoIds((ids) => ids.filter((id) => id !== c.id)),
     });
   }
 
@@ -256,7 +284,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
     });
   }
 
-  const currentCargo = cargos.find((c) => c.id === selectedCargoIds[0]);
+  const cargoSummary = cargos.filter((c) => selectedCargoIds.includes(c.id)).map((c) => c.name).join(", ");
   const roleStyle = ROLE_COLOR[profile.role];
   const tenure = tenureLabel(profile.joinedAt, house);
   const card = "rounded-2xl border border-foreground/8 bg-foreground/[0.02] p-4";
@@ -282,8 +310,8 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <span className="rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide"
               style={{ backgroundColor: roleStyle.bg, color: roleStyle.color }}>{ROLE_LABEL[profile.role]}</span>
-            {currentCargo && (
-              <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55"><Briefcase size={11} /> {currentCargo.name}</span>
+            {cargoSummary && (
+              <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground/55 min-w-0"><Briefcase size={11} className="shrink-0" /> <span className="truncate">{cargoSummary}</span></span>
             )}
             {tenure && <span className="text-[12px] text-foreground/35">· {tenure}</span>}
           </div>
@@ -312,21 +340,54 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
               <option value="master">Adm Master</option>
             </select>
           </div>
-          {cargos.length > 0 && (
-            <div>
-              <label className={label}>
-                Cargo
-                <InfoTip text="A função do dia a dia (Designer, Social Media...). Define permissões extras, ex: Financeiro enxerga a aba de cobrança." />
-              </label>
-              <select value={selectedCargoIds[0] ?? ""} onChange={(e) => pickCargo(e.target.value)} className={field}>
-                <option value="">Sem cargo</option>
-                {cargos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              {selectedCargoIds.length > 1 && (
-                <p className="text-[10.5px] text-foreground/35 mt-1">Essa pessoa tem {selectedCargoIds.length} cargos; escolher um aqui substitui os outros.</p>
-              )}
+          <div>
+            <label className={label}>
+              Cargos
+              <InfoTip text="O que a pessoa faz no dia a dia (Designer, Social Media...). Marque quantos se encaixarem. Você pode criar, renomear e apagar os cargos da sua agência aqui mesmo." />
+            </label>
+            <div className="rounded-lg border border-foreground/10 bg-background p-1.5 max-h-52 overflow-y-auto">
+              {cargos.length === 0 && <p className="text-[11.5px] text-foreground/35 px-2 py-1.5">Nenhum cargo ainda.</p>}
+              {cargos.map((c) => (
+                <div key={c.id} className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-foreground/[0.04]">
+                  {editingCargoId === c.id ? (
+                    <>
+                      <input autoFocus value={editingCargoName} maxLength={60} onChange={(e) => setEditingCargoName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") renameCargo(c); if (e.key === "Escape") setEditingCargoId(null); }}
+                        className="flex-1 min-w-0 bg-card border border-foreground/10 rounded px-2 py-1 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]" />
+                      <button type="button" aria-label="Salvar nome" onClick={() => renameCargo(c)} className="text-foreground/60 hover:text-foreground p-1"><Check size={14} /></button>
+                      <button type="button" aria-label="Cancelar" onClick={() => setEditingCargoId(null)} className="text-foreground/40 hover:text-foreground p-1"><X size={14} /></button>
+                    </>
+                  ) : (
+                    <>
+                      <label className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer text-sm text-foreground/85">
+                        <input type="checkbox" checked={selectedCargoIds.includes(c.id)} onChange={() => toggleCargo(c.id)} />
+                        <span className="truncate">{c.name}</span>
+                      </label>
+                      <button type="button" aria-label={`Renomear ${c.name}`} onClick={() => { setEditingCargoId(c.id); setEditingCargoName(c.name); }}
+                        className="text-foreground/30 hover:text-foreground p-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"><Pencil size={13} /></button>
+                      <button type="button" aria-label={`Apagar ${c.name}`} onClick={() => removeCargo(c)}
+                        className="text-foreground/30 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"><Trash2 size={13} /></button>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+            {addingCargo ? (
+              <div className="flex items-center gap-2 mt-2">
+                <input autoFocus value={newCargo} maxLength={60} placeholder="Nome do cargo" onChange={(e) => setNewCargo(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") createCargo(); if (e.key === "Escape") { setAddingCargo(false); setNewCargo(""); } }}
+                  className={field + " !py-1.5"} />
+                <button type="button" onClick={createCargo} disabled={upsertCargo.isPending || !newCargo.trim()}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 shrink-0">Criar</button>
+                <button type="button" aria-label="Cancelar" onClick={() => { setAddingCargo(false); setNewCargo(""); }} className="text-foreground/40 hover:text-foreground p-1.5"><X size={14} /></button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAddingCargo(true)}
+                className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground/55 hover:text-foreground transition-colors">
+                <Plus size={13} /> Novo cargo
+              </button>
+            )}
+          </div>
           {me?.role === "master" && (
             <div>
               <label className={label}>
