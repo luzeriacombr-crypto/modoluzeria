@@ -11,7 +11,7 @@ import {
 import { Modal } from "./Modals";
 import { toast } from "sonner";
 import { getFacebookConnectionStatus, getFacebookPagePosts } from "@/lib/luzeria/facebook.functions";
-import { instagramActivityQO, gridThumbnailsQO, useMe } from "@/lib/luzeria/queries";
+import { instagramActivityQO, gridThumbnailsQO, clientsQO, useMe } from "@/lib/luzeria/queries";
 import {
   getInstagramAccountMedia, getInstagramAccountMediaInsights, getInstagramAccountOverview, getInstagramFollowerHistory,
   getInstagramComments, replyToInstagramComment, postInstagramComment,
@@ -46,11 +46,15 @@ export function InstagramActivityPage() {
 
   const [tab, setTab] = useState<"atividade" | "calendario">("atividade");
   const [clientFilter, setClientFilter] = useState<string | null>(null);
-  const clients = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; color: string }>();
-    for (const i of items) if (!map.has(i.clientId)) map.set(i.clientId, { id: i.clientId, name: i.clientName, color: i.clientColor });
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [items]);
+  // Antes vinha só dos itens de atividade (post programado/publicado) — um
+  // cliente sem nada programado nunca aparecia no filtro, mesmo pra só ver
+  // as métricas dele. Agora é a lista de clientes de verdade. Pedido do
+  // Junior (01/10).
+  const { data: allClients = [] } = useQuery(clientsQO());
+  const clients = useMemo(
+    () => [...allClients].sort((a, b) => a.name.localeCompare(b.name)).map((c) => ({ id: c.id, name: c.name, color: c.color })),
+    [allClients],
+  );
 
   const filtered = useMemo(
     () => (clientFilter ? items.filter((i) => i.clientId === clientFilter) : items),
