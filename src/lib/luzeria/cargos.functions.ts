@@ -59,9 +59,9 @@ export const upsertCargo = createServerFn({ method: "POST" })
         .update({ name: data.name, permissions: data.permissions }).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await db.from("cargos")
-        .insert({ org_id: context.orgId, name: data.name, permissions: data.permissions });
-      if (error) throw new Error(error.message);
+      // Novos cargos deixaram de existir (pedido do Junior, 02/10): quem
+      // manda nas permissões agora é a Função (Membro/Setor/Master).
+      throw new Error("Não é mais possível criar cargos novos.");
     }
     return { ok: true };
   });

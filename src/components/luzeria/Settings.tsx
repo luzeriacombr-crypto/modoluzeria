@@ -45,7 +45,6 @@ const BlogAdminTab = lazy(() => import("./BlogAdminTab").then((m) => ({ default:
 const EmailTemplatesPanel = lazy(() => import("./EmailTemplatesPanel").then((m) => ({ default: m.EmailTemplatesPanel })));
 const JourneyStagesTab = lazy(() => import("./JourneyStagesTab").then((m) => ({ default: m.JourneyStagesTab })));
 const ClientOperationsOverview = lazy(() => import("./ClientOperationsOverview").then((m) => ({ default: m.ClientOperationsOverview })));
-const ProductionAuditTab = lazy(() => import("./ProductionAuditTab").then((m) => ({ default: m.ProductionAuditTab })));
 const OrgKnowledgeSettings = lazy(() => import("./OrgKnowledgeSettings").then((m) => ({ default: m.OrgKnowledgeSettings })));
 
 function TabLoadingFallback() {
@@ -57,7 +56,7 @@ function TabLoadingFallback() {
 }
 
 type SettingsTab = "team" | "report" | "auditoria" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "emails" | "journey" | "cliente" | "knowledge";
-const VALID_TABS: SettingsTab[] = ["team", "report", "auditoria", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
+const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
 
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
@@ -78,7 +77,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     // setor (antes essas pessoas nem conseguiam abrir Configurações).
     "updates",
     ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
-    ...(hasSetorPermission(me, "team_reports") ? (["report", "auditoria"] as SettingsTab[]) : []),
+    ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "orcamentos", "cliente"] as SettingsTab[]) : []),
     ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
     // Estas duas permissões apareciam no editor de cargos com rótulo e
@@ -125,7 +124,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div>
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
-            {tab === "team" || tab === "report" || tab === "auditoria" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
+            {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
              tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos" ? "Seu plano, indicações e o financeiro da agência." :
@@ -159,7 +158,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
         const isActive = (id: string) =>
           tab === (id as any) ||
-          (id === "team" && (tab === "report" || tab === "auditoria")) ||
+          (id === "team" && tab === "report") ||
           (id === "cliente" && (tab === "margem" || tab === "journey")) ||
           (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos"));
         return (
@@ -299,20 +298,19 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "integrations" ? <IntegrationsTab disabledFeatures={me.disabledFeatures ?? []} /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "knowledge" ? <OrgKnowledgeSettings /> :
-       tab === "team" || tab === "report" || tab === "auditoria" ? (
+       tab === "team" || tab === "report" ? (
         <>
-      {(allowedTabs.includes("report") || allowedTabs.includes("auditoria")) && (
+      {allowedTabs.includes("report") && (
         <div className="flex items-center gap-1 mb-6 -mt-2">
           {[
             { id: "team" as const, label: "Equipe" },
             ...(allowedTabs.includes("report") ? [{ id: "report" as const, label: "Relatório" }] : []),
-            ...(allowedTabs.includes("auditoria") ? [{ id: "auditoria" as const, label: "Auditoria de Produção" }] : []),
           ].map((s) => (
             <SubTabPill key={s.id} active={tab === s.id} onClick={() => setTab(s.id)} label={s.label} />
           ))}
         </div>
       )}
-      {tab === "report" ? <ReportsTab /> : tab === "auditoria" ? <ProductionAuditTab /> : (
+      {tab === "report" ? <ReportsTab /> : (
         <>
       {pending.length > 0 && (
         <>
@@ -385,12 +383,6 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <TeamPermissionsPanel me={me} />
       </div>
 
-      <div className="mt-8 pt-6 border-t border-foreground/6">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--lz-accent-ink)] mb-4">
-          Cargos
-        </div>
-        <CargosPanel />
-      </div>
         </>
       )}
         </>
@@ -944,96 +936,6 @@ function TeamPermissionsPanel({ me }: { me: Profile }) {
   );
 }
 
-/** Cargos são atômicos e combináveis (uma pessoa pode ter vários ao mesmo
- * tempo, ex: Editor + Videomaker) — cada cargo aqui é um cartão com nome
- * editável e uma grade de permissões próprias, além do que a função
- * (Membro/Setor/Master) já libera. */
-function CargosPanel() {
-  const { upsertCargo, deleteCargo } = useApi();
-  const { data: cargos = [], isLoading } = useQuery(cargosQO());
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
-
-  function createCargo() {
-    if (!newName.trim()) return;
-    upsertCargo.mutate({ data: { name: newName.trim(), permissions: [] } }, {
-      onSuccess: () => { setNewName(""); setCreating(false); },
-    });
-  }
-
-  async function handleDelete(id: string, name: string) {
-    if (!(await requestConfirm(`Apagar o cargo "${name}"? Quem tiver esse cargo perde as permissões dele.`, { danger: true }))) return;
-    deleteCargo.mutate({ data: { id } });
-  }
-
-  function togglePermission(cargo: { id: string; name: string; permissions: string[] }, key: string) {
-    const next = cargo.permissions.includes(key)
-      ? cargo.permissions.filter((k) => k !== key)
-      : [...cargo.permissions, key];
-    upsertCargo.mutate({ data: { id: cargo.id, name: cargo.name, permissions: next as any } });
-  }
-
-  if (isLoading) return <Loader2 className="animate-spin text-foreground/40" size={20} />;
-
-  return (
-    <div className="space-y-3">
-      {cargos.map((c) => (
-        <div key={c.id} className="bg-card rounded-lg p-4">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-sm font-semibold text-foreground">{c.name}</span>
-            <button onClick={() => handleDelete(c.id, c.name)} className="text-foreground/30 hover:text-red-400 transition-colors">
-              <Trash2 size={14} />
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {PERMISSION_KEYS.map((key) => {
-              const on = c.permissions.includes(key);
-              return (
-                <button
-                  key={key}
-                  onClick={() => togglePermission(c, key)}
-                  title={PERMISSION_LABEL[key].description}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border"
-                  style={on
-                    ? { backgroundColor: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)", borderColor: "rgb(var(--lz-brand-rgb))" }
-                    : { color: "color-mix(in srgb, var(--foreground) 50%, transparent)", borderColor: "color-mix(in srgb, var(--foreground) 15%, transparent)" }}
-                >
-                  {PERMISSION_LABEL[key].label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {creating ? (
-        <div className="flex items-center gap-2">
-          <input
-            autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") createCargo(); if (e.key === "Escape") setCreating(false); }}
-            placeholder="Nome do cargo" maxLength={60}
-            className="flex-1 bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
-          />
-          <button onClick={createCargo} disabled={upsertCargo.isPending || !newName.trim()}
-            className="px-3 py-2 rounded-md text-sm font-semibold bg-[rgb(var(--lz-brand-rgb))] text-black disabled:opacity-40 shrink-0">
-            Criar
-          </button>
-          <button onClick={() => setCreating(false)} className="text-foreground/40 hover:text-foreground p-2"><X size={16} /></button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border border-foreground/15 text-foreground/60 hover:text-foreground transition-colors"
-        >
-          <Plus size={12} /> Novo cargo
-        </button>
-      )}
-      <p className="text-[11px] text-foreground/30 mt-1">
-        Cada pessoa pode ter mais de um cargo ao mesmo tempo (atribua em Equipe, no perfil de cada um).
-      </p>
-    </div>
-  );
-}
 
 const MAX_LOGO_BYTES = 3 * 1024 * 1024;
 

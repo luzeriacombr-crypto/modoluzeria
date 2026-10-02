@@ -25,6 +25,7 @@ import { TikTokConnectSection } from "./TikTokSections";
 import { LinkedInConnectSection } from "./LinkedInSections";
 import { term, isHouse } from "@/lib/luzeria/house";
 import { HouseBrandBriefing } from "./HouseBrandBriefing";
+import { ClientProfileBriefing } from "./ClientProfileBriefing";
 import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
 function formatHours(h: number | null) {
@@ -221,6 +222,10 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
       </div>
 
       {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing clientId={clientId} />}
+      {activeTab === "geral" && (
+        <ClientProfileBriefing client={client} canEdit={isAdmin} hideBriefing={isHouseBrand}
+          onSave={(patch) => api.updateClient.mutate({ data: { id: client.id, patch } })} />
+      )}
       {activeTab === "geral" && (
         <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
         <FichaCard label={isHouseBrand ? "Configuração da marca" : "Configuração do cliente"} wide>

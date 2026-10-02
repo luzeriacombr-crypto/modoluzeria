@@ -41,8 +41,8 @@ function byScheduledAt(direction: OrderDirection) {
   };
 }
 
-type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "ficha";
-const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "ficha"];
+type ClientTab = "posts" | "reels" | "stories" | "finalizados" | "mais" | "feed" | "docs" | "ficha";
+const VALID_CLIENT_TABS: ClientTab[] = ["posts", "reels", "stories", "finalizados", "mais", "feed", "docs", "ficha"];
 /** Abas que dá pra ocultar (por padrão da agência ou só pra um cliente) —
  * só "ficha" fica de fora (é o mínimo de navegação garantido). */
 const HIDEABLE_TABS = ["posts", "reels", "stories", "mais", "feed"] as const;
@@ -50,7 +50,7 @@ const HIDEABLE_TABS = ["posts", "reels", "stories", "mais", "feed"] as const;
 // ser ocultado só num cliente ou por padrão na agência — e pra voltar pelo
 // mesmo lugar, o "Personalizar abas".
 const ONBOARDING_KEY = "onboarding";
-type MaisSubTab = "atividades" | "campanhas" | "docs" | "biblioteca";
+type MaisSubTab = "atividades" | "campanhas" | "biblioteca";
 
 export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   clientId: string; tab?: string; onTabChange: (tab: ClientTab) => void;
@@ -109,8 +109,13 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // cliente, senão a grade de conteúdo renderiza sem nenhuma aba destacada.
   // "finalizados" não é uma aba ocultável por cliente (Personalizar abas) —
   // é uma escolha única da agência inteira, em Configurações → Geral.
+  // "Roteiros & Planejamento" virou aba própria (antes morava em Mais), entre
+  // Preview de Feed e Ficha do Cliente — pedido do Junior, 02/10. House: a
+  // equipe escreve o planejamento e os roteiros da marca.
+  const showDocsSubTab = isAdmin || isHouse(me);
   const visibleTabs = VALID_CLIENT_TABS
     .filter((t) => t !== "finalizados" || finalizadosSeparateTab)
+    .filter((t) => t !== "docs" || showDocsSubTab)
     .filter((t) => !(HIDEABLE_TABS as readonly string[]).includes(t) || !hiddenTabs.has(t));
   const tab: ClientTab = tabParam && (visibleTabs as string[]).includes(tabParam)
     ? (tabParam as ClientTab)
@@ -254,8 +259,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
     },
   } as const;
 
-  // House: a equipe escreve o planejamento e os roteiros da marca.
-  const showDocsSubTab = isAdmin || isHouse(me);
   const showBibliotecaSubTab = !disabledFeatures.has("reference_library");
 
   // Dentro da cota calculada acima, ESSE cliente precisa estar marcado
@@ -349,7 +352,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             <button key={t} onClick={() => setTab(t as any)}
               className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
               style={{ color: tab === t ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
-              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
+              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
               {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
             </button>
           ))}
@@ -780,9 +783,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             <div className="flex items-center gap-2 mb-5">
               <MaisSubTabPill active={maisSubTab === "atividades"} onClick={() => setMaisSubTab("atividades")}>Atividades</MaisSubTabPill>
               <MaisSubTabPill active={maisSubTab === "campanhas"} onClick={() => setMaisSubTab("campanhas")}>Campanhas</MaisSubTabPill>
-              {showDocsSubTab && (
-                <MaisSubTabPill active={maisSubTab === "docs"} onClick={() => setMaisSubTab("docs")}>Roteiros &amp; Planejamento</MaisSubTabPill>
-              )}
               {showBibliotecaSubTab && (
                 <MaisSubTabPill active={maisSubTab === "biblioteca"} onClick={() => setMaisSubTab("biblioteca")}>Biblioteca</MaisSubTabPill>
               )}
@@ -803,19 +803,21 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
             {maisSubTab === "campanhas" && (
               <CampanhasTab clientId={client.id} monthKey={effectiveMonthKey} isAdmin={isAdmin} />
             )}
-            {maisSubTab === "docs" && showDocsSubTab && (
-              <ClientDocsTab
-                clientId={client.id}
-                isAdmin={isAdmin}
-                aiPlanningEnabled={aiPlanningEnabled}
-                aiPlanningLimited={aiPlanningLimited}
-                aiPlanningUsed={aiPlanningUsed}
-                aiPlanningQuota={aiPlanningQuota}
-                aiPlanningHasSubscription={orgPlanStatus?.hasAsaasSubscription ?? false}
-              />
-            )}
             {maisSubTab === "biblioteca" && showBibliotecaSubTab && <ClientReferenceLibraryTab clientId={client.id} />}
           </div>
+        )}
+        {tab === "docs" && showDocsSubTab && (
+        <div className="mt-2">
+          <ClientDocsTab
+            clientId={client.id}
+            isAdmin={isAdmin}
+            aiPlanningEnabled={aiPlanningEnabled}
+            aiPlanningLimited={aiPlanningLimited}
+            aiPlanningUsed={aiPlanningUsed}
+            aiPlanningQuota={aiPlanningQuota}
+            aiPlanningHasSubscription={orgPlanStatus?.hasAsaasSubscription ?? false}
+          />
+        </div>
         )}
         {tab === "ficha" && (
           <div className="mt-2 -mx-4 sm:-mx-6 md:mx-0 md:rounded-lg md:overflow-hidden md:border md:border-foreground/6">
