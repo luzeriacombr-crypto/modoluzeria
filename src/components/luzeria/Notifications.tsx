@@ -127,8 +127,12 @@ export function NotificationsBell() {
                     navigate({ to: "/cliente/$clientId", params: { clientId: n.clientId }, search: { tab: "docs" } });
                   } else if (n.type === "forum_reply") {
                     navigate({ to: "/ajuda", search: { tab: "forum" } });
-                  } else if (n.type === "demo_request") {
-                    navigate({ to: "/configuracoes", search: { tab: "cobranca" } });
+                  } else if (n.type === "demo_request" || n.type === "new_agency_signup") {
+                    // "cobranca" é o financeiro da PRÓPRIA agência do Junior — nada
+                    // a ver com pedido de demonstração ou agência nova. O lugar
+                    // certo é "plataforma" (todas as agências + pedidos de
+                    // demonstração, ver Settings.tsx). Bug reportado por ele (01/10).
+                    navigate({ to: "/configuracoes", search: { tab: "plataforma" } });
                   } else if (n.type === "photo_selection_finalized" && n.photoClientId) {
                     navigate({ to: "/selecao-de-fotos/$clientId", params: { clientId: n.photoClientId } });
                   } else if (n.type === "contract_signed" && n.clientId) {
