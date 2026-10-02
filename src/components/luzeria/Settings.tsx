@@ -1595,8 +1595,8 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
 }) {
   const subs = [
     ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
-    ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
     ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
+    ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
   ];
   const [sub, setSub] = useState<"overview" | "jornada" | "margem">(
     subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),
