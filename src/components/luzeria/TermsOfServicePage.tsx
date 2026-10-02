@@ -17,7 +17,7 @@ export function TermsOfServicePage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Termos de Serviço</h1>
-        <p className="text-foreground/50 text-sm mb-10">Última atualização: agosto de 2026</p>
+        <p className="text-foreground/50 text-sm mb-10">Última atualização: outubro de 2026</p>
 
         <div className="space-y-8 text-foreground/80 text-sm leading-relaxed">
           <section>
@@ -92,7 +92,20 @@ export function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">7. Limitação de responsabilidade</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">7. Nativo (editor de posts)</h2>
+            <p>
+              O Nativo é um editor de posts e stories oferecido como bônus do Modo Criador, com a mesma
+              conta. Você é responsável pelo que cria e publica com ele: precisa ter direito de usar as
+              fotos, logos, marcas e textos que envia, e autorização das pessoas que aparecem nas imagens.
+              As fotos de exemplo dos modelos servem só de exemplo e devem ser trocadas antes de publicar.
+              Os modelos podem ser usados e adaptados livremente nos posts da sua agência e dos seus
+              clientes. O Nativo não tem afiliação, patrocínio ou aprovação da Meta; Instagram é marca
+              registrada da Meta Platforms, Inc. Podemos remover conteúdo que viole a lei ou estes termos.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">8. Limitação de responsabilidade</h2>
             <p>
               O Modo Criador é fornecido "como está". Fazemos o possível para manter o serviço disponível e
               seus dados seguros, mas não garantimos operação ininterrupta e não nos responsabilizamos por
@@ -101,7 +114,7 @@ export function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">8. Alterações nestes termos</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">9. Alterações nestes termos</h2>
             <p>
               Podemos atualizar estes termos ocasionalmente. Mudanças relevantes serão comunicadas por
               e-mail ou dentro da própria plataforma.
@@ -109,7 +122,7 @@ export function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">9. Contato</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">10. Contato</h2>
             <p>
               Dúvidas sobre estes termos podem ser enviadas para{" "}
               <a href="mailto:junior.reis@live.com" className="underline">

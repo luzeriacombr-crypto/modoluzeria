@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
 
       <main className="max-w-[720px] mx-auto px-5 sm:px-10 py-14">
         <h1 className="text-3xl font-black mb-2">Política de Privacidade</h1>
-        <p className="text-foreground/50 text-sm mb-10">Última atualização: 29 de setembro de 2026</p>
+        <p className="text-foreground/50 text-sm mb-10">Última atualização: 2 de outubro de 2026</p>
 
         <div className="space-y-8 text-foreground/80 text-sm leading-relaxed">
           <section>
@@ -175,7 +175,29 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">10. Seus direitos</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">10. Nativo (editor de posts)</h2>
+            <p>
+              O Nativo (nativo.modocriador.com.br) é um editor de posts e stories incluído no Modo Criador,
+              que usa a mesma conta. Nele, guardamos:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-2">
+              <li>Seus projetos e modelos (textos, cores, posição dos elementos) e as fotos e imagens que você envia, separados por agência;</li>
+              <li>Os dados que você preenche em "Seus dados" (nome, @ do Instagram, profissão e foto), usados só pra personalizar os modelos;</li>
+              <li>Os kits de marca dos clientes (cores, fontes, @ e logo). Pra montar o kit, o Nativo lê do Modo Criador o nome, a cor e a foto do cliente e o @ do Instagram conectado. O token de acesso do Instagram nunca é lido pelo Nativo.</li>
+            </ul>
+            <p className="mt-2">
+              O recorte de pessoas e objetos (efeito 3D e adesivo) é feito no seu próprio aparelho: a foto
+              não é enviada a nenhum servidor pra isso. O Nativo não usa ferramentas de rastreamento nem
+              publicidade; fontes e bibliotecas ficam hospedadas no próprio site, e o navegador guarda só
+              preferências de tela (como dicas já vistas). Projetos ficam guardados até você apagá-los.
+              Fotos enviadas que não estejam mais em nenhum projeto são apagadas automaticamente depois de
+              30 dias. Ao enviar fotos de outras pessoas, a agência é responsável por ter autorização pra
+              usar a imagem delas.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">11. Seus direitos</h2>
             <p>
               Você pode solicitar, a qualquer momento, a confirmação, correção, exportação ou exclusão dos
               seus dados pessoais, conforme previsto na LGPD. Para isso, entre em contato pelo e-mail
@@ -184,7 +206,7 @@ export function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-foreground mb-2">11. Contato</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">12. Contato</h2>
             <p>
               Dúvidas sobre esta política ou solicitações relacionadas aos seus dados podem ser enviadas
               para{" "}
