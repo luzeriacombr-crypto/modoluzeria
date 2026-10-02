@@ -143,8 +143,8 @@ export const FEATURE_INDEX: FeatureEntry[] = [
     label: "Margem por Cliente",
     description: "Quanto cada cliente rende, descontando custo de hora e horas estimadas.",
     keywords: ["margem", "lucro", "custo", "rentabilidade", "quanto rende", "lucratividade", "custo hora", "vale a pena"],
-    to: "/configuracoes",
-    toSearch: { tab: "margem" },
+    to: "/financeiro",
+    toSearch: { aba: "margem" },
     roles: ["master"],
   },
   {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, TrendingDown, Info, X, ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
-import { orgCostSettingsQO, clientMarginsQO, clientMarginBreakdownQO, useApi } from "@/lib/luzeria/queries";
+import { orgCostSettingsQO, clientMarginsQO, clientMarginBreakdownQO, useApi, useMe } from "@/lib/luzeria/queries";
+import { isHouse, term } from "@/lib/luzeria/house";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
 import { InfoTip } from "./InfoTip";
@@ -28,7 +29,12 @@ const SORT_OPTIONS = [
   { id: "name", label: "Nome" },
   { id: "contract", label: "Valor do contrato" },
 ] as const;
-type SortBy = (typeof SORT_OPTIONS)[number]["id"];
+// House: sem contrato nem margem — só quanto a equipe custa em cada marca.
+const HOUSE_SORT_OPTIONS = [
+  { id: "cost", label: "Maior custo" },
+  { id: "name", label: "Nome" },
+] as const;
+type SortBy = (typeof SORT_OPTIONS)[number]["id"] | (typeof HOUSE_SORT_OPTIONS)[number]["id"];
 
 const money = (v: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -152,31 +158,39 @@ export function ClientMarginPanel() {
   const { data, isLoading } = useQuery(clientMarginsQO(days));
   const { openFicha } = useUI();
   const [breakdownFor, setBreakdownFor] = useState<{ clientId: string; clientName: string } | null>(null);
-  const [sortBy, setSortBy] = useState<SortBy>("margin");
+  const me = useMe().data;
+  const house = isHouse(me);
+  const [sortBy, setSortBy] = useState<SortBy>(house ? "cost" : "margin");
 
   // O server já devolve ordenado por margem (pior primeiro) — os outros
   // modos só reordenam no cliente, sem re-buscar nada.
   const sortedRows = useMemo(() => {
     if (!data) return [];
-    if (sortBy === "margin") return data.rows;
     const rows = [...data.rows];
     if (sortBy === "name") rows.sort((a, b) => a.clientName.localeCompare(b.clientName, "pt-BR"));
-    else rows.sort((a, b) => (b.contractValue ?? -1) - (a.contractValue ?? -1));
+    else if (sortBy === "cost") rows.sort((a, b) => (b.estimatedCost ?? -1) - (a.estimatedCost ?? -1));
+    else if (sortBy === "contract") rows.sort((a, b) => (b.contractValue ?? -1) - (a.contractValue ?? -1));
+    else return data.rows;
     return rows;
   }, [data, sortBy]);
+  const totals = useMemo(() => ({
+    delivered: sortedRows.reduce((n, r) => n + r.deliveredCount, 0),
+    hours: Math.round(sortedRows.reduce((n, r) => n + r.estimatedHours, 0) * 10) / 10,
+    cost: sortedRows.some((r) => r.estimatedCost != null) ? sortedRows.reduce((n, r) => n + (r.estimatedCost ?? 0), 0) : null,
+  }), [sortedRows]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <TrendingDown size={16} className="text-[var(--lz-accent-ink)]" />
-        <h2 className="text-foreground font-semibold">Margem por cliente</h2>
+        <h2 className="text-foreground font-semibold">{house ? "Custo da equipe por marca" : "Margem por cliente"}</h2>
       </div>
 
       <CostSettingsForm />
 
       <div className="flex items-center gap-2 text-foreground/60 text-xs bg-foreground/[0.03] border border-foreground/10 rounded-lg px-3 py-2">
         <Info size={14} className="shrink-0" />
-        Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem finalizou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
+        Custo é uma estimativa (itens finalizados × horas médias × custo-hora de quem executou, ou o padrão acima quando a pessoa não tem remuneração cadastrada) — não é apontamento real de horas nem contabilidade oficial.
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -192,7 +206,7 @@ export function ClientMarginPanel() {
         <div className="flex items-center gap-1.5 text-xs text-foreground/40">
           Ordenar por
           <div className="flex items-center gap-1 bg-foreground/[0.05] rounded-md p-1">
-            {SORT_OPTIONS.map((opt) => (
+            {(house ? HOUSE_SORT_OPTIONS : SORT_OPTIONS).map((opt) => (
               <button key={opt.id} onClick={() => setSortBy(opt.id)}
                 className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${sortBy === opt.id ? "text-[#0D0D0D]" : "text-foreground/60 hover:text-foreground"}`}
                 style={sortBy === opt.id ? { backgroundColor: "rgb(var(--lz-brand-rgb))" } : undefined}>
@@ -207,7 +221,7 @@ export function ClientMarginPanel() {
         <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-foreground/40" size={32} /></div>
       ) : !data || data.rows.length === 0 ? (
         <div className="text-center py-12 px-6 bg-foreground/[0.03] border border-foreground/10 rounded-2xl">
-          <p className="text-foreground/50 text-sm">Nenhum cliente ativo encontrado.</p>
+          <p className="text-foreground/50 text-sm">{house ? "Nenhuma marca ativa encontrada." : "Nenhum cliente ativo encontrado."}</p>
         </div>
       ) : (
         <div className="bg-card border border-foreground/7 rounded-xl overflow-hidden overflow-x-auto">
@@ -216,16 +230,16 @@ export function ClientMarginPanel() {
               <tr className="border-b border-foreground/7">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1">
-                    Cliente
-                    <InfoTip text="Nome do cliente. Clique pra abrir a ficha completa e preencher o valor do contrato, por exemplo." />
+                    {house ? "Marca" : "Cliente"}
+                    <InfoTip text={house ? "Nome da marca. Clique pra abrir a ficha completa." : "Nome do cliente. Clique pra abrir a ficha completa e preencher o valor do contrato, por exemplo."} />
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
+                {!house && <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Quanto o cliente paga no período escolhido: valor mensal do contrato × meses do período (em Avulsos, o valor fechado do trabalho). Aparece '—' quando ainda não foi preenchido." />
                     Receita no período
                   </span>
-                </th>
+                </th>}
                 <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
                   <span className="inline-flex items-center gap-1 justify-end">
                     <InfoTip text="Quantidade de itens finalizados desse cliente no período escolhido (30/90/180 dias) — mesma contagem usada no ranking da equipe." />
@@ -244,12 +258,21 @@ export function ClientMarginPanel() {
                     Custo est.
                   </span>
                 </th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
-                  <span className="inline-flex items-center gap-1 justify-end">
-                    <InfoTip text="Receita no período menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
-                    Margem
-                  </span>
-                </th>
+                {house ? (
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      <InfoTip text="Quanto do custo total da house está nessa marca." />
+                      % do total
+                    </span>
+                  </th>
+                ) : (
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-foreground/60">
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      <InfoTip text="Receita no período menos o custo estimado. Vermelho quando negativo, verde quando positivo. Aparece '—' quando o contrato não está preenchido." />
+                      Margem
+                    </span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -261,12 +284,12 @@ export function ClientMarginPanel() {
                       {r.clientName}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-foreground/70 text-right">
+                  {!house && <td className="px-4 py-3 text-sm text-foreground/70 text-right">
                     {money(r.periodRevenue)}
                     {r.periodRevenue != null && r.contractValue != null && r.periodRevenue !== r.contractValue && (
                       <div className="text-[10px] text-foreground/35">{money(r.contractValue)}/mês</div>
                     )}
-                  </td>
+                  </td>}
                   <td className="px-4 py-3 text-sm text-right">
                     <button onClick={() => setBreakdownFor({ clientId: r.clientId, clientName: r.clientName })}
                       className="text-foreground/70 hover:text-[var(--lz-accent-ink)] hover:underline transition">
@@ -280,13 +303,30 @@ export function ClientMarginPanel() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-foreground/70 text-right">{money(r.estimatedCost)}</td>
-                  <td className="px-4 py-3 text-sm text-right font-semibold"
-                    style={{ color: r.margin == null ? "color-mix(in srgb, var(--foreground) 40%, transparent)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
-                    {money(r.margin)}
-                  </td>
+                  {house ? (
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-foreground/80 tabular-nums">
+                      {totals.cost && r.estimatedCost != null ? `${Math.round((r.estimatedCost / totals.cost) * 100)}%` : "—"}
+                    </td>
+                  ) : (
+                    <td className="px-4 py-3 text-sm text-right font-semibold"
+                      style={{ color: r.margin == null ? "color-mix(in srgb, var(--foreground) 40%, transparent)" : r.margin < 0 ? "#FF6B6B" : "#4ADE80" }}>
+                      {money(r.margin)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
+            {house && (
+              <tfoot>
+                <tr className="border-t border-foreground/10 bg-foreground/[0.03]">
+                  <td className="px-4 py-3 text-sm font-bold text-foreground">Total da house</td>
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-foreground/80">{totals.delivered}</td>
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-foreground/80">{totals.hours}h</td>
+                  <td className="px-4 py-3 text-sm text-right font-bold" style={{ color: "var(--lz-accent-ink)" }}>{money(totals.cost)}</td>
+                  <td className="px-4 py-3 text-sm text-right font-semibold text-foreground/80">{totals.cost ? "100%" : "—"}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

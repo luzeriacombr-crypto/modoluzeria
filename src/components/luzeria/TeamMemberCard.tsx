@@ -466,7 +466,7 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       <section className={card + " mt-3.5"}>
         <div className="flex items-center gap-1.5 mb-3">
           <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-foreground/55">Remuneração</h3>
-          <InfoTip text="Usado pra calcular o custo-hora dessa pessoa na Margem por cliente: salário mensal ÷ horas mensais estimadas da escala abaixo. Só master vê e edita isso." />
+          <InfoTip text="Usado pra calcular o custo-hora dessa pessoa na Margem por cliente (Financeiro): salário mensal ÷ horas mensais estimadas da escala abaixo. Só master vê e edita isso." />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-6 gap-y-3">
           <div className="space-y-3">

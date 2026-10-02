@@ -255,7 +255,6 @@ export function Sidebar({
         {(() => {
           const clienteItems = orderSection("cliente", [
             ...(isAdmin && !disabled.has("client_overview") ? [{ id: "cliente-overview", label: navLabel("cliente-overview", "Visão Geral"), node: <NavSubButton key="cliente-overview" label={navLabel("cliente-overview", "Visão Geral")} active={configTabActive("cliente")} onClick={() => goToConfigTab("cliente")} /> }] : []),
-            ...(isAdmin && canFinanceiro && !disabled.has("margin") ? [{ id: "margem", label: navLabel("margem", "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", "Margem por cliente")} active={configTabActive("margem")} onClick={() => goToConfigTab("margem")} /> }] : []),
             ...(canJourney && !disabled.has("journey") ? [{ id: "jornada", label: navLabel("jornada", "Jornada do cliente"), node: <NavSubButton key="jornada" label={navLabel("jornada", "Jornada do cliente")} active={configTabActive("journey")} onClick={() => goToConfigTab("journey")} /> }] : []),
           ]);
 
@@ -279,6 +278,7 @@ export function Sidebar({
             ...(!disabled.has("financeiro") ? [
             { id: "pagamentos", label: navLabel("pagamentos", "Entradas e saídas"), node: <NavSubButton key="pagamentos" label={navLabel("pagamentos", "Entradas e saídas")} active={financeTabActive("entradas")} onClick={() => goToFinance("entradas")} /> },
             { id: "resultado", label: navLabel("resultado", "Resultado do mês"), node: <NavSubButton key="resultado" label={navLabel("resultado", "Resultado do mês")} active={financeTabActive("resultado")} onClick={() => goToFinance("resultado")} /> },
+            ...(isAdmin && !disabled.has("margin") ? [{ id: "margem", label: navLabel("margem", house ? "Custo por marca" : "Margem por cliente"), node: <NavSubButton key="margem" label={navLabel("margem", house ? "Custo por marca" : "Margem por cliente")} active={financeTabActive("margem")} onClick={() => goToFinance("margem")} /> }] : []),
             { id: "orcamentos", label: navLabel("orcamentos", "Orçamentos"), node: <NavSubButton key="orcamentos" label={navLabel("orcamentos", "Orçamentos")} active={financeTabActive("orcamentos")} onClick={() => goToFinance("orcamentos")} /> },
             ] : []),
           ]) : [];

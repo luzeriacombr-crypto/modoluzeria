@@ -25,7 +25,6 @@ export const HOUSE_HIDDEN_FEATURES = [
   "agency_levels",    // Programa de Níveis / ranking de agências
   "whatsapp_reminders", // Avisar clientes no WhatsApp
   "client_finance",   // Valor de contrato/vencimento, pagamentos por cliente
-  "margin",           // Margem por cliente
   "journey",          // Jornada do cliente
   "approval_link",    // Aprovação por link (feed e roteiros)
   "avulsos",          // Pasta de clientes avulsos

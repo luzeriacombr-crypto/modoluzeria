@@ -35,7 +35,6 @@ const AgenciesBillingPanel = lazy(() => import("./AgenciesBillingPanel").then((m
 const PageActivityReportPanel = lazy(() => import("./PageActivityReportPanel").then((m) => ({ default: m.PageActivityReportPanel })));
 const NewUserJourneyReportPanel = lazy(() => import("./NewUserJourneyReportPanel").then((m) => ({ default: m.NewUserJourneyReportPanel })));
 const AiPlanningFeedbackPanel = lazy(() => import("./AiPlanningFeedbackPanel").then((m) => ({ default: m.AiPlanningFeedbackPanel })));
-const ClientMarginPanel = lazy(() => import("./ClientMarginPanel").then((m) => ({ default: m.ClientMarginPanel })));
 const DemoRequestsPanel = lazy(() => import("./DemoRequestsPanel").then((m) => ({ default: m.DemoRequestsPanel })));
 const DailySplashSettingsPanel = lazy(() => import("./DailySplashSettingsPanel").then((m) => ({ default: m.DailySplashSettingsPanel })));
 const MessagesPanel = lazy(() => import("./MessagesPanel").then((m) => ({ default: m.MessagesPanel })));
@@ -96,7 +95,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     "afiliados", "revenda",
     // House: sem jornada/margem/visão geral de clientes, pagamentos por
     // cliente nem indicação entre agências.
-    ...(isHouse(me) ? (["indicacoes", "margem", "journey", "cliente", "pagamentos"] as SettingsTab[]) : []),
+    ...(isHouse(me) ? (["indicacoes", "journey", "cliente", "pagamentos"] as SettingsTab[]) : []),
   ];
   const allowedTabs: SettingsTab[] = (isMaster ? VALID_TABS : setorAllowedTabs).filter((t) => !HIDDEN_TABS.includes(t));
   // Pedido do Junior: "Plataforma" só existe pra ele (isPlatformAdmin), e é
@@ -280,14 +279,11 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           </div>
         </div>
        ) : null) :
-       tab === "cliente" || tab === "margem" || tab === "journey" ? (
+       tab === "margem" ? <Navigate to="/financeiro" search={{ aba: "margem" } as any} replace /> :
+       tab === "cliente" || tab === "journey" ? (
         <ClienteTab
-          initialSub={tab === "margem" ? "margem" : tab === "journey" ? "jornada" : "overview"}
+          initialSub={tab === "journey" ? "jornada" : "overview"}
           canJourney={hasSetorPermission(me, "settings_journey")}
-          // Margem usa custo-hora derivado do salário da equipe — o servidor
-          // só libera pra master/setor (is_admin). Sem o isAdmin aqui, quem
-          // tinha só o cargo Financeiro via a aba e recebia erro.
-          canMargem={isAdmin && hasPermission(me, "view_financeiro")}
           isAdmin={isAdmin}
         />
        ) :
@@ -1590,15 +1586,16 @@ function SubTabPill({ active, onClick, label }: { active: boolean; onClick: () =
   );
 }
 
-function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
-  initialSub: "overview" | "jornada" | "margem"; canJourney: boolean; canMargem: boolean; isAdmin: boolean;
+function ClienteTab({ initialSub, canJourney, isAdmin }: {
+  initialSub: "overview" | "jornada"; canJourney: boolean; isAdmin: boolean;
 }) {
+  // A Margem mudou pro Financeiro (pedido do Junior, 02/10) — ?tab=margem
+  // redireciona pra lá.
   const subs = [
     ...(isAdmin ? [{ id: "overview" as const, label: "Visão Geral" }] : []),
-    ...(canMargem ? [{ id: "margem" as const, label: "Margem" }] : []),
     ...(canJourney ? [{ id: "jornada" as const, label: "Jornada" }] : []),
   ];
-  const [sub, setSub] = useState<"overview" | "jornada" | "margem">(
+  const [sub, setSub] = useState<"overview" | "jornada">(
     subs.some((s) => s.id === initialSub) ? initialSub : (subs[0]?.id ?? "overview"),
   );
   return (
@@ -1607,8 +1604,7 @@ function ClienteTab({ initialSub, canJourney, canMargem, isAdmin }: {
         {subs.map((s) => <SubTabPill key={s.id} active={sub === s.id} onClick={() => setSub(s.id)} label={s.label} />)}
       </div>
       {sub === "overview" ? <ClientOperationsOverview /> :
-       sub === "jornada" ? <JourneyStagesTab /> :
-       sub === "margem" ? <ClientMarginPanel /> : null}
+       sub === "jornada" ? <JourneyStagesTab /> : null}
     </div>
   );
 }

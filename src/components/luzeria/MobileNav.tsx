@@ -58,7 +58,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
   // House com uma marca só: o botão da barra inferior vai direto pra ela.
   const houseBrands = house ? clients.filter((c) => !c.archived) : [];
   const singleBrandId = house && houseBrands.length <= 1 ? (me?.houseClientId ?? houseBrands[0]?.id ?? null) : null;
-  const showClientSection = !disabledFeatures.has("client_overview") || (canJourney && !disabledFeatures.has("journey")) || (canFinanceiro && !disabledFeatures.has("margin"));
+  const showClientSection = !disabledFeatures.has("client_overview") || (canJourney && !disabledFeatures.has("journey"));
   const showFinanceSection = canFinanceiro && (isMaster || !disabledFeatures.has("financeiro"));
   const tab = showClients ? "clients" : showMenu ? "menu" : "home";
 
@@ -285,7 +285,6 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
                 <p className="px-3 pt-4 pb-1 text-xs font-bold uppercase tracking-wider text-foreground/50">{navLabel("cliente", DEFAULT_NAV_LABELS.cliente)}</p>
                 {isAdmin && !disabledFeatures.has("client_overview") && <MenuLink icon={<IdCard size={17} />} label={navLabel("cliente-overview", DEFAULT_NAV_LABELS["cliente-overview"])} onClick={() => goToConfigTab("cliente")} />}
                 {canJourney && !disabledFeatures.has("journey") && <MenuLink icon={<IdCard size={17} />} label={navLabel("jornada", DEFAULT_NAV_LABELS.jornada)} onClick={() => goToConfigTab("journey")} />}
-                {isAdmin && canFinanceiro && !disabledFeatures.has("margin") && <MenuLink icon={<IdCard size={17} />} label={navLabel("margem", DEFAULT_NAV_LABELS.margem)} onClick={() => goToConfigTab("margem")} />}
               </>
             )}
 
@@ -297,6 +296,7 @@ export function MobileNav({ onCreateClient }: { onCreateClient?: (category?: str
                   <>
                     <MenuLink icon={<Wallet size={17} />} label={navLabel("pagamentos", DEFAULT_NAV_LABELS.pagamentos)} onClick={() => goToFinance("entradas")} />
                     <MenuLink icon={<Wallet size={17} />} label={navLabel("resultado", DEFAULT_NAV_LABELS.resultado)} onClick={() => goToFinance("resultado")} />
+                    {isAdmin && !disabledFeatures.has("margin") && <MenuLink icon={<Wallet size={17} />} label={navLabel("margem", house ? "Custo por marca" : DEFAULT_NAV_LABELS.margem)} onClick={() => goToFinance("margem")} />}
                     <MenuLink icon={<Wallet size={17} />} label={navLabel("orcamentos", DEFAULT_NAV_LABELS.orcamentos)} onClick={() => goToFinance("orcamentos")} />
                   </>
                 )}

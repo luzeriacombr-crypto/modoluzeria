@@ -64,8 +64,8 @@ export const FEATURE_SHOWCASE: ShowcaseEntry[] = [
       "Cruza isso com o tempo que cada cliente consome pra calcular a margem de verdade.",
       "Use isso na hora de negociar reajuste, desconto ou um brinde — sem chutar.",
     ],
-    to: "/configuracoes",
-    toSearch: { tab: "margem" },
+    to: "/financeiro",
+    toSearch: { aba: "margem" },
     roles: ["master"],
   },
   {
