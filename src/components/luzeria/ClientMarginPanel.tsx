@@ -7,6 +7,8 @@ import { CONTENT_TYPE_LABEL, type ContentType } from "@/lib/luzeria/types";
 import { InfoTip } from "./InfoTip";
 
 const EFFORT_TYPES: ContentType[] = ["post", "reel", "story", "gravacao", "outros"];
+/** Reel aqui é o tempo de edição, contado por reel editado (custo do editor). */
+const effortLabel = (t: ContentType) => (t === "reel" ? "Editar reels" : CONTENT_TYPE_LABEL[t]);
 const DAYS_OPTIONS = [30, 90, 180] as const;
 const SORT_OPTIONS = [
   { id: "margin", label: "Pior margem" },
@@ -77,7 +79,7 @@ function CostSettingsForm() {
 
   const summary = [
     hourlyCost === "" ? "Custo-hora não definido" : `${money(Number(hourlyCost))}/h`,
-    ...EFFORT_TYPES.map((t) => `${CONTENT_TYPE_LABEL[t]} ${formatHours(Number(avgHours[t]) || 0)}`),
+    ...EFFORT_TYPES.map((t) => `${effortLabel(t)} ${formatHours(Number(avgHours[t]) || 0)}`),
   ].join(" · ");
 
   return (
@@ -104,11 +106,11 @@ function CostSettingsForm() {
           <div>
             <label className="text-xs text-foreground/50 mb-2 inline-flex items-center gap-1">
               Tempo médio por tipo de conteúdo
-              <InfoTip text="Quanto tempo, em média, sua equipe leva pra produzir cada tipo de item (ajuste de 15 em 15 minutos). Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
+              <InfoTip text="Quanto tempo, em média, sua equipe leva pra produzir cada tipo de item (ajuste de 15 em 15 minutos). Em reels, conta o tempo de edição e o custo é da pessoa marcada como Editor de cada reel. Usado junto com os itens finalizados pra estimar quantas horas cada cliente consumiu." />
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {EFFORT_TYPES.map((t) => (
-                <HoursStepper key={t} label={CONTENT_TYPE_LABEL[t]} value={Number(avgHours[t]) || 0}
+                <HoursStepper key={t} label={effortLabel(t)} value={Number(avgHours[t]) || 0}
                   onChange={(v) => setAvgHours((prev) => ({ ...prev, [t]: v }))} />
               ))}
             </div>

@@ -76,7 +76,7 @@ export const getClientMargins = createServerFn({ method: "GET" })
     const start = new Date(Date.now() - data.days * 86400000);
     const { data: finals, error: finalsErr } = await context.supabase
       .from("finalizations")
-      .select("user_id, content_items!inner(type, activity_quantity, months!inner(client_id))")
+      .select("user_id, content_items!inner(type, editor_id, activity_quantity, months!inner(client_id))")
       .gte("finalized_at", start.toISOString())
       .not("item_id", "is", null);
     if (finalsErr) throw new Error(finalsErr.message);
@@ -94,7 +94,11 @@ export const getClientMargins = createServerFn({ method: "GET" })
       const hours = weight * hoursPerUnit;
       hoursByClient.set(clientId, (hoursByClient.get(clientId) ?? 0) + hours);
       deliveredByClient.set(clientId, (deliveredByClient.get(clientId) ?? 0) + weight);
-      const rate = hourlyCostByUser.get(f.user_id) ?? hourlyCost;
+      // Reel: o custo é de quem editou (campo "Editor" do reel), não de quem
+      // clicou em finalizar — pedido do Junior, 02/10. Sem editor marcado,
+      // cai em quem finalizou, como antes.
+      const payerId = it.type === "reel" && it.editor_id ? it.editor_id : f.user_id;
+      const rate = hourlyCostByUser.get(payerId) ?? hourlyCost;
       if (rate != null) {
         anyRateAvailable = true;
         costByClient.set(clientId, (costByClient.get(clientId) ?? 0) + hours * rate);
@@ -184,14 +188,15 @@ export const getClientMarginBreakdown = createServerFn({ method: "GET" })
     const start = new Date(Date.now() - data.days * 86400000);
     const { data: rows, error } = await context.supabase
       .from("finalizations")
-      .select("user_id, finalized_at, content_items!inner(id, idx, type, title, activity_quantity, months!inner(client_id))")
+      .select("user_id, finalized_at, content_items!inner(id, idx, type, title, editor_id, activity_quantity, months!inner(client_id))")
       .gte("finalized_at", start.toISOString())
       .eq("content_items.months.client_id", data.clientId)
       .not("item_id", "is", null)
       .order("finalized_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const userIds = [...new Set((rows ?? []).map((r: any) => r.user_id))];
+    const payerOf = (r: any): string => (r.content_items?.type === "reel" && r.content_items?.editor_id ? r.content_items.editor_id : r.user_id);
+    const userIds = [...new Set((rows ?? []).map(payerOf))];
     const nameByUser = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: profiles } = await context.supabase.from("profiles").select("id, name").in("id", userIds);
@@ -207,8 +212,8 @@ export const getClientMarginBreakdown = createServerFn({ method: "GET" })
         itemIdx: it.idx as number,
         itemTitle: it.title as string,
         itemType: it.type as string,
-        userId: r.user_id as string,
-        userName: nameByUser.get(r.user_id) ?? "—",
+        userId: payerOf(r) as string,
+        userName: nameByUser.get(payerOf(r)) ?? "—",
         hours: Math.round(hours * 10) / 10,
         finalizedAt: r.finalized_at as string,
       };
