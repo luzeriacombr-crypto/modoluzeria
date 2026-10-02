@@ -251,8 +251,8 @@ function PublicPreviewPage() {
             await approveItem({ data: { token, itemId: activeItem!.id, authorName: author } });
             await q.refetch();
           }}
-          onSubmitFeedback={async (author, text) => {
-            await addFb({ data: { token, itemId: activeItem!.id, authorName: author, text } });
+          onSubmitFeedback={async (author, text, category) => {
+            await addFb({ data: { token, itemId: activeItem!.id, authorName: author, text, category } });
             try { localStorage.setItem("lz_public_author", author); setSavedName(author); } catch {}
             await q.refetch();
           }}

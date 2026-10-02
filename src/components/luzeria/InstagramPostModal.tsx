@@ -18,7 +18,13 @@ export type IGModalFile = {
   webViewUrl?: string | null;
   thumbUrl?: string | null;
 };
-export type IGModalFeedback = { id: string; authorName: string; text: string; createdAt: string };
+export type IGModalFeedback = { id: string; authorName: string; text: string; createdAt: string; category?: "conteudo" | "data_horario" | "design" | null };
+
+const FEEDBACK_CATEGORY_LABEL: Record<string, { label: string; color: string }> = {
+  conteudo: { label: "Conteúdo/Estratégia", color: "#4A9EFF" },
+  data_horario: { label: "Data e horário", color: "#5BA88A" },
+  design: { label: "Design", color: "#FF9F4A" },
+};
 export type IGModalItem = {
   id: string;
   type: "post" | "reel" | "story" | "outros" | "gravacao" | "roteiro" | "sistema";
@@ -124,7 +130,7 @@ export function InstagramPostModal({
   mode: ThumbMode;
   canComment: boolean;
   onClose: () => void;
-  onSubmitFeedback?: (author: string, text: string) => Promise<void> | void;
+  onSubmitFeedback?: (author: string, text: string, category?: "conteudo" | "data_horario" | "design" | null) => Promise<void> | void;
   onApproveItem?: () => Promise<void> | void;
   initialAuthorName?: string;
 }) {
@@ -197,6 +203,7 @@ export function InstagramPostModal({
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState<"conteudo" | "data_horario" | "design" | null>(null);
   const [itemApproved, setItemApproved] = useState(false);
   const [itemApproving, setItemApproving] = useState(false);
   const isPublic = mode.kind === "public";
@@ -268,8 +275,9 @@ export function InstagramPostModal({
     if (!onSubmitFeedback) return;
     const a = author.trim(); const t = text.trim();
     if (!a || !t) return;
+    if (isPublic && !feedbackCategory) return;
     setSubmitting(true);
-    try { await onSubmitFeedback(a, t); setText(""); setComposerOpen(false); }
+    try { await onSubmitFeedback(a, t, feedbackCategory); setText(""); setComposerOpen(false); setFeedbackCategory(null); }
     finally { setSubmitting(false); }
   }
 
@@ -464,6 +472,14 @@ export function InstagramPostModal({
                   {item.feedback.map((f) => (
                     <div key={f.id} className="text-[13px] leading-snug">
                       <span className="font-semibold text-black mr-1">{f.authorName}</span>
+                      {f.category && FEEDBACK_CATEGORY_LABEL[f.category] && (
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide mr-1.5"
+                          style={{ background: `${FEEDBACK_CATEGORY_LABEL[f.category].color}22`, color: FEEDBACK_CATEGORY_LABEL[f.category].color }}
+                        >
+                          {FEEDBACK_CATEGORY_LABEL[f.category].label}
+                        </span>
+                      )}
                       <span className="text-black">{f.text}</span>
                       <div className="text-[11px] text-neutral-500 mt-0.5">{relativeTime(f.createdAt)}</div>
                     </div>
@@ -567,6 +583,28 @@ export function InstagramPostModal({
                       maxLength={60}
                     />
                   )}
+                  <div className="mb-2.5">
+                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">O que você quer ajustar?</div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {([
+                        { id: "conteudo" as const, label: "Conteúdo/Estratégia" },
+                        { id: "data_horario" as const, label: "Data e horário" },
+                        { id: "design" as const, label: "Design" },
+                      ]).map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setFeedbackCategory(c.id)}
+                          className="text-[12px] font-semibold px-3 py-1.5 rounded-full border-2 transition"
+                          style={feedbackCategory === c.id
+                            ? { background: "rgb(var(--lz-brand-rgb))", borderColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }
+                            : { background: "transparent", borderColor: "#E5E5E5", color: "#737373" }}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -577,12 +615,12 @@ export function InstagramPostModal({
                   />
                   <div className="mt-4 flex items-center justify-end gap-2">
                     <button
-                      onClick={() => { setComposerOpen(false); setText(""); }}
+                      onClick={() => { setComposerOpen(false); setText(""); setFeedbackCategory(null); }}
                       className="text-[13px] font-medium text-neutral-500 hover:text-black px-3 py-3"
                     >Cancelar</button>
                     <button
                       onClick={submit}
-                      disabled={submitting || !author.trim() || !text.trim()}
+                      disabled={submitting || !author.trim() || !text.trim() || !feedbackCategory}
                       className="text-[14px] font-semibold px-5 py-3 rounded-md transition disabled:opacity-50"
                       style={{ background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}
                     >{submitting ? "Enviando…" : "Enviar sugestão"}</button>

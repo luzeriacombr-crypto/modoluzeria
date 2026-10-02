@@ -154,7 +154,7 @@ export const listClientFeedback = createServerFn({ method: "GET" })
     z.object({ itemId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
-      .from("client_feedback").select("id, author_name, text, created_at")
+      .from("client_feedback").select("id, author_name, text, created_at, category")
       .eq("item_id", data.itemId).order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (rows ?? []).map((r: any) => ({
@@ -162,6 +162,7 @@ export const listClientFeedback = createServerFn({ method: "GET" })
       authorName: r.author_name as string,
       text: r.text as string,
       createdAt: r.created_at as string,
+      category: (r.category ?? null) as FeedbackCategory | null,
     }));
   });
 
@@ -584,13 +585,16 @@ export const getPublicDriveVideoToken = createServerFn({ method: "GET" })
 
 /* ============ PUBLIC: add feedback ============ */
 
+export type FeedbackCategory = "conteudo" | "data_horario" | "design";
+
 export const addPublicFeedback = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; itemId: string; authorName: string; text: string }) =>
+  .inputValidator((d: { token: string; itemId: string; authorName: string; text: string; category?: FeedbackCategory | null }) =>
     z.object({
       token: z.string().min(8).max(60),
       itemId: z.string().uuid(),
       authorName: z.string().trim().min(1).max(60),
       text: z.string().trim().min(1).max(1000),
+      category: z.enum(["conteudo", "data_horario", "design"]).nullable().optional(),
     }).parse(d))
   .handler(async ({ data }) => {
     const { createClient } = await import("@supabase/supabase-js");
@@ -605,6 +609,7 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
       _item_id: data.itemId,
       _author_name: data.authorName,
       _text: data.text,
+      _category: data.category ?? null,
     });
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Link inválido ou revogado.");
@@ -614,6 +619,7 @@ export const addPublicFeedback = createServerFn({ method: "POST" })
       authorName: r.author_name as string,
       text: r.text as string,
       createdAt: r.created_at as string,
+      category: (r.category ?? null) as FeedbackCategory | null,
     };
   });
 
