@@ -23,6 +23,7 @@ import { InstallAppTutorialModal } from "./InstallAppTutorialModal";
 // de todas as abas só pra ver "Equipe", que é a aba padrão.
 const ReportsTab = lazy(() => import("./ReportsTab").then((m) => ({ default: m.ReportsTab })));
 const IntegrationsTab = lazy(() => import("./IntegrationsTab").then((m) => ({ default: m.IntegrationsTab })));
+import { AnniversaryMessageEditor } from "./AnniversaryMessageEditor";
 const MemberGoalsTab = lazy(() => import("./MemberGoalsTab").then((m) => ({ default: m.MemberGoalsTab })));
 const AutomationsTab = lazy(() => import("./AutomationsTab").then((m) => ({ default: m.AutomationsTab })));
 const UpdatesTab = lazy(() => import("./UpdatesTab").then((m) => ({ default: m.UpdatesTab })));
@@ -367,6 +368,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
       <p className="text-[11px] text-foreground/30 mt-4">
         Clique num membro pra ver mais opções: cargos, restringir clientes, resetar senha, ver demandas, ativar/desativar ou remover.
       </p>
+
+      <AnniversaryMessageEditor />
 
       <div className="mt-10 pt-6 border-t border-foreground/6">
         <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-4">

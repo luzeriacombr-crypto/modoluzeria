@@ -349,6 +349,8 @@ export interface Profile {
   isReseller?: boolean;
   orgId?: string | null;
   orgName?: string | null;
+  /** Mensagem de aniversário de casa da agência (null = texto padrão). */
+  orgAnniversaryMessage?: string | null;
   orgTagline?: string | null;
   orgLogoUrl?: string | null;
   orgLogoUrlLight?: string | null;

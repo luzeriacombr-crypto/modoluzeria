@@ -153,7 +153,7 @@ export const getMe = createServerFn({ method: "GET" })
     const role = (roleRow?.role ?? "member") as Role;
     const orgId = (profile as any).org_id as string | null;
     const { data: org, error: orgErr } = orgId
-      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, logo_size_adjust_px, logo_position_adjust_px, color_primary, color_primary_light, color_sidebar, color_accent_light, brand_advanced_colors, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason").eq("id", orgId).maybeSingle()
+      ? await context.supabase.from("orgs").select("name, tagline, logo_path, logo_path_light, logo_size_adjust_px, logo_position_adjust_px, color_primary, color_primary_light, color_sidebar, color_accent_light, brand_advanced_colors, feed_preview_image_path, planejamento_cover_image_path, favicon_path, photo_watermark_path, photo_watermark_mode, photo_watermark_text, photo_watermark_opacity, photo_watermark_density, disabled_features, setor_permissions, members_can_set_editor_format, is_reseller, nav_labels, nav_order, border_radius, dashboard_layout, hero_gradient_from, hero_gradient_to, contract_template, finalizados_separate_tab, demo_read_only, first_payment_confirmed_at, plan_id, subscription_status, trial_ends_at, deactivation_reason, anniversary_message").eq("id", orgId).maybeSingle()
       : { data: null, error: null };
     // Silenciosamente virar tudo null aqui já apagou a marca (logo/cores) de
     // toda agência uma vez, quando uma política de RLS quebrada fazia essa
@@ -230,6 +230,7 @@ export const getMe = createServerFn({ method: "GET" })
       orgId,
       orgName: (org as any)?.name ?? null,
       orgTagline: (org as any)?.tagline ?? null,
+      orgAnniversaryMessage: (org as any)?.anniversary_message ?? null,
       orgColorPrimary: (org as any)?.color_primary ?? null,
       orgColorPrimaryLight: (org as any)?.color_primary_light ?? null,
       orgColorSidebar: (org as any)?.color_sidebar ?? null,
@@ -1549,6 +1550,19 @@ export const setHideGoalsWidget = createServerFn({ method: "POST" })
     if (!isMaster) throw new Error("Forbidden");
     const { error } = await context.supabase.from("profiles")
       .update({ hide_goals_widget: data.hideGoalsWidget }).eq("id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setAnniversaryMessage = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { message: string | null }) =>
+    z.object({ message: z.string().trim().max(600).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (!isMaster) throw new Error("Forbidden");
+    const { error } = await (context.supabase as any).from("orgs")
+      .update({ anniversary_message: data.message || null }).eq("id", context.orgId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

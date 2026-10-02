@@ -15,6 +15,7 @@ import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, M
 import { formatMonth, deadlineInfo } from "@/lib/luzeria/utils";
 import { MyWeekView } from "./MyWeekView";
 import { getDailyVerse } from "@/lib/luzeria/daily-verse";
+import { AnniversaryCard } from "@/components/luzeria/AnniversaryCard";
 import { StoriesInspiracoesButton, StoriesInspiracoesModal } from "@/components/luzeria/StoriesInspiracoesModal";
 
 const ProductivityBlock = lazy(() =>
@@ -739,6 +740,7 @@ export function MyTasks() {
           </button>
         </div>
       )}
+      {isMeView && <AnniversaryCard />}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/40 mb-2">Minhas demandas</p>
