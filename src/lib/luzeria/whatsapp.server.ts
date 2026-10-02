@@ -11,11 +11,14 @@
 const GRAPH = "https://graph.facebook.com/v24.0";
 const LANG = "pt_BR";
 
-/** Nomes dos modelos que precisam estar aprovados no WhatsApp Manager. */
+/** Nomes dos modelos aprovados no WhatsApp Manager, em ordem de
+ * preferência: tenta o primeiro e, se ele ainda não existir/estiver
+ * aprovado na Meta, cai pro seguinte (as versões _v2 têm o texto revisado
+ * pelo Junior e entraram em análise depois das originais). */
 export const WA_TEMPLATES = {
-  welcome: "boas_vindas_modo_criador",
-  supportAlert: "alerta_suporte",
-  supportReply: "resposta_suporte",
+  welcome: ["boas_vindas_modo_criador_v2", "boas_vindas_modo_criador"],
+  supportAlert: ["alerta_suporte"],
+  supportReply: ["resposta_suporte_v2", "resposta_suporte"],
 } as const;
 
 /** Palavras que tiram / devolvem o número da lista de envio. "Parar
@@ -130,24 +133,35 @@ async function logOutgoing(to: string, result: WaSendResult, body: string, templ
   if (error) console.error("[whatsapp] falha ao registrar mensagem:", error.message);
 }
 
-/** Envia um modelo aprovado. `params` preenche {{1}}, {{2}}… do corpo, na ordem. */
-export async function sendTemplate(to: string, template: string, params: string[], extra: LogExtra): Promise<WaSendResult> {
+/** Erro da Meta pra "esse modelo não existe/não está aprovado nesse idioma". */
+const TEMPLATE_MISSING_CODE = 132001;
+
+/** Envia um modelo aprovado. `params` preenche {{1}}, {{2}}… do corpo, na
+ * ordem. Com uma lista de nomes, usa o primeiro que estiver aprovado. */
+export async function sendTemplate(to: string, template: string | readonly string[], params: string[], extra: LogExtra): Promise<WaSendResult> {
   if (!whatsappConfigured()) return { ok: false, error: "WhatsApp não configurado." };
   const digits = toWaDigits(to);
   if (!digits) return { ok: false, error: "Número inválido." };
   const safeParams = params.map((p) => templateParam(p));
-  const result = await postMessage({
-    to: digits,
-    type: "template",
-    template: {
-      name: template,
-      language: { code: LANG },
-      ...(safeParams.length > 0 && {
-        components: [{ type: "body", parameters: safeParams.map((text) => ({ type: "text", text })) }],
-      }),
-    },
-  });
-  await logOutgoing(digits, result, safeParams.join(" | "), template, extra);
+  const names = typeof template === "string" ? [template] : template;
+  let result: WaSendResult = { ok: false, error: "Nenhum modelo informado." };
+  let used = names[0];
+  for (const name of names) {
+    used = name;
+    result = await postMessage({
+      to: digits,
+      type: "template",
+      template: {
+        name,
+        language: { code: LANG },
+        ...(safeParams.length > 0 && {
+          components: [{ type: "body", parameters: safeParams.map((text) => ({ type: "text", text })) }],
+        }),
+      },
+    });
+    if (result.ok || result.code !== TEMPLATE_MISSING_CODE) break;
+  }
+  await logOutgoing(digits, result, safeParams.join(" | "), used, extra);
   return result;
 }
 
