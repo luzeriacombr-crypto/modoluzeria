@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { useServerFn } from "@tanstack/react-start";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
   Instagram, Clock, CheckCircle2, Image as ImageIcon, BarChart3, Download, Loader2, ExternalLink, ChevronDown, ChevronUp,
   Sparkles, Users, Eye, Heart, TrendingUp, TrendingDown, MessageCircle, Send, X, Mail, CalendarDays, UserCheck, Cake, MapPin,
-  Share2, Link2, Copy, Check, Sun, Moon,
+  Share2, Link2, Copy, Check, Sun, Moon, Bookmark, UserPlus, Percent,
 } from "lucide-react";
 import { Modal } from "./Modals";
 import { toast } from "sonner";
@@ -177,10 +177,12 @@ const KPI_ACCENT: Record<string, string> = {
   alcance: "#7AA7FF",
   visitas: "#FFA67A",
   interacoes: "#D896FF",
+  novos: "#7ED957",
+  engajamento: "#FF8FB1",
 };
 
 function KpiTile({ label, value, changePct, icon, accent = "seguidores" }: {
-  label: string; value: number; changePct: number | null; icon: React.ReactNode; accent?: keyof typeof KPI_ACCENT;
+  label: string; value: number | string; changePct: number | null; icon: React.ReactNode; accent?: keyof typeof KPI_ACCENT;
 }) {
   const color = KPI_ACCENT[accent];
   return (
@@ -204,7 +206,7 @@ function KpiTile({ label, value, changePct, icon, accent = "seguidores" }: {
         )}
       </div>
       <div>
-        <div className="text-2xl font-extrabold text-foreground tabular-nums tracking-tight">{value.toLocaleString("pt-BR")}</div>
+        <div className="text-2xl font-extrabold text-foreground tabular-nums tracking-tight">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</div>
         <div className="text-[11.5px] font-semibold text-foreground/40 mt-0.5 truncate" title={label}>{label}</div>
       </div>
     </div>
@@ -649,6 +651,146 @@ function FollowerComparisonCard({ history }: { history: InstagramFollowerHistory
   );
 }
 
+const PERF_SERIES = {
+  reach: { label: "Alcance", color: "#7AA7FF" },
+  followers: { label: "Novos seguidores", color: "#7ED957" },
+} as const;
+
+/** Alcance e novos seguidores por dia (30 dias) no mesmo gráfico, cada um
+ * com a própria escala; os botões ligam e desligam cada linha. Usa só a
+ * série diária que a Visão geral já busca. */
+function PerformanceCard({ reachSeries, followersSeries }: {
+  reachSeries: { date: string; value: number }[]; followersSeries: { date: string; value: number }[];
+}) {
+  const [show, setShow] = useState({ reach: true, followers: true });
+  const data = useMemo(() => {
+    const byDate = new Map<string, { date: string; reach: number | null; followers: number | null }>();
+    for (const r of reachSeries) byDate.set(r.date, { date: r.date, reach: r.value, followers: null });
+    for (const f of followersSeries) {
+      const row = byDate.get(f.date) ?? { date: f.date, reach: null, followers: null };
+      row.followers = f.value; byDate.set(f.date, row);
+    }
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+      .map((r) => ({ ...r, label: new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) }));
+  }, [reachSeries, followersSeries]);
+
+  function toggle(k: "reach" | "followers") {
+    const other = k === "reach" ? "followers" : "reach";
+    // Sempre deixa pelo menos uma linha ligada.
+    if (show[k] && !show[other]) return;
+    setShow((s) => ({ ...s, [k]: !s[k] }));
+  }
+
+  return (
+    <div className="rounded-2xl bg-card p-4 mb-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Desempenho · 30 dias</span>
+        <div className="flex items-center gap-1.5">
+          {(Object.keys(PERF_SERIES) as (keyof typeof PERF_SERIES)[]).map((k) => (
+            <button key={k} onClick={() => toggle(k)} aria-pressed={show[k]}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${show[k] ? "text-foreground border-foreground/20" : "text-foreground/35 border-foreground/8 hover:text-foreground/70"}`}>
+              <span className="h-2 w-2 rounded-full" style={{ background: show[k] ? PERF_SERIES[k].color : "color-mix(in srgb, var(--foreground) 25%, transparent)" }} />
+              {PERF_SERIES[k].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="h-56 mt-3 -ml-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 6, right: 4, left: 0, bottom: 0 }}>
+            <XAxis dataKey="label" axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(data.length / 8) - 1)}
+              tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
+            <YAxis yAxisId="reach" hide={!show.reach} axisLine={false} tickLine={false} width={34}
+              tick={{ fill: "color-mix(in srgb, var(--foreground) 35%, transparent)", fontSize: 9 }} />
+            <YAxis yAxisId="followers" orientation="right" hide={!show.followers} axisLine={false} tickLine={false} width={30}
+              tick={{ fill: "color-mix(in srgb, var(--foreground) 35%, transparent)", fontSize: 9 }} />
+            <Tooltip
+              cursor={{ stroke: "color-mix(in srgb, var(--foreground) 25%, transparent)" }}
+              content={({ active, payload }: any) => active && payload?.length ? (
+                <div className="bg-background border border-foreground/10 rounded-md px-2.5 py-1.5 text-[10px] text-foreground/80 shadow-xl">
+                  <div className="font-bold mb-0.5">{payload[0].payload.label}</div>
+                  {show.reach && payload[0].payload.reach != null && <div><span style={{ color: PERF_SERIES.reach.color }}>●</span> Alcance: <b>{payload[0].payload.reach.toLocaleString("pt-BR")}</b></div>}
+                  {show.followers && payload[0].payload.followers != null && <div><span style={{ color: PERF_SERIES.followers.color }}>●</span> Novos seguidores: <b>{payload[0].payload.followers >= 0 ? "+" : ""}{payload[0].payload.followers.toLocaleString("pt-BR")}</b></div>}
+                </div>
+              ) : null}
+            />
+            {show.reach && <Line yAxisId="reach" type="monotone" dataKey="reach" stroke={PERF_SERIES.reach.color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />}
+            {show.followers && <Line yAxisId="followers" type="monotone" dataKey="followers" stroke={PERF_SERIES.followers.color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+const RANKING_CATEGORIES: { key: "likes" | "comments" | "reach" | "shares" | "saved" | "views"; title: string; unit: string; color: string; icon: React.ReactNode }[] = [
+  { key: "likes", title: "Campeão de curtidas", unit: "curtidas", color: "#FF6B8A", icon: <Heart size={13} /> },
+  { key: "comments", title: "Gerador de conversas", unit: "comentários", color: "#FFA67A", icon: <MessageCircle size={13} /> },
+  { key: "reach", title: "Maior alcance", unit: "contas alcançadas", color: "#7AA7FF", icon: <Eye size={13} /> },
+  { key: "shares", title: "Mais viral", unit: "compartilhamentos", color: "#D896FF", icon: <Share2 size={13} /> },
+  { key: "saved", title: "Mais valioso", unit: "salvamentos", color: "#7ED957", icon: <Bookmark size={13} /> },
+  { key: "views", title: "Rei das visualizações", unit: "visualizações", color: "#FFD166", icon: <TrendingUp size={13} /> },
+];
+
+/** Melhor publicação em cada categoria, entre as que a aba Conteúdo já
+ * carregou (sem nenhuma chamada nova à Meta). */
+function PostRanking({ mediaState }: { mediaState: ReturnType<typeof useAccountMediaWithInsights> }) {
+  const rows = (mediaState.media ?? [])
+    .map((m) => ({ m, r: mediaState.results.get(m.id) }))
+    .filter((x): x is { m: InstagramAccountMedia; r: InstagramMediaInsights & { error?: string } } => !!x.r && !x.r.error);
+
+  const winners = RANKING_CATEGORIES.map((c) => {
+    let best: (typeof rows)[number] | null = null;
+    for (const x of rows) {
+      const v = x.r[c.key];
+      if (v != null && v > 0 && (best === null || v > (best.r[c.key] as number))) best = x;
+    }
+    return { c, best };
+  }).filter((w) => w.best);
+
+  if (winners.length === 0) {
+    return mediaState.loadingMedia || mediaState.loadingInsights ? (
+      <div className="mb-5 text-[11px] text-foreground/35 flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Calculando o ranking de posts…</div>
+    ) : null;
+  }
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-baseline gap-2 mb-2.5">
+        <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Ranking de posts</span>
+        <span className="text-[10.5px] text-foreground/35">
+          entre as últimas {mediaState.media?.length ?? 0} publicações
+          {mediaState.loadingInsights ? " · atualizando…" : ""}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {winners.map(({ c, best }) => {
+          const { m, r } = best!;
+          const value = r[c.key] as number;
+          const Wrapper: any = m.permalink ? "a" : "div";
+          return (
+            <Wrapper key={c.key} {...(m.permalink ? { href: m.permalink, target: "_blank", rel: "noopener noreferrer" } : {})}
+              className="rounded-2xl bg-card p-3 flex gap-3 hover:bg-foreground/[0.04] transition-colors">
+              <div className="relative shrink-0 h-[72px] w-[72px] rounded-lg overflow-hidden bg-foreground/5">
+                {m.thumbnailUrl && <img src={m.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold" style={{ color: c.color }}>{c.icon}{c.title}</div>
+                <div className="text-xs text-foreground/55 mt-1 line-clamp-2">{m.caption ?? "Sem legenda"}</div>
+                <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+                  <span className="text-lg font-extrabold tabular-nums text-foreground leading-none">{value.toLocaleString("pt-BR")}</span>
+                  <span className="text-[11px] text-foreground/45">{c.unit}</span>
+                  <span className="text-[10.5px] text-foreground/30 ml-auto">{new Date(m.timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span>
+                </div>
+              </div>
+            </Wrapper>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState }: {
   overview: InstagramAccountOverview | null; isLoading: boolean; error: unknown;
   history: InstagramFollowerHistory | null; mediaState: ReturnType<typeof useAccountMediaWithInsights>;
@@ -656,7 +798,12 @@ function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState 
   if (isLoading) return <div className="text-center py-10"><Loader2 size={18} className="animate-spin mx-auto text-foreground/30" /></div>;
   if (error || !data) return <p className="text-xs text-red-400/80 py-4">{(error as any)?.message ?? "Não foi possível carregar o painel de insights."}</p>;
 
-  const maxReach = Math.max(...data.reachSeries.map((r) => r.value), 1);
+  // Derivados do que a Meta já devolve (sem chamada nova): novos seguidores
+  // = soma da série diária de follower_count; engajamento = interações ÷ alcance.
+  const newFollowers = data.followersSeries.reduce((n, r) => n + r.value, 0);
+  const engagementRate = data.kpis.reach > 0
+    ? `${(Math.round((data.kpis.totalInteractions / data.kpis.reach) * 10000) / 100).toLocaleString("pt-BR")}%`
+    : "—";
   const maxFreq = Math.max(...data.postingFrequency.map((d) => d.count), 1);
   const maxEngagementHour = Math.max(...(data.engagementByHour?.map((h) => h.value) ?? []), 1);
   const bestHour = data.engagementByHour ? [...data.engagementByHour].sort((a, b) => b.value - a.value)[0] : null;
@@ -673,66 +820,20 @@ function VisaoGeralPane({ overview: data, isLoading, error, history, mediaState 
 
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-5">
         <KpiTile label="Seguidores" value={data.followersCount} changePct={data.followersChangePct} accent="seguidores" icon={<Users size={16} />} />
+        <KpiTile label="Novos seguidores (30d)" value={newFollowers} changePct={null} accent="novos" icon={<UserPlus size={16} />} />
         <KpiTile label="Alcance (30d)" value={data.kpis.reach} changePct={data.kpis.reachChangePct} accent="alcance" icon={<Eye size={16} />} />
         <KpiTile label="Visitas ao perfil" value={data.kpis.profileViews} changePct={data.kpis.profileViewsChangePct} accent="visitas" icon={<UserCheck size={16} />} />
         <KpiTile label="Interações" value={data.kpis.totalInteractions} changePct={data.kpis.totalInteractionsChangePct} accent="interacoes" icon={<Heart size={16} />} />
+        <KpiTile label="Taxa de engajamento" value={engagementRate} changePct={null} accent="engajamento" icon={<Percent size={16} />} />
       </div>
 
       {history && <FollowerComparisonCard history={history} />}
 
-      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        <div className="rounded-2xl bg-card p-4">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Alcance por dia (30 dias)</span>
-          <div className="h-40 mt-2 -ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.reachSeries.map((r) => ({ ...r, label: new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) }))}>
-                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={4}
-                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
-                <Tooltip
-                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
-                  content={({ active, payload }: any) => active && payload?.length ? (
-                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
-                      {payload[0].payload.label}: <b>{payload[0].value.toLocaleString("pt-BR")}</b>
-                    </div>
-                  ) : null}
-                />
-                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
-                  {data.reachSeries.map((r, i) => (
-                    <Cell key={i} fill={r.value === maxReach ? "var(--lz-accent-ink)" : "rgba(var(--lz-brand-light-rgb),0.4)"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      <PerformanceCard reachSeries={data.reachSeries} followersSeries={data.followersSeries} />
 
-        <div className="rounded-2xl bg-card p-4">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-foreground/50">Seguidores por dia (30 dias)</span>
-          <div className="h-40 mt-2 -ml-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.followersSeries.map((r) => ({ ...r, label: new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) }))}>
-                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={4}
-                  tick={{ fill: "color-mix(in srgb, var(--foreground) 40%, transparent)", fontSize: 9 }} />
-                <Tooltip
-                  cursor={{ fill: "rgba(var(--lz-brand-light-rgb),0.08)" }}
-                  content={({ active, payload }: any) => active && payload?.length ? (
-                    <div className="bg-background border border-foreground/10 rounded-md px-2 py-1 text-[10px] text-foreground/80 shadow-xl">
-                      {payload[0].payload.label}: <b>{payload[0].value >= 0 ? "+" : ""}{payload[0].value.toLocaleString("pt-BR")}</b>
-                    </div>
-                  ) : null}
-                />
-                <Bar dataKey="value" radius={[3, 3, 0, 0]}>
-                  {data.followersSeries.map((r, i) => (
-                    <Cell key={i} fill={r.value >= 0 ? "#7ED957" : "#FF6B6B"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+      <PostRanking mediaState={mediaState} />
 
       {topContent.length > 0 && (
         <div className="mb-5">
