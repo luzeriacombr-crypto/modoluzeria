@@ -228,6 +228,26 @@ export function App() {
     };
   }, [me.data?.orgFaviconUrl]);
 
+  // App instalado com a marca da empresa: troca o manifesto (nome, cor e
+  // ícone da organização) e o título que o iOS usa na tela inicial. Vale pra
+  // quem instalar DEPOIS de abrir o app logado; quem já instalou reinstala.
+  useEffect(() => {
+    const orgId = me.data?.orgId;
+    if (!orgId || !me.data?.orgName) return;
+    const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    const prevHref = manifest?.getAttribute("href") ?? null;
+    manifest?.setAttribute("href", `/api/manifest/${orgId}`);
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+    const createdMeta = !meta;
+    if (!meta) { meta = document.createElement("meta"); meta.name = "apple-mobile-web-app-title"; document.head.appendChild(meta); }
+    const prevTitle = meta.content;
+    meta.content = me.data.orgName.slice(0, 30);
+    return () => {
+      if (manifest && prevHref) manifest.setAttribute("href", prevHref);
+      if (createdMeta) meta?.remove(); else if (meta) meta.content = prevTitle;
+    };
+  }, [me.data?.orgId, me.data?.orgName]);
+
   // Cache the org's logo + brand colors locally so the loading screen
   // (which renders before we know who's logged in, so before the
   // --lz-brand-rgb CSS var is set) can show them immediately on a repeat

@@ -57,6 +57,30 @@ function TabLoadingFallback() {
 type SettingsTab = "team" | "report" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "emails" | "journey" | "cliente" | "knowledge";
 const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
 
+/** Redimensiona qualquer imagem pra um PNG quadrado (contain, fundo transparente). */
+async function toSquarePng(file: File, size: number): Promise<Blob> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Não consegui ler essa imagem."));
+      i.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Seu navegador não conseguiu preparar a imagem.");
+    const iw = img.naturalWidth || size, ih = img.naturalHeight || size;
+    const scale = Math.min(size / iw, size / ih);
+    const w = iw * scale, h = ih * scale;
+    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Falha ao converter a imagem."))), "image/png"));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onTabChange: (tab: SettingsTab) => void }) {
   const me = useMe().data;
   const { data: profiles = [] } = useQuery(profilesQO());
@@ -1886,10 +1910,12 @@ function OrgBrandingSection({
     if (file.size > MAX_LOGO_BYTES) { toast.error("Imagem muito grande (máximo 3 MB)."); return; }
     setUploadingFavicon(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `org-favicon/${orgId}/favicon-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
-        contentType: file.type, upsert: true,
+      // Sempre vira PNG quadrado de 512px: é o que o celular exige pra instalar
+      // o app com esse ícone (WebP/SVG/retângulo não servem).
+      const png = await toSquarePng(file, 512);
+      const path = `org-favicon/${orgId}/favicon-${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, png, {
+        contentType: "image/png", upsert: true,
       });
       if (upErr) throw upErr;
       await updateMyOrg.mutateAsync({ data: { faviconPath: path } });
