@@ -1969,3 +1969,340 @@ export const deleteClientContract = createServerFn({ method: "POST" })
     }
     return { ok: true };
   }));
+/* ============== LINK PÚBLICO DE ENVIO DE MATERIAIS BRUTOS ==============
+ * A agência gera, dentro de um post/reel, um link (3 dias) pra um freelancer
+ * subir imagens e vídeos direto pro Drive da agência, sem login. Mesmo
+ * mecanismo do upload do app (sessão resumível no Drive + pedaços de 2,5MB
+ * passando pelo servidor), só que autorizado pelo token do link em vez de
+ * por uma sessão. O token mora em item_upload_requests; nenhuma função
+ * pública toca o Drive sem antes validar token ativo, não expirado, o tipo e
+ * o tamanho do arquivo, e que a URL de upload foi emitida por esse mesmo link
+ * (assinatura HMAC). O arquivo é sempre registrado na pasta/lista "raw" do
+ * item e conferido no Drive antes de entrar. */
+
+const UPLOAD_LINK_MAX_FILES = 300;
+const UPLOAD_LINK_ALLOWED = /^(image|video)\//i;
+
+function randomUploadToken(len = 24): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < len; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
+
+async function uploadAdminDb(): Promise<any> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as any;
+}
+
+async function signUploadUrl(token: string, uploadUrl: string): Promise<string> {
+  const { createHmac } = await import("node:crypto");
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (!secret) throw new Error("Configuração do servidor incompleta.");
+  return createHmac("sha256", secret).update(`${token}|${uploadUrl}`).digest("hex");
+}
+
+type UploadRequestRow = { id: string; org_id: string; item_id: string; status: string; expires_at: string; max_file_bytes: number; created_by: string | null };
+
+async function loadUploadRequest(token: string): Promise<UploadRequestRow | null> {
+  const db = await uploadAdminDb();
+  const { data } = await db.from("item_upload_requests")
+    .select("id, org_id, item_id, status, expires_at, max_file_bytes, created_by").eq("token", token).maybeSingle();
+  return (data as UploadRequestRow | null) ?? null;
+}
+
+async function requireActiveUploadRequest(token: string): Promise<UploadRequestRow> {
+  const r = await loadUploadRequest(token);
+  if (!r) throw new Error("Link não encontrado.");
+  if (r.status !== "ativo") throw new Error("Esse link foi cancelado. Peça um novo à agência.");
+  if (new Date(r.expires_at).getTime() < Date.now()) throw new Error("Esse link expirou. Peça um novo à agência.");
+  return r;
+}
+
+function cleanUploaderName(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim().slice(0, 60);
+}
+
+function cleanFileName(raw: string): string {
+  return raw.replace(/[\\/\u0000-\u001f]+/g, "_").trim().slice(0, 200) || "arquivo";
+}
+
+export type ItemUploadRequestFile = { id: string; name: string; sizeBytes: number | null; uploaderName: string; createdAt: string };
+export type ItemUploadRequest = {
+  id: string; token: string; status: "ativo" | "cancelado" | "expirado"; expiresAt: string; createdAt: string;
+  files: ItemUploadRequestFile[];
+};
+
+/** Agência: gera um link preso a este item (precisa ser admin ou responsável pelo item, igual ao upload normal). */
+export const createItemUploadRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ token: string }> => {
+    await assertCanWrite(context.supabase, context.userId, data.itemId);
+    const db = await uploadAdminDb();
+    const { data: item } = await db.from("content_items")
+      .select("id, org_id, months!inner(client_id)").eq("id", data.itemId).maybeSingle();
+    if (!item || item.org_id !== context.orgId) throw new Error("Item não encontrado.");
+    const clientId = (item as any).months?.client_id as string;
+    const map = await loadClientFolderMap(db, clientId);
+    if (!map?.deliveries_folder_id) throw deliveriesFolderMissingError(clientId);
+
+    const token = randomUploadToken();
+    const { error } = await db.from("item_upload_requests").insert({
+      org_id: context.orgId, item_id: data.itemId, token, created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { token };
+  });
+
+/** Agência: links do item (ativos, cancelados e expirados) com os arquivos que cada um recebeu. */
+export const listItemUploadRequests = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { itemId: string }) => z.object({ itemId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ItemUploadRequest[]> => {
+    const db = context.supabase as any;
+    const { data: reqs, error } = await db.from("item_upload_requests")
+      .select("id, token, status, expires_at, created_at").eq("item_id", data.itemId).order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    const ids = (reqs ?? []).map((r: any) => r.id);
+    const filesByReq = new Map<string, ItemUploadRequestFile[]>();
+    if (ids.length > 0) {
+      const { data: files } = await db.from("item_upload_request_files")
+        .select("id, request_id, name, size_bytes, uploader_name, created_at").in("request_id", ids).order("created_at", { ascending: false });
+      for (const f of files ?? []) {
+        const arr = filesByReq.get(f.request_id) ?? [];
+        arr.push({ id: f.id, name: f.name, sizeBytes: f.size_bytes ?? null, uploaderName: f.uploader_name, createdAt: f.created_at });
+        filesByReq.set(f.request_id, arr);
+      }
+    }
+    return (reqs ?? []).map((r: any) => ({
+      id: r.id, token: r.token,
+      status: r.status === "cancelado" ? "cancelado" : new Date(r.expires_at).getTime() < Date.now() ? "expirado" : "ativo",
+      expiresAt: r.expires_at, createdAt: r.created_at,
+      files: filesByReq.get(r.id) ?? [],
+    }));
+  });
+
+export const cancelItemUploadRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = await uploadAdminDb();
+    const { data: r } = await db.from("item_upload_requests").select("id, org_id, item_id").eq("id", data.id).maybeSingle();
+    if (!r || r.org_id !== context.orgId) throw new Error("Link não encontrado.");
+    await assertCanWrite(context.supabase, context.userId, r.item_id);
+    const { error } = await db.from("item_upload_requests").update({ status: "cancelado" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+export type PublicUploadInfo = {
+  status: "ativo" | "cancelado" | "expirado";
+  expiresAt: string;
+  orgName: string;
+  orgLogoUrl: string | null;
+  clientName: string;
+  itemLabel: string;
+  maxFileBytes: number;
+};
+
+/** Pública (sem login): o que a página do freelancer mostra. */
+export const getPublicUploadInfo = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<PublicUploadInfo | null> => {
+    const r = await loadUploadRequest(data.token);
+    if (!r) return null;
+    const db = await uploadAdminDb();
+    const [{ data: item }, { data: org }] = await Promise.all([
+      db.from("content_items").select("type, idx, title, months!inner(clients!months_client_id_fkey!inner(name))").eq("id", r.item_id).maybeSingle(),
+      db.from("orgs").select("name, logo_path").eq("id", r.org_id).maybeSingle(),
+    ]);
+    let orgLogoUrl: string | null = null;
+    if (org?.logo_path) {
+      try {
+        const { data: signed } = await db.storage.from("avatars").createSignedUrl(org.logo_path as string, 60 * 60 * 24);
+        orgLogoUrl = signed?.signedUrl ?? null;
+      } catch { /* branding é só cosmético */ }
+    }
+    const typeLabel: Record<string, string> = { post: "Post", reel: "Reel", story: "Story" };
+    const itemLabel = item
+      ? `${typeLabel[item.type as string] ?? "Item"} ${String(item.idx ?? "").padStart(2, "0")}${item.title ? ` — ${item.title}` : ""}`
+      : "Materiais brutos";
+    return {
+      status: r.status === "cancelado" ? "cancelado" : new Date(r.expires_at).getTime() < Date.now() ? "expirado" : "ativo",
+      expiresAt: r.expires_at,
+      orgName: org?.name ?? "Agência",
+      orgLogoUrl,
+      clientName: (item as any)?.months?.clients?.name ?? "",
+      itemLabel,
+      maxFileBytes: Number(r.max_file_bytes),
+    };
+  });
+
+/** Pública: só os arquivos enviados por ESSE nome (o freelancer não vê o que outras pessoas mandaram pelo mesmo link). */
+export const listPublicUploadFiles = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string; uploaderName: string }) =>
+    z.object({ token: z.string().min(8).max(60), uploaderName: z.string().min(1).max(80) }).parse(d))
+  .handler(async ({ data }): Promise<ItemUploadRequestFile[]> => {
+    const r = await loadUploadRequest(data.token);
+    if (!r) return [];
+    const db = await uploadAdminDb();
+    const { data: files } = await db.from("item_upload_request_files")
+      .select("id, name, size_bytes, uploader_name, created_at")
+      .eq("request_id", r.id).eq("uploader_name", cleanUploaderName(data.uploaderName)).order("created_at", { ascending: false });
+    return (files ?? []).map((f: any) => ({ id: f.id, name: f.name, sizeBytes: f.size_bytes ?? null, uploaderName: f.uploader_name, createdAt: f.created_at }));
+  });
+
+/** Pública, passo 1: valida e abre a sessão resumível no Drive, na pasta "Materiais Brutos" do cliente. */
+export const startPublicUpload = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; uploaderName: string; name: string; mimeType: string; size: number }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      uploaderName: z.string().min(1).max(80),
+      name: z.string().min(1).max(255),
+      mimeType: z.string().min(1).max(200),
+      size: z.number().int().min(1),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const r = await requireActiveUploadRequest(data.token);
+    if (!cleanUploaderName(data.uploaderName)) throw new Error("Informe o seu nome antes de enviar.");
+    if (!UPLOAD_LINK_ALLOWED.test(data.mimeType)) throw new Error("Só aceitamos imagens e vídeos por este link.");
+    if (data.size > Number(r.max_file_bytes)) {
+      throw new Error(`Esse arquivo passa do limite de ${Math.round(Number(r.max_file_bytes) / 1024 ** 3)} GB por arquivo.`);
+    }
+    const db = await uploadAdminDb();
+    const { count } = await db.from("item_upload_request_files").select("id", { count: "exact", head: true }).eq("request_id", r.id);
+    if ((count ?? 0) >= UPLOAD_LINK_MAX_FILES) throw new Error("Esse link atingiu o limite de arquivos. Peça um novo à agência.");
+
+    return withDriveOrg(r.org_id, async () => {
+      const targetParentId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const metadata: any = { name: cleanFileName(data.name), mimeType: data.mimeType };
+      if (targetParentId) metadata.parents = [targetParentId];
+      const sessionRes = await fetch(
+        `${UPLOAD_BASE}/files?uploadType=resumable&supportsAllDrives=true&fields=${encodeURIComponent(DRIVE_FIELDS)}`,
+        {
+          method: "POST",
+          headers: {
+            ...await driveHeaders(),
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": data.mimeType,
+            "X-Upload-Content-Length": String(data.size),
+          },
+          body: JSON.stringify(metadata),
+        },
+      );
+      if (!sessionRes.ok) {
+        const txt = await sessionRes.text().catch(() => "");
+        console.error("[public-upload] session", sessionRes.status, txt.slice(0, 240));
+        throw new Error("Não foi possível iniciar o envio agora. Avise a agência.");
+      }
+      const uploadUrl = sessionRes.headers.get("Location");
+      if (!uploadUrl) throw new Error("O Drive não retornou uma URL de upload.");
+      return { uploadUrl, sig: await signUploadUrl(data.token, uploadUrl) };
+    });
+  });
+
+/** Pública, passo 2: um pedaço do arquivo (mesmo formato do uploadDriveChunk). */
+export const uploadPublicChunk = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; uploadUrl: string; sig: string; chunkBase64: string; rangeStart: number; rangeEnd: number; totalSize: number; mimeType: string }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      uploadUrl: z.string().url(),
+      sig: z.string().min(10).max(200),
+      chunkBase64: z.string().min(1),
+      rangeStart: z.number().int().min(0),
+      rangeEnd: z.number().int().min(0),
+      totalSize: z.number().int().min(1),
+      mimeType: z.string().min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const r = await requireActiveUploadRequest(data.token);
+    assertDriveUploadUrl(data.uploadUrl);
+    if (data.sig !== await signUploadUrl(data.token, data.uploadUrl)) throw new Error("Envio não autorizado.");
+    if (data.totalSize > Number(r.max_file_bytes)) throw new Error("Arquivo acima do limite.");
+    return withDriveOrg(r.org_id, async () => {
+      const chunk = Buffer.from(data.chunkBase64, "base64");
+      const res = await fetch(data.uploadUrl, {
+        method: "PUT",
+        headers: {
+          ...await driveHeaders(),
+          "Content-Type": data.mimeType,
+          "Content-Range": `bytes ${data.rangeStart}-${data.rangeEnd}/${data.totalSize}`,
+        },
+        body: chunk,
+      });
+      if (res.status === 308) return { done: false as const };
+      if (res.ok) {
+        const meta: any = await res.json();
+        return { done: true as const, meta: { id: meta.id as string } };
+      }
+      const txt = await res.text().catch(() => "");
+      console.error("[public-upload] chunk", res.status, txt.slice(0, 240));
+      throw new Error(`O Drive recusou um pedaço do arquivo (${res.status}).`);
+    });
+  });
+
+/** Pública, passo 3: confere o arquivo no Drive (pasta certa, nome, tamanho), registra no item e avisa a agência. */
+export const finalizePublicUpload = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; uploaderName: string; driveFileId: string }) =>
+    z.object({
+      token: z.string().min(8).max(60),
+      uploaderName: z.string().min(1).max(80),
+      driveFileId: z.string().min(1).max(200),
+    }).parse(d))
+  .handler(async ({ data }) => {
+    const r = await requireActiveUploadRequest(data.token);
+    const uploader = cleanUploaderName(data.uploaderName);
+    if (!uploader) throw new Error("Informe o seu nome antes de enviar.");
+    const db = await uploadAdminDb();
+
+    const meta = await withDriveOrg(r.org_id, async () => {
+      const targetParentId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const res = await fetch(
+        `${DRIVE_BASE}/files/${encodeURIComponent(data.driveFileId)}?supportsAllDrives=true&fields=${encodeURIComponent(`${DRIVE_FIELDS},parents`)}`,
+        { headers: await driveHeaders() },
+      );
+      if (!res.ok) throw new Error("Não consegui confirmar o arquivo no Drive.");
+      const m: any = await res.json();
+      // Só entra o que está de fato na pasta de brutos desse link — o freelancer não consegue "anexar" outro arquivo do Drive.
+      if (targetParentId && !(m.parents ?? []).includes(targetParentId)) throw new Error("Arquivo fora da pasta esperada.");
+      if (!UPLOAD_LINK_ALLOWED.test(m.mimeType ?? "")) throw new Error("Tipo de arquivo não permitido.");
+      return m;
+    });
+
+    const { error: fErr } = await db.from("item_files").upsert({
+      item_id: r.item_id,
+      drive_file_id: meta.id,
+      name: meta.name,
+      mime_type: meta.mimeType ?? null,
+      icon_url: meta.iconLink ?? null,
+      thumbnail_url: meta.thumbnailLink ?? null,
+      web_view_url: meta.webViewLink ?? `https://drive.google.com/file/d/${meta.id}/view`,
+      size_bytes: meta.size != null ? Number(meta.size) : null,
+      added_by: null,
+      sort_order: 0,
+      kind: "raw",
+    }, { onConflict: "item_id,drive_file_id" });
+    if (fErr) throw new Error(fErr.message);
+
+    await db.from("item_upload_request_files").insert({
+      request_id: r.id, uploader_name: uploader, drive_file_id: meta.id, name: meta.name,
+      mime_type: meta.mimeType ?? null, size_bytes: meta.size != null ? Number(meta.size) : null,
+    });
+
+    // Um aviso por rodada de envio (não um por arquivo): pula se já mandamos um nos últimos 15 minutos.
+    if (r.created_by) {
+      const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { data: recent } = await db.from("notifications").select("id")
+        .eq("user_id", r.created_by).eq("type", "raw_upload_received").eq("item_id", r.item_id).gte("created_at", since).limit(1);
+      if (!recent || recent.length === 0) {
+        await db.from("notifications").insert({
+          user_id: r.created_by, type: "raw_upload_received", item_id: r.item_id,
+          message: `${uploader} está enviando materiais brutos pelo link.`,
+        });
+      }
+    }
+    return { ok: true as const, file: { id: meta.id as string, name: meta.name as string } };
+  });

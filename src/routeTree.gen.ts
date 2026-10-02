@@ -41,6 +41,7 @@ import { Route as OauthTiktokCallbackRouteImport } from './routes/oauth.tiktok-c
 import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
 import { Route as InsightsTokenRouteImport } from './routes/insights.$token'
 import { Route as HouseCriarRouteImport } from './routes/house.criar'
+import { Route as EnviarTokenRouteImport } from './routes/enviar.$token'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
 import { Route as ConectarTiktokTokenRouteImport } from './routes/conectar-tiktok.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
@@ -74,6 +75,8 @@ import { Route as AuthenticatedAjudaRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiWhatsappWebhookRouteImport } from './routes/api.whatsapp.webhook'
 import { Route as ApiSelecaoOgTokenRouteImport } from './routes/api.selecao-og.$token'
+import { Route as ApiOrgIconOrgIdRouteImport } from './routes/api.org-icon.$orgId'
+import { Route as ApiManifestOrgIdRouteImport } from './routes/api.manifest.$orgId'
 import { Route as ApiIgMediaTokenRouteImport } from './routes/api.ig-media.$token'
 import { Route as ApiDescadastrarTokenRouteImport } from './routes/api.descadastrar.$token'
 import { Route as ApiCronSnapshotInstagramFollowersRouteImport } from './routes/api.cron.snapshot-instagram-followers'
@@ -264,6 +267,11 @@ const HouseCriarRoute = HouseCriarRouteImport.update({
   path: '/house/criar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EnviarTokenRoute = EnviarTokenRouteImport.update({
+  id: '/enviar/$token',
+  path: '/enviar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContratoTokenRoute = ContratoTokenRouteImport.update({
   id: '/contrato/$token',
   path: '/contrato/$token',
@@ -431,6 +439,16 @@ const ApiWhatsappWebhookRoute = ApiWhatsappWebhookRouteImport.update({
 const ApiSelecaoOgTokenRoute = ApiSelecaoOgTokenRouteImport.update({
   id: '/api/selecao-og/$token',
   path: '/api/selecao-og/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrgIconOrgIdRoute = ApiOrgIconOrgIdRouteImport.update({
+  id: '/api/org-icon/$orgId',
+  path: '/api/org-icon/$orgId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiManifestOrgIdRoute = ApiManifestOrgIdRouteImport.update({
+  id: '/api/manifest/$orgId',
+  path: '/api/manifest/$orgId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIgMediaTokenRoute = ApiIgMediaTokenRouteImport.update({
@@ -623,6 +641,7 @@ export interface FileRoutesByFullPath {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/enviar/$token': typeof EnviarTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -655,6 +674,8 @@ export interface FileRoutesByFullPath {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
+  '/api/manifest/$orgId': typeof ApiManifestOrgIdRoute
+  '/api/org-icon/$orgId': typeof ApiOrgIconOrgIdRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -713,6 +734,7 @@ export interface FileRoutesByTo {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/enviar/$token': typeof EnviarTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -745,6 +767,8 @@ export interface FileRoutesByTo {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
+  '/api/manifest/$orgId': typeof ApiManifestOrgIdRoute
+  '/api/org-icon/$orgId': typeof ApiOrgIconOrgIdRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -805,6 +829,7 @@ export interface FileRoutesById {
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
   '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
+  '/enviar/$token': typeof EnviarTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
@@ -837,6 +862,8 @@ export interface FileRoutesById {
   '/api/cron/snapshot-instagram-followers': typeof ApiCronSnapshotInstagramFollowersRoute
   '/api/descadastrar/$token': typeof ApiDescadastrarTokenRoute
   '/api/ig-media/$token': typeof ApiIgMediaTokenRoute
+  '/api/manifest/$orgId': typeof ApiManifestOrgIdRoute
+  '/api/org-icon/$orgId': typeof ApiOrgIconOrgIdRoute
   '/api/selecao-og/$token': typeof ApiSelecaoOgTokenRoute
   '/api/whatsapp/webhook': typeof ApiWhatsappWebhookRoute
   '/api/selecao-download/$token/$fileId': typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -897,6 +924,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/conectar-tiktok/$token'
     | '/contrato/$token'
+    | '/enviar/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
@@ -929,6 +957,8 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
+    | '/api/manifest/$orgId'
+    | '/api/org-icon/$orgId'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
@@ -987,6 +1017,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/conectar-tiktok/$token'
     | '/contrato/$token'
+    | '/enviar/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
@@ -1019,6 +1050,8 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
+    | '/api/manifest/$orgId'
+    | '/api/org-icon/$orgId'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
@@ -1078,6 +1111,7 @@ export interface FileRouteTypes {
     | '/conectar-instagram/$token'
     | '/conectar-tiktok/$token'
     | '/contrato/$token'
+    | '/enviar/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
@@ -1110,6 +1144,8 @@ export interface FileRouteTypes {
     | '/api/cron/snapshot-instagram-followers'
     | '/api/descadastrar/$token'
     | '/api/ig-media/$token'
+    | '/api/manifest/$orgId'
+    | '/api/org-icon/$orgId'
     | '/api/selecao-og/$token'
     | '/api/whatsapp/webhook'
     | '/api/selecao-download/$token/$fileId'
@@ -1147,6 +1183,7 @@ export interface RootRouteChildren {
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
   ConectarTiktokTokenRoute: typeof ConectarTiktokTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
+  EnviarTokenRoute: typeof EnviarTokenRoute
   HouseCriarRoute: typeof HouseCriarRoute
   InsightsTokenRoute: typeof InsightsTokenRoute
   OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
@@ -1171,6 +1208,8 @@ export interface RootRouteChildren {
   ApiCronSnapshotInstagramFollowersRoute: typeof ApiCronSnapshotInstagramFollowersRoute
   ApiDescadastrarTokenRoute: typeof ApiDescadastrarTokenRoute
   ApiIgMediaTokenRoute: typeof ApiIgMediaTokenRoute
+  ApiManifestOrgIdRoute: typeof ApiManifestOrgIdRoute
+  ApiOrgIconOrgIdRoute: typeof ApiOrgIconOrgIdRoute
   ApiSelecaoOgTokenRoute: typeof ApiSelecaoOgTokenRoute
   ApiWhatsappWebhookRoute: typeof ApiWhatsappWebhookRoute
   ApiSelecaoDownloadTokenFileIdRoute: typeof ApiSelecaoDownloadTokenFileIdRoute
@@ -1402,6 +1441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HouseCriarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/enviar/$token': {
+      id: '/enviar/$token'
+      path: '/enviar/$token'
+      fullPath: '/enviar/$token'
+      preLoaderRoute: typeof EnviarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contrato/$token': {
       id: '/contrato/$token'
       path: '/contrato/$token'
@@ -1631,6 +1677,20 @@ declare module '@tanstack/react-router' {
       path: '/api/selecao-og/$token'
       fullPath: '/api/selecao-og/$token'
       preLoaderRoute: typeof ApiSelecaoOgTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org-icon/$orgId': {
+      id: '/api/org-icon/$orgId'
+      path: '/api/org-icon/$orgId'
+      fullPath: '/api/org-icon/$orgId'
+      preLoaderRoute: typeof ApiOrgIconOrgIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/manifest/$orgId': {
+      id: '/api/manifest/$orgId'
+      path: '/api/manifest/$orgId'
+      fullPath: '/api/manifest/$orgId'
+      preLoaderRoute: typeof ApiManifestOrgIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ig-media/$token': {
@@ -1912,6 +1972,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
   ConectarTiktokTokenRoute: ConectarTiktokTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
+  EnviarTokenRoute: EnviarTokenRoute,
   HouseCriarRoute: HouseCriarRoute,
   InsightsTokenRoute: InsightsTokenRoute,
   OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
@@ -1937,6 +1998,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiCronSnapshotInstagramFollowersRoute,
   ApiDescadastrarTokenRoute: ApiDescadastrarTokenRoute,
   ApiIgMediaTokenRoute: ApiIgMediaTokenRoute,
+  ApiManifestOrgIdRoute: ApiManifestOrgIdRoute,
+  ApiOrgIconOrgIdRoute: ApiOrgIconOrgIdRoute,
   ApiSelecaoOgTokenRoute: ApiSelecaoOgTokenRoute,
   ApiWhatsappWebhookRoute: ApiWhatsappWebhookRoute,
   ApiSelecaoDownloadTokenFileIdRoute: ApiSelecaoDownloadTokenFileIdRoute,

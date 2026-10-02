@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { Upload, Loader2, Image as ImageIcon, Film, Play, Download } from "lucide-react";
+import { Upload, Loader2, Image as ImageIcon, Film, Play, Download, Link as LinkIcon } from "lucide-react";
 import { itemFilesQO, driveThumbnailQO, useApi } from "@/lib/luzeria/queries";
 import { getDriveVideoToken } from "@/lib/luzeria/drive.functions";
 import { downloadDriveFile, downloadDriveFilesAsZip } from "@/lib/luzeria/drive-download";
@@ -12,6 +12,7 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { FileActionsMenu } from "./FileActionsMenu";
 import { CarouselLightbox } from "./CarouselLightbox";
+import { UploadLinkPanel } from "./UploadLinkPanel";
 
 function RawMaterialThumb({ file, onOpen, onRemoveAppOnly, onRemoveEverywhere, canEdit }: {
   file: { id: string; driveFileId: string; name: string; webViewUrl: string; mimeType?: string | null };
@@ -81,6 +82,7 @@ export function MateriaisBrutosUploads({ itemId, clientId, canEdit }: { itemId: 
   const fetchDriveToken = useServerFn(getDriveVideoToken);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [showLinkPanel, setShowLinkPanel] = useState(false);
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
 
@@ -128,9 +130,23 @@ export function MateriaisBrutosUploads({ itemId, clientId, canEdit }: { itemId: 
               Fazer upload de material bruto
             </button>
           )}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setShowLinkPanel((v) => !v)}
+              aria-pressed={showLinkPanel}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10.5px] font-semibold border border-foreground/15 text-foreground/70 hover:text-foreground hover:border-foreground/30 transition-colors"
+              title="Gerar um link pra um freelancer enviar os arquivos, sem login"
+            >
+              <LinkIcon size={11} />
+              Link de envio
+            </button>
+          )}
           {canEdit && <input ref={fileRef} type="file" multiple hidden onChange={onPick} accept="image/*,video/*" />}
         </div>
       </div>
+
+      {canEdit && showLinkPanel && <UploadLinkPanel itemId={itemId} />}
 
       {files.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
