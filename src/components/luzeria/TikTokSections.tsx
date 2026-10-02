@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Clock, Music2 } from "lucide-react";
+import { Loader2, Clock, Music2, Link as LinkIcon, Copy, Check, MessageCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import {
   getTikTokConnectionStatus, getTikTokConnectUrl, disconnectTikTok,
   getTikTokCreatorInfo, getTikTokItemState, publishToTikTok, setTikTokAutoPublish,
+  createTikTokConnectRequest, listTikTokConnectRequests, cancelTikTokConnectRequest,
   type TikTokPostSettings,
 } from "@/lib/luzeria/tiktok.functions";
 
@@ -81,12 +82,87 @@ export function TikTokConnectSection({ clientId }: { clientId: string }) {
           </button>
         </div>
       ) : (
-        <button onClick={connect} disabled={connecting}
-          className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
-          {connecting ? <Loader2 size={14} className="animate-spin" /> : <Music2 size={14} />}
-          Conectar TikTok
-        </button>
+        <div className="space-y-3">
+          <button onClick={connect} disabled={connecting}
+            className="lz-btn-primary text-xs px-4 py-2 rounded-md inline-flex items-center gap-2 disabled:opacity-50">
+            {connecting ? <Loader2 size={14} className="animate-spin" /> : <Music2 size={14} />}
+            Conectar TikTok
+          </button>
+          <div className="pt-3 border-t border-foreground/6">
+            <div className="text-[11px] text-foreground/45 mb-2">Prefere que o cliente conecte sozinho? Mande um link: ele entra com a conta dele, sem passar a senha.</div>
+            <GenerateTikTokLinkBlock clientId={clientId} />
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+/** Link de 7 dias pro cliente conectar o próprio TikTok (mesmo desenho do link do Instagram). */
+function GenerateTikTokLinkBlock({ clientId }: { clientId: string }) {
+  const qc = useQueryClient();
+  const list = useServerFn(listTikTokConnectRequests);
+  const create = useServerFn(createTikTokConnectRequest);
+  const cancelFn = useServerFn(cancelTikTokConnectRequest);
+  const key = ["tiktok-connect-requests", clientId];
+  const { data: requests = [], isLoading } = useQuery({ queryKey: key, queryFn: () => list({ data: { clientId } }) });
+  const createMut = useMutation({
+    mutationFn: () => create({ data: { clientId } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Link gerado. Copie e mande pro cliente."); },
+    onError: (e: any) => toastFriendlyError(e, "Falha ao gerar o link"),
+  });
+  const cancelMut = useMutation({
+    mutationFn: (id: string) => cancelFn({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onError: (e: any) => toastFriendlyError(e, "Falha ao cancelar o link"),
+  });
+  const [copied, setCopied] = useState(false);
+
+  const now = Date.now();
+  const current = requests.find((r) => r.status === "aguardando" && new Date(r.expiresAt).getTime() > now) ?? null;
+  const link = current ? `https://www.modocriador.com.br/conectar-tiktok/${current.token}` : null;
+  const btn = "inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold border border-foreground/15 text-foreground/80 hover:text-foreground hover:border-foreground/30 transition";
+
+  function copyLink() {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function cancel(id: string) {
+    if (!(await requestConfirm("Cancelar esse link? Ele deixa de funcionar.", { danger: true }))) return;
+    cancelMut.mutate(id);
+  }
+
+  if (isLoading) return <Loader2 size={14} className="animate-spin text-foreground/40" />;
+
+  if (!current) {
+    return (
+      <button onClick={() => createMut.mutate()} disabled={createMut.isPending} className={`${btn} disabled:opacity-50`}>
+        <LinkIcon size={12} /> {createMut.isPending ? "Gerando…" : "Gerar link"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="bg-card border border-foreground/6 rounded-md px-3 py-2.5">
+        <div className="text-xs font-semibold text-foreground mb-1">Aguardando o cliente conectar</div>
+        <div className="text-[11px] text-foreground/50 truncate">{link}</div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={copyLink} className={btn}>
+          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado!" : "Copiar link"}
+        </button>
+        <a href={`https://wa.me/?text=${encodeURIComponent(`Olá! Clique aqui pra conectar seu TikTok: ${link}`)}`}
+          target="_blank" rel="noopener noreferrer" className={btn}>
+          <MessageCircle size={12} /> Mandar no WhatsApp
+        </a>
+        <button onClick={() => cancel(current.id)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-[11px] font-semibold text-foreground/40 hover:text-red-400 transition">
+          <Trash2 size={12} /> Cancelar
+        </button>
+      </div>
     </div>
   );
 }

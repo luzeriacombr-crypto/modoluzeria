@@ -588,3 +588,166 @@ export async function runScheduledTikTokPublishes() {
   }
   return results;
 }
+
+/* ============== LINK PÚBLICO: o cliente conecta o próprio TikTok ==============
+ * Mesmo desenho do link do Instagram (createInstagramConnectRequest): a
+ * agência gera um link de 7 dias, o cliente abre sem login, autoriza no
+ * TikTok e as credenciais caem na Ficha do cliente. Usa a MESMA
+ * redirect_uri do fluxo da agência (/oauth/tiktok-callback — não precisa
+ * cadastrar URL nova no TikTok for Developers); a diferença é o `state`:
+ * "pub_<token>" aqui, o id do cliente no fluxo normal. */
+
+function randomToken(len = 22): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < len; i++) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
+
+export type TikTokConnectRequest = {
+  id: string;
+  token: string;
+  status: "aguardando" | "conectado" | "expirado" | "cancelado";
+  displayName: string | null;
+  createdAt: string;
+  expiresAt: string;
+};
+
+export const createTikTokConnectRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ token: string }> => {
+    await assertCanPublish(context.supabase, context.userId);
+    await assertClientInOrg(context.supabase, data.clientId, context.orgId);
+    const db = context.supabase as any;
+    const token = randomToken();
+    const { error } = await db.from("tiktok_connect_requests").insert({
+      org_id: context.orgId,
+      client_id: data.clientId,
+      token,
+      created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { token };
+  });
+
+export const listTikTokConnectRequests = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<TikTokConnectRequest[]> => {
+    const db = context.supabase as any;
+    const { data: rows, error } = await db
+      .from("tiktok_connect_requests")
+      .select("id, token, status, tt_display_name, created_at, expires_at")
+      .eq("client_id", data.clientId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((r: any) => ({
+      id: r.id, token: r.token, status: r.status, displayName: r.tt_display_name,
+      createdAt: r.created_at, expiresAt: r.expires_at,
+    }));
+  });
+
+export const cancelTikTokConnectRequest = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanPublish(context.supabase, context.userId);
+    const db = context.supabase as any;
+    const { error } = await db.from("tiktok_connect_requests").update({ status: "cancelado" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+export type PublicTikTokConnectInfo = {
+  status: "aguardando" | "conectado" | "expirado" | "cancelado";
+  expiresAt: string;
+  clientName: string;
+  orgName: string;
+  orgLogoUrl: string | null;
+};
+
+async function publicSupabase() {
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+}
+
+/** GET pública, sem sessão: cliente anon + RPC SECURITY DEFINER que valida o token por dentro. */
+export const getPublicTikTokConnectInfo = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }): Promise<PublicTikTokConnectInfo | null> => {
+    const supabase = await publicSupabase();
+    const { data: info, error } = await supabase.rpc("get_public_tiktok_connect_info", { _token: data.token });
+    if (error || !info) return null;
+    const r = info as any;
+
+    let orgLogoUrl: string | null = null;
+    if (r.orgLogoPath) {
+      try {
+        const db = await admin();
+        const { data: signed } = await db.storage.from("avatars").createSignedUrl(r.orgLogoPath as string, 60 * 60 * 24);
+        orgLogoUrl = signed?.signedUrl ?? null;
+      } catch { /* branding é só cosmético */ }
+    }
+    return { status: r.status, expiresAt: r.expiresAt, clientName: r.clientName, orgName: r.orgName, orgLogoUrl };
+  });
+
+/** POST pública: confirma que o link ainda vale e monta a URL de autorização do TikTok com state=pub_<token>. */
+export const getPublicTikTokConnectUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => z.object({ token: z.string().min(8).max(60) }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = await publicSupabase();
+    const { data: info, error } = await supabase.rpc("get_public_tiktok_connect_info", { _token: data.token });
+    if (error || !info) throw new Error("Link não encontrado.");
+    const r = info as any;
+    if (r.status !== "aguardando") throw new Error("Esse link já foi usado ou cancelado.");
+    if (new Date(r.expiresAt).getTime() < Date.now()) throw new Error("Esse link expirou.");
+
+    const { key } = credentials();
+    const params = new URLSearchParams({
+      client_key: key,
+      scope: TT_SCOPES,
+      response_type: "code",
+      redirect_uri: TT_REDIRECT_URI,
+      state: `pub_${data.token}`,
+    });
+    return { url: `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}` };
+  });
+
+/** POST pública: chamada pela página de callback depois que o TikTok volta com o código. */
+export const completePublicTikTokConnect = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; code: string }) =>
+    z.object({ token: z.string().min(8).max(60), code: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const json = await ttToken({ grant_type: "authorization_code", code: data.code, redirect_uri: TT_REDIRECT_URI });
+    const grantedScopes = String(json.scope ?? "").split(",");
+    if (!grantedScopes.includes("video.publish")) {
+      throw new Error("A permissão de publicar vídeos não foi concedida. Abra o link de novo e aceite todas as permissões.");
+    }
+
+    let displayName: string | null = null;
+    let avatarUrl: string | null = null;
+    try {
+      const info = await ttJson("/user/info/?fields=open_id,display_name,avatar_url", json.access_token);
+      displayName = info?.data?.user?.display_name ?? null;
+      avatarUrl = info?.data?.user?.avatar_url ?? null;
+    } catch { /* sem o nome a conexão ainda funciona */ }
+
+    const now = Date.now();
+    const supabase = await publicSupabase();
+    const { data: ok, error } = await supabase.rpc("complete_tiktok_connect_request", {
+      _token: data.token,
+      _open_id: json.open_id,
+      _display_name: displayName,
+      _avatar_url: avatarUrl,
+      _access_token: json.access_token,
+      _access_token_expires_at: new Date(now + (json.expires_in ?? 86400) * 1000).toISOString(),
+      _refresh_token: json.refresh_token,
+      _refresh_token_expires_at: new Date(now + (json.refresh_expires_in ?? 31536000) * 1000).toISOString(),
+      _scopes: json.scope ?? null,
+    });
+    if (error || !ok) throw new Error("Não foi possível concluir — o link pode ter expirado ou já foi usado.");
+    return { ok: true as const, displayName };
+  });

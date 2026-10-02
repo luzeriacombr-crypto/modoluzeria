@@ -134,7 +134,7 @@ export function NotificationsBell() {
                     navigate({ to: "/configuracoes", search: { tab: "plataforma" } });
                   } else if (n.type === "photo_selection_finalized" && n.photoClientId) {
                     navigate({ to: "/selecao-de-fotos/$clientId", params: { clientId: n.photoClientId } });
-                  } else if (n.type === "contract_signed" && n.clientId) {
+                  } else if ((n.type === "contract_signed" || n.type === "instagram_connected_by_client" || n.type === "tiktok_connected_by_client") && n.clientId) {
                     openFicha(n.clientId);
                   } else if (n.type === "client_template_welcome" && n.clientId) {
                     openFicha(n.clientId);

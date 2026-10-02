@@ -37,10 +37,12 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PromoSlugRouteImport } from './routes/promo/$slug'
 import { Route as PreviewTokenRouteImport } from './routes/preview.$token'
 import { Route as PlanejamentoTokenRouteImport } from './routes/planejamento.$token'
+import { Route as OauthTiktokCallbackRouteImport } from './routes/oauth.tiktok-callback'
 import { Route as OauthInstagramCallbackClienteRouteImport } from './routes/oauth.instagram-callback-cliente'
 import { Route as InsightsTokenRouteImport } from './routes/insights.$token'
 import { Route as HouseCriarRouteImport } from './routes/house.criar'
 import { Route as ContratoTokenRouteImport } from './routes/contrato.$token'
+import { Route as ConectarTiktokTokenRouteImport } from './routes/conectar-tiktok.$token'
 import { Route as ConectarInstagramTokenRouteImport } from './routes/conectar-instagram.$token'
 import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
@@ -88,7 +90,6 @@ import { Route as ApiCronComputeAgencyRanksRouteImport } from './routes/api.cron
 import { Route as ApiCronCheckAgencyReferralsRouteImport } from './routes/api.cron.check-agency-referrals'
 import { Route as ApiCronActivationNudgesRouteImport } from './routes/api.cron.activation-nudges'
 import { Route as AuthenticatedSelecaoDeFotosClientIdRouteImport } from './routes/_authenticated/selecao-de-fotos_.$clientId'
-import { Route as AuthenticatedOauthTiktokCallbackRouteImport } from './routes/_authenticated/oauth.tiktok-callback'
 import { Route as AuthenticatedOauthLinkedinCallbackRouteImport } from './routes/_authenticated/oauth.linkedin-callback'
 import { Route as AuthenticatedOauthInstagramCallbackRouteImport } from './routes/_authenticated/oauth.instagram-callback'
 import { Route as AuthenticatedOauthGoogleCalendarCallbackRouteImport } from './routes/_authenticated/oauth.google-calendar-callback'
@@ -242,6 +243,11 @@ const PlanejamentoTokenRoute = PlanejamentoTokenRouteImport.update({
   path: '/planejamento/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthTiktokCallbackRoute = OauthTiktokCallbackRouteImport.update({
+  id: '/oauth/tiktok-callback',
+  path: '/oauth/tiktok-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OauthInstagramCallbackClienteRoute =
   OauthInstagramCallbackClienteRouteImport.update({
     id: '/oauth/instagram-callback-cliente',
@@ -261,6 +267,11 @@ const HouseCriarRoute = HouseCriarRouteImport.update({
 const ContratoTokenRoute = ContratoTokenRouteImport.update({
   id: '/contrato/$token',
   path: '/contrato/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConectarTiktokTokenRoute = ConectarTiktokTokenRouteImport.update({
+  id: '/conectar-tiktok/$token',
+  path: '/conectar-tiktok/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConectarInstagramTokenRoute = ConectarInstagramTokenRouteImport.update({
@@ -509,12 +520,6 @@ const AuthenticatedSelecaoDeFotosClientIdRoute =
     path: '/selecao-de-fotos/$clientId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedOauthTiktokCallbackRoute =
-  AuthenticatedOauthTiktokCallbackRouteImport.update({
-    id: '/oauth/tiktok-callback',
-    path: '/oauth/tiktok-callback',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedOauthLinkedinCallbackRoute =
   AuthenticatedOauthLinkedinCallbackRouteImport.update({
     id: '/oauth/linkedin-callback',
@@ -616,10 +621,12 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
+  '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/oauth/tiktok-callback': typeof OauthTiktokCallbackRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -632,7 +639,6 @@ export interface FileRoutesByFullPath {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
-  '/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
@@ -705,10 +711,12 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
+  '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/oauth/tiktok-callback': typeof OauthTiktokCallbackRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -721,7 +729,6 @@ export interface FileRoutesByTo {
   '/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
-  '/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/selecao-de-fotos/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
@@ -796,10 +803,12 @@ export interface FileRoutesById {
   '/blog_/$slug': typeof BlogSlugRoute
   '/campanha/$token': typeof CampanhaTokenRoute
   '/conectar-instagram/$token': typeof ConectarInstagramTokenRoute
+  '/conectar-tiktok/$token': typeof ConectarTiktokTokenRoute
   '/contrato/$token': typeof ContratoTokenRoute
   '/house/criar': typeof HouseCriarRoute
   '/insights/$token': typeof InsightsTokenRoute
   '/oauth/instagram-callback-cliente': typeof OauthInstagramCallbackClienteRoute
+  '/oauth/tiktok-callback': typeof OauthTiktokCallbackRoute
   '/planejamento/$token': typeof PlanejamentoTokenRoute
   '/preview/$token': typeof PreviewTokenRoute
   '/promo/$slug': typeof PromoSlugRoute
@@ -812,7 +821,6 @@ export interface FileRoutesById {
   '/_authenticated/oauth/google-calendar-callback': typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   '/_authenticated/oauth/instagram-callback': typeof AuthenticatedOauthInstagramCallbackRoute
   '/_authenticated/oauth/linkedin-callback': typeof AuthenticatedOauthLinkedinCallbackRoute
-  '/_authenticated/oauth/tiktok-callback': typeof AuthenticatedOauthTiktokCallbackRoute
   '/_authenticated/selecao-de-fotos_/$clientId': typeof AuthenticatedSelecaoDeFotosClientIdRoute
   '/api/cron/activation-nudges': typeof ApiCronActivationNudgesRoute
   '/api/cron/check-agency-referrals': typeof ApiCronCheckAgencyReferralsRoute
@@ -887,10 +895,12 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/campanha/$token'
     | '/conectar-instagram/$token'
+    | '/conectar-tiktok/$token'
     | '/contrato/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/oauth/tiktok-callback'
     | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
@@ -903,7 +913,6 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/oauth/linkedin-callback'
-    | '/oauth/tiktok-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
@@ -976,10 +985,12 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/campanha/$token'
     | '/conectar-instagram/$token'
+    | '/conectar-tiktok/$token'
     | '/contrato/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/oauth/tiktok-callback'
     | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
@@ -992,7 +1003,6 @@ export interface FileRouteTypes {
     | '/oauth/google-calendar-callback'
     | '/oauth/instagram-callback'
     | '/oauth/linkedin-callback'
-    | '/oauth/tiktok-callback'
     | '/selecao-de-fotos/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
@@ -1066,10 +1076,12 @@ export interface FileRouteTypes {
     | '/blog_/$slug'
     | '/campanha/$token'
     | '/conectar-instagram/$token'
+    | '/conectar-tiktok/$token'
     | '/contrato/$token'
     | '/house/criar'
     | '/insights/$token'
     | '/oauth/instagram-callback-cliente'
+    | '/oauth/tiktok-callback'
     | '/planejamento/$token'
     | '/preview/$token'
     | '/promo/$slug'
@@ -1082,7 +1094,6 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth/google-calendar-callback'
     | '/_authenticated/oauth/instagram-callback'
     | '/_authenticated/oauth/linkedin-callback'
-    | '/_authenticated/oauth/tiktok-callback'
     | '/_authenticated/selecao-de-fotos_/$clientId'
     | '/api/cron/activation-nudges'
     | '/api/cron/check-agency-referrals'
@@ -1134,10 +1145,12 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   CampanhaTokenRoute: typeof CampanhaTokenRoute
   ConectarInstagramTokenRoute: typeof ConectarInstagramTokenRoute
+  ConectarTiktokTokenRoute: typeof ConectarTiktokTokenRoute
   ContratoTokenRoute: typeof ContratoTokenRoute
   HouseCriarRoute: typeof HouseCriarRoute
   InsightsTokenRoute: typeof InsightsTokenRoute
   OauthInstagramCallbackClienteRoute: typeof OauthInstagramCallbackClienteRoute
+  OauthTiktokCallbackRoute: typeof OauthTiktokCallbackRoute
   PlanejamentoTokenRoute: typeof PlanejamentoTokenRoute
   PreviewTokenRoute: typeof PreviewTokenRoute
   PromoSlugRoute: typeof PromoSlugRoute
@@ -1361,6 +1374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlanejamentoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/tiktok-callback': {
+      id: '/oauth/tiktok-callback'
+      path: '/oauth/tiktok-callback'
+      fullPath: '/oauth/tiktok-callback'
+      preLoaderRoute: typeof OauthTiktokCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/oauth/instagram-callback-cliente': {
       id: '/oauth/instagram-callback-cliente'
       path: '/oauth/instagram-callback-cliente'
@@ -1387,6 +1407,13 @@ declare module '@tanstack/react-router' {
       path: '/contrato/$token'
       fullPath: '/contrato/$token'
       preLoaderRoute: typeof ContratoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conectar-tiktok/$token': {
+      id: '/conectar-tiktok/$token'
+      path: '/conectar-tiktok/$token'
+      fullPath: '/conectar-tiktok/$token'
+      preLoaderRoute: typeof ConectarTiktokTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conectar-instagram/$token': {
@@ -1718,13 +1745,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSelecaoDeFotosClientIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/oauth/tiktok-callback': {
-      id: '/_authenticated/oauth/tiktok-callback'
-      path: '/oauth/tiktok-callback'
-      fullPath: '/oauth/tiktok-callback'
-      preLoaderRoute: typeof AuthenticatedOauthTiktokCallbackRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/oauth/linkedin-callback': {
       id: '/_authenticated/oauth/linkedin-callback'
       path: '/oauth/linkedin-callback'
@@ -1815,7 +1835,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOauthGoogleCalendarCallbackRoute: typeof AuthenticatedOauthGoogleCalendarCallbackRoute
   AuthenticatedOauthInstagramCallbackRoute: typeof AuthenticatedOauthInstagramCallbackRoute
   AuthenticatedOauthLinkedinCallbackRoute: typeof AuthenticatedOauthLinkedinCallbackRoute
-  AuthenticatedOauthTiktokCallbackRoute: typeof AuthenticatedOauthTiktokCallbackRoute
   AuthenticatedSelecaoDeFotosClientIdRoute: typeof AuthenticatedSelecaoDeFotosClientIdRoute
 }
 
@@ -1854,7 +1873,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedOauthInstagramCallbackRoute,
   AuthenticatedOauthLinkedinCallbackRoute:
     AuthenticatedOauthLinkedinCallbackRoute,
-  AuthenticatedOauthTiktokCallbackRoute: AuthenticatedOauthTiktokCallbackRoute,
   AuthenticatedSelecaoDeFotosClientIdRoute:
     AuthenticatedSelecaoDeFotosClientIdRoute,
 }
@@ -1892,10 +1910,12 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   CampanhaTokenRoute: CampanhaTokenRoute,
   ConectarInstagramTokenRoute: ConectarInstagramTokenRoute,
+  ConectarTiktokTokenRoute: ConectarTiktokTokenRoute,
   ContratoTokenRoute: ContratoTokenRoute,
   HouseCriarRoute: HouseCriarRoute,
   InsightsTokenRoute: InsightsTokenRoute,
   OauthInstagramCallbackClienteRoute: OauthInstagramCallbackClienteRoute,
+  OauthTiktokCallbackRoute: OauthTiktokCallbackRoute,
   PlanejamentoTokenRoute: PlanejamentoTokenRoute,
   PreviewTokenRoute: PreviewTokenRoute,
   PromoSlugRoute: PromoSlugRoute,

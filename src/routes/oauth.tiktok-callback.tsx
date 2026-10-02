@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { connectTikTok } from "@/lib/luzeria/tiktok.functions";
+import { connectTikTok, completePublicTikTokConnect } from "@/lib/luzeria/tiktok.functions";
 
-export const Route = createFileRoute("/_authenticated/oauth/tiktok-callback")({
+// Esta rota fica FORA do layout _authenticated de propósito: o mesmo redirect_uri
+// serve o fluxo da agência (state = id do cliente, precisa de sessão) e o
+// link público do cliente (state = "pub_<token>", sem login nenhum).
+export const Route = createFileRoute("/oauth/tiktok-callback")({
   component: TikTokCallbackPage,
   ssr: false,
 });
 
 function TikTokCallbackPage() {
   const connect = useServerFn(connectTikTok);
+  const completePublic = useServerFn(completePublicTikTokConnect);
+  const [publicFlow, setPublicFlow] = useState(false);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
@@ -33,6 +38,19 @@ function TikTokCallbackPage() {
       setMessage("Código de autorização ausente na URL.");
       return;
     }
+    if (state.startsWith("pub_")) {
+      setPublicFlow(true);
+      completePublic({ data: { code, token: state.slice(4) } })
+        .then((r: any) => {
+          setStatus("success");
+          setMessage(r.displayName ? `Conectado como "${r.displayName}".` : "Conta conectada.");
+        })
+        .catch((e: any) => {
+          setStatus("error");
+          setMessage(e?.message ?? "Falha ao conectar com o TikTok.");
+        });
+      return;
+    }
     setClientId(state);
     connect({ data: { code, clientId: state } })
       .then((r: any) => {
@@ -41,7 +59,8 @@ function TikTokCallbackPage() {
       })
       .catch((e: any) => {
         setStatus("error");
-        setMessage(e?.message ?? "Falha ao conectar com o TikTok.");
+        const msg = e?.message ?? "Falha ao conectar com o TikTok.";
+        setMessage(/unauthorized|autentic|login/i.test(msg) ? "Entre no Modo Criador neste navegador e conecte de novo pela Ficha do cliente." : msg);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -62,7 +81,10 @@ function TikTokCallbackPage() {
             <p className="text-foreground/60 text-sm">{message}</p>
           </>
         )}
-        {status !== "loading" && (
+        {status === "success" && publicFlow && (
+          <p className="text-foreground/40 text-xs mt-4">Você já pode fechar esta página.</p>
+        )}
+        {status !== "loading" && !publicFlow && (
           <a href={clientId ? `/cliente/${clientId}?tab=ficha` : "/minhas-tarefas"} className="lz-btn-primary inline-block mt-6 px-4 py-2 rounded-md text-sm">
             Voltar pro cliente
           </a>
