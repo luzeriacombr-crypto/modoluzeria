@@ -37,7 +37,7 @@ export async function deliverSupportReply(threadId: string, text: string): Promi
   if (isMaster && org?.whatsapp) {
     try {
       const wa = await import("./whatsapp.server");
-      if (wa.whatsappConfigured() && !(await wa.isOptedOut(org.whatsapp))) {
+      if (wa.whatsappConfigured() && (await wa.autoMessagesEnabled()) && !(await wa.isOptedOut(org.whatsapp))) {
         const firstName = profile?.name?.trim().split(" ")[0] || "tudo bem";
         const r = await wa.sendTemplate(org.whatsapp, wa.WA_TEMPLATES.supportReply, [firstName, text], {
           kind: "support_reply", orgId: thread.org_id, supportThreadId: threadId,

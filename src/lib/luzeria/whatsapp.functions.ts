@@ -164,3 +164,30 @@ export const getWhatsappCampaignStatus = createServerFn({ method: "GET" })
     (rows ?? []).forEach((r: any) => { if (r.status in counts) counts[r.status as keyof typeof counts]++; });
     return counts;
   });
+
+/** Chave liga/desliga das mensagens automáticas (boas-vindas, alerta de
+ * suporte, cópia da resposta no WhatsApp da agência) — ver whatsapp.server.ts. */
+export const getWhatsappAutoEnabled = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    await assertPlatformAdmin(context);
+    const { autoMessagesEnabled } = await import("./whatsapp.server");
+    return { enabled: await autoMessagesEnabled() };
+  });
+
+export const setWhatsappAutoEnabled = createServerFn({ method: "POST" })
+  .inputValidator((d: { enabled: boolean }) => z.object({ enabled: z.boolean() }).parse(d))
+  .middleware([requireActiveProfile])
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context);
+    const { AUTO_SETTING_KEY } = await import("./whatsapp.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any).from("app_settings").upsert({
+      key: AUTO_SETTING_KEY,
+      value: { enabled: data.enabled },
+      updated_at: new Date().toISOString(),
+      updated_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { enabled: data.enabled };
+  });

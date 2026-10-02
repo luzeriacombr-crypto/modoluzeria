@@ -67,6 +67,18 @@ async function admin() {
   return supabaseAdmin as any;
 }
 
+/** Chave liga/desliga das mensagens que saem sozinhas (boas-vindas no
+ * cadastro, alerta de suporte pro Junior e cópia da resposta dele no WhatsApp
+ * da agência). Guardada em app_settings; sem registro = desligada, pra nada
+ * sair antes do Junior testar. */
+export const AUTO_SETTING_KEY = "whatsapp_auto_enabled";
+
+export async function autoMessagesEnabled() {
+  const db = await admin();
+  const { data } = await db.from("app_settings").select("value").eq("key", AUTO_SETTING_KEY).maybeSingle();
+  return (data?.value as any)?.enabled === true;
+}
+
 export async function isOptedOut(phone: string) {
   const db = await admin();
   const { data } = await db.from("whatsapp_opt_outs").select("phone_key").eq("phone_key", phoneKey(phone)).maybeSingle();
@@ -168,6 +180,7 @@ export async function alertAdmin(params: {
 }) {
   const adminPhone = process.env.WHATSAPP_ADMIN_PHONE;
   if (!whatsappConfigured() || !adminPhone) return;
+  if (!(await autoMessagesEnabled())) return;
   const result = await sendTemplate(adminPhone, WA_TEMPLATES.supportAlert, [params.label, params.message], {
     kind: "support_alert",
     orgId: params.orgId,
