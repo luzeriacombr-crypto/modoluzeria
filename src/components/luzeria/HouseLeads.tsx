@@ -10,6 +10,8 @@ import { Plus, Trash2, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { useMe, profilesQO } from "@/lib/luzeria/queries";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
+import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
 import {
   createInstagramLead, listInstagramLeads, updateInstagramLead, deleteInstagramLead, type InstagramLead,
 } from "@/lib/luzeria/house-day.functions";
@@ -43,11 +45,13 @@ function QuickLeadModal({ onClose }: { onClose: () => void }) {
   const [origin, setOrigin] = useState<LeadOrigin | null>(null);
   const [note, setNote] = useState("");
   const [showNote, setShowNote] = useState(false);
+  const { brandParam, writeBrandId } = useHouseBrand();
+  const [pickBrand, setPickBrand] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
   const create = useMutation({
-    mutationFn: () => createFn({ data: { name: name.trim(), origin: origin!, note: note.trim() || undefined } }),
+    mutationFn: () => createFn({ data: { name: name.trim(), origin: origin!, note: note.trim() || undefined, brandId: pickBrand ?? brandParam ?? writeBrandId } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: LEADS_KEY });
       toast.success("Lead registrado!");
@@ -66,6 +70,7 @@ function QuickLeadModal({ onClose }: { onClose: () => void }) {
           <h3 className="text-base font-bold text-foreground">Novo lead</h3>
           <button type="button" onClick={onClose} className="p-1.5 rounded text-foreground/50 hover:text-foreground"><X size={18} /></button>
         </div>
+        <div className="mb-3"><HouseBrandSelect value={pickBrand ?? brandParam} onChange={setPickBrand} /></div>
         <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome ou @"
           autoCapitalize="none" autoCorrect="off" maxLength={120}
           className="lz-input w-full text-base" />
@@ -124,16 +129,17 @@ export function HouseLeadsPage() {
   const deleteFn = useServerFn(deleteInstagramLead);
   const [period, setPeriod] = useState<Period>("mes");
   const [origin, setOrigin] = useState<LeadOrigin | "todas">("todas");
+  const { brandParam } = useHouseBrand();
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<LeadStatus | null>(null);
   const { data: profiles = [] } = useQuery(profilesQO());
   const nameById = new Map(profiles.map((p) => [p.id, p.name.split(" ")[0]]));
 
   const from = periodFrom(period);
-  const queryKey = [...LEADS_KEY, period, origin];
+  const queryKey = [...LEADS_KEY, period, origin, brandParam ?? "all"];
   const { data: leads = [], isLoading } = useQuery({
     queryKey,
-    queryFn: () => listFn({ data: { from, origin: origin === "todas" ? undefined : origin } }),
+    queryFn: () => listFn({ data: { from, origin: origin === "todas" ? undefined : origin, brandId: brandParam } }),
   });
 
   const move = useMutation({
@@ -173,6 +179,7 @@ export function HouseLeadsPage() {
     <div className="px-4 sm:px-6 md:px-10 py-6 md:py-10 max-w-7xl mx-auto pb-28">
       <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/40">Instagram</div>
       <h1 className="text-[28px] md:text-[32px] font-bold text-foreground tracking-tight mt-1">Leads</h1>
+      <HouseBrandSwitcher className="mt-3" />
 
       <div className="mt-5 grid grid-cols-3 gap-2 md:gap-3 max-w-xl">
         <Stat label="Leads" value={String(total)} />

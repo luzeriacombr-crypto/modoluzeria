@@ -17,15 +17,19 @@ import { CADENCE_LABEL, checklistDueLabel } from "@/lib/luzeria/house-checklists
 import { statusLabel, getStatusMeta } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { HouseStoryIdeas } from "./HouseStoryIdeas";
+import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
 
 export const myDayQueryKey = ["house-my-day"];
+const dayKey = (brandParam?: string) => [...myDayQueryKey, brandParam ?? "all"];
 
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 export function HouseMyDay() {
   const me = useMe().data;
   const fetchDay = useServerFn(getMyDay);
-  const { data: day, isLoading, error } = useQuery({ queryKey: myDayQueryKey, queryFn: () => fetchDay(), staleTime: 60_000 });
+  const { brandParam } = useHouseBrand();
+  const { data: day, isLoading, error } = useQuery({ queryKey: dayKey(brandParam), queryFn: () => fetchDay({ data: { brandId: brandParam } }), staleTime: 60_000 });
   const firstName = me?.name.split(" ")[0] ?? "";
   const todayLabel = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
@@ -36,6 +40,7 @@ export function HouseMyDay() {
         {firstName ? `Bom trabalho hoje, ${firstName}!` : "Meu dia"}
       </h1>
       <p className="text-sm text-foreground/50 mt-1 first-letter:uppercase">{todayLabel}</p>
+      <HouseBrandSwitcher className="mt-4" />
 
       {isLoading && <div className="mt-8 text-sm text-foreground/40">Carregando…</div>}
       {error && <div className="mt-8 text-sm" style={{ color: "#E76F51" }}>Não consegui carregar seu dia. Tenta atualizar a página.</div>}
@@ -131,15 +136,16 @@ function ChecklistCard({ day }: { day: MyDay }) {
   const navigate = useNavigate();
   const me = useMe().data;
   const toggleFn = useServerFn(setChecklistDone);
+  const { brandParam } = useHouseBrand();
   const toggle = useMutation({
     mutationFn: (v: { itemId: string; done: boolean }) => toggleFn({ data: v }),
     onMutate: async (v) => {
       await qc.cancelQueries({ queryKey: myDayQueryKey });
-      const prev = qc.getQueryData<MyDay>(myDayQueryKey);
-      if (prev) qc.setQueryData<MyDay>(myDayQueryKey, { ...prev, checklist: prev.checklist.map((i) => i.id === v.itemId ? { ...i, done: v.done, late: v.done ? false : i.late } : i) });
+      const prev = qc.getQueryData<MyDay>(dayKey(brandParam));
+      if (prev) qc.setQueryData<MyDay>(dayKey(brandParam), { ...prev, checklist: prev.checklist.map((i) => i.id === v.itemId ? { ...i, done: v.done, late: v.done ? false : i.late } : i) });
       return { prev };
     },
-    onError: (e: any, _v, ctx) => { if (ctx?.prev) qc.setQueryData(myDayQueryKey, ctx.prev); toastFriendlyError(e, "Não consegui salvar"); },
+    onError: (e: any, _v, ctx) => { if (ctx?.prev) qc.setQueryData(dayKey(brandParam), ctx.prev); toastFriendlyError(e, "Não consegui salvar"); },
     onSettled: () => qc.invalidateQueries({ queryKey: myDayQueryKey }),
   });
   const pending = day.checklist.filter((i) => !i.done).length;
@@ -256,6 +262,10 @@ function LogCard({ day }: { day: MyDay }) {
   const deleteFn = useServerFn(deleteActivityLog);
   const [showList, setShowList] = useState(false);
   const [scope, setScope] = useState<"mine" | "team">("mine");
+  const { brandParam, writeBrandId, multi } = useHouseBrand();
+  // Com "todas as marcas" na tela, a pessoa escolhe em qual marca está registrando.
+  const [pick, setPick] = useState<string | undefined>(undefined);
+  const logBrand = brandParam ?? pick ?? writeBrandId;
   const isMaster = me?.role === "master";
   const after = () => {
     qc.invalidateQueries({ queryKey: myDayQueryKey });
@@ -264,14 +274,14 @@ function LogCard({ day }: { day: MyDay }) {
     qc.invalidateQueries({ queryKey: ["house-ranking"] });
   };
   const undo = useMutation({
-    mutationFn: (kind: "story" | "post" | "reel") => undoFn({ data: { kind } }),
+    mutationFn: (kind: "story" | "post" | "reel") => undoFn({ data: { kind, brandId: logBrand } }),
     onSettled: after,
   });
   const add = useMutation({
-    mutationFn: (kind: "story" | "post" | "reel") => logFn({ data: { kind } }),
+    mutationFn: (kind: "story" | "post" | "reel") => logFn({ data: { kind, brandId: logBrand } }),
     onMutate: (kind) => {
-      const prev = qc.getQueryData<MyDay>(myDayQueryKey);
-      if (prev) qc.setQueryData<MyDay>(myDayQueryKey, { ...prev, myLogsToday: { ...prev.myLogsToday, [kind]: prev.myLogsToday[kind] + 1 } });
+      const prev = qc.getQueryData<MyDay>(dayKey(brandParam));
+      if (prev) qc.setQueryData<MyDay>(dayKey(brandParam), { ...prev, myLogsToday: { ...prev.myLogsToday, [kind]: prev.myLogsToday[kind] + 1 } });
     },
     onSuccess: (_r, kind) => {
       // Aviso com botão: errou o toque? Desfaz na hora.
@@ -284,8 +294,8 @@ function LogCard({ day }: { day: MyDay }) {
     onSettled: after,
   });
   const { data: logs = [] } = useQuery({
-    queryKey: ["house-activity-logs", scope],
-    queryFn: () => listFn({ data: { scope } }),
+    queryKey: ["house-activity-logs", scope, brandParam ?? "all"],
+    queryFn: () => listFn({ data: { scope, brandId: brandParam } }),
     enabled: showList,
   });
   const remove = useMutation({
@@ -302,6 +312,9 @@ function LogCard({ day }: { day: MyDay }) {
   return (
     <Card icon={<Hand size={14} />} title="Postei agora"
       right={<span className="text-[10px] text-foreground/40">o que você postou direto no Instagram</span>}>
+      {multi && !brandParam && (
+        <div className="mb-3"><HouseBrandSelect value={pick} onChange={setPick} /></div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         {items.map((it) => {
           const n = day.myLogsToday?.[it.kind] ?? 0;
@@ -373,7 +386,8 @@ function UnassignedCard() {
   const navigate = useNavigate();
   const { selectMonth, openItem } = useUI();
   const listFn = useServerFn(listUnassignedItems);
-  const { data: items = [] } = useQuery({ queryKey: ["house-unassigned"], queryFn: () => listFn(), staleTime: 60_000 });
+  const { brandParam } = useHouseBrand();
+  const { data: items = [] } = useQuery({ queryKey: ["house-unassigned", brandParam ?? "all"], queryFn: () => listFn({ data: { brandId: brandParam } }), staleTime: 60_000 });
   const { addAssignee } = useApi();
   if (items.length === 0 || !me) return null;
   return (

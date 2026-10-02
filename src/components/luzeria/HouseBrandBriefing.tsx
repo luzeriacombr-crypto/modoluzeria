@@ -13,14 +13,14 @@ import { BRAND_BRIEFING_FIELDS, briefingCompleteness, type BrandBriefing } from 
 export const brandBriefingKey = ["house-brand-briefing"];
 const NICHE_MAX = 200;
 
-export function useBrandBriefing() {
+export function useBrandBriefing(clientId?: string) {
   const fn = useServerFn(getBrandBriefing);
-  return useQuery({ queryKey: brandBriefingKey, queryFn: () => fn(), staleTime: 5 * 60_000 });
+  return useQuery({ queryKey: [...brandBriefingKey, clientId ?? "main"], queryFn: () => fn({ data: { brandId: clientId } }), staleTime: 5 * 60_000 });
 }
 
-export function HouseBrandBriefing() {
+export function HouseBrandBriefing({ clientId }: { clientId?: string }) {
   const qc = useQueryClient();
-  const { data } = useBrandBriefing();
+  const { data } = useBrandBriefing(clientId);
   const saveFn = useServerFn(saveBrandBriefing);
   const [niche, setNiche] = useState("");
   const [description, setDescription] = useState("");
@@ -75,7 +75,7 @@ export function HouseBrandBriefing() {
   });
 
   const save = useMutation({
-    mutationFn: () => saveFn({ data: { niche, description, competitors, briefing } }),
+    mutationFn: () => saveFn({ data: { niche, description, competitors, briefing, brandId: clientId } }),
     onSuccess: () => {
       setDirty(false);
       qc.invalidateQueries({ queryKey: brandBriefingKey });

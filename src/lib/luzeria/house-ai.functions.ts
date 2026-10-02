@@ -6,12 +6,15 @@ import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 import { BRAND_BRIEFING_FIELDS, composeBriefingText, type BrandBriefing, type StoryIdea } from "./house-brand";
 import { houseDateKey, LEAD_ORIGIN_LABEL } from "./house-checklists";
+import { getHouseBrands, pickWriteBrand, pickBrands, brandFilter } from "./house-brands.server";
 
-async function houseBrand(context: { supabase: any; orgId: string }) {
-  const { data } = await context.supabase.from("orgs").select("account_type, house_client_id, plan_id, name").eq("id", context.orgId).maybeSingle();
+/** Marca de trabalho: a pedida (se a pessoa tem acesso a ela), senão a principal. */
+async function houseBrand(context: { supabase: any; orgId: string }, brandId?: string | null) {
+  const { data } = await context.supabase.from("orgs").select("account_type, plan_id, name").eq("id", context.orgId).maybeSingle();
   if (data?.account_type !== "house") throw new Error("Disponível só em contas House.");
-  if (!data.house_client_id) throw new Error("A House ainda não tem marca principal.");
-  return { clientId: data.house_client_id as string, planId: data.plan_id as string, orgName: data.name as string };
+  const { brands } = await getHouseBrands(context);
+  const brand = pickWriteBrand(brands, brandId);
+  return { clientId: brand.id, planId: data.plan_id as string, orgName: data.name as string };
 }
 
 /* ============== Briefing da marca ============== */
@@ -23,8 +26,9 @@ const briefingSchema = z.object({
 
 export const getBrandBriefing = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
-    const { clientId } = await houseBrand(context);
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }) => {
+    const { clientId } = await houseBrand(context, input.brandId);
     const { data } = await (context.supabase as any).from("clients")
       .select("id, name, niche, description, competitors, brand_briefing").eq("id", clientId).maybeSingle();
     return {
@@ -39,15 +43,16 @@ export const getBrandBriefing = createServerFn({ method: "GET" })
 
 export const saveBrandBriefing = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { niche?: string; description?: string; competitors?: string; briefing: BrandBriefing }) =>
+  .inputValidator((d: { niche?: string; description?: string; competitors?: string; briefing: BrandBriefing; brandId?: string }) =>
     z.object({
+      brandId: z.string().uuid().optional(),
       niche: z.string().trim().max(200, "Texto muito longo (máximo 200 caracteres).").optional(),
       description: z.string().trim().max(4000, "Texto muito longo (máximo 4000 caracteres).").optional(),
       competitors: z.string().trim().max(2000, "Texto muito longo (máximo 2000 caracteres).").optional(),
       briefing: briefingSchema,
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { clientId } = await houseBrand(context);
+    const { clientId } = await houseBrand(context, data.brandId);
     const briefing = Object.fromEntries(Object.entries(data.briefing).map(([k, v]) => [k, (v ?? "").trim()])) as BrandBriefing;
     // Service role: na House a equipe toda preenche o briefing (o update de
     // clients é só de admin na RLS de agência).
@@ -197,10 +202,13 @@ export type StoryIdeaRow = { id: string; batchId: string; idea: StoryIdea; creat
 
 export const listStoryIdeas = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<StoryIdeaRow[]> => {
-    const { data, error } = await (context.supabase as any).from("house_story_ideas")
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }): Promise<StoryIdeaRow[]> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, input.brandId);
+    const { data, error } = await brandFilter((context.supabase as any).from("house_story_ideas")
       .select("id, batch_id, idea, created_at, used_at, used_by")
-      .eq("org_id", context.orgId).is("dismissed_at", null)
+      .eq("org_id", context.orgId).is("dismissed_at", null), "client_id", selected)
       .order("created_at", { ascending: false }).limit(30);
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((r) => ({ id: r.id, batchId: r.batch_id, idea: r.idea, createdAt: r.created_at, usedAt: r.used_at ?? null, usedBy: r.used_by ?? null }));
@@ -208,9 +216,9 @@ export const listStoryIdeas = createServerFn({ method: "GET" })
 
 export const generateStoryIdeas = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { focus?: string }) => z.object({ focus: z.string().trim().max(500).optional() }).parse(d ?? {}))
+  .inputValidator((d: { focus?: string; brandId?: string }) => z.object({ focus: z.string().trim().max(500).optional(), brandId: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
-    const { clientId, planId } = await houseBrand(context);
+    const { clientId, planId } = await houseBrand(context, data.brandId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin: any = supabaseAdmin;
     const { data: plan } = await admin.from("plans").select("features").eq("id", planId).maybeSingle();
@@ -269,12 +277,14 @@ export const markStoryIdeaUsed = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string; used: boolean }) => z.object({ id: z.string().uuid(), used: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const db: any = context.supabase;
+    const { data: ideaRow } = await db.from("house_story_ideas").select("client_id").eq("id", data.id).eq("org_id", context.orgId).maybeSingle();
+    const ideaClient = (ideaRow?.client_id ?? null) as string | null;
     const { error } = await db.from("house_story_ideas")
       .update(data.used ? { used_at: new Date().toISOString(), used_by: context.userId } : { used_at: null, used_by: null })
       .eq("id", data.id).eq("org_id", context.orgId);
     if (error) throw new Error(error.message);
     if (data.used) {
-      await db.from("house_activity_logs").insert({ org_id: context.orgId, user_id: context.userId, day: houseDateKey(), kind: "story", qty: 1 });
+      await db.from("house_activity_logs").insert({ org_id: context.orgId, user_id: context.userId, client_id: ideaClient, day: houseDateKey(), kind: "story", qty: 1 });
     } else {
       const { data: last } = await db.from("house_activity_logs").select("id")
         .eq("user_id", context.userId).eq("day", houseDateKey()).eq("kind", "story").order("created_at", { ascending: false }).limit(1).maybeSingle();

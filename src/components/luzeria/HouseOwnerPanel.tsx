@@ -13,6 +13,8 @@ import { useMe } from "@/lib/luzeria/queries";
 import { getOwnerPanel, saveHouseTargets, type OwnerPanel } from "@/lib/luzeria/house-owner.functions";
 import { getTeamRanking, RANKING_POINTS } from "@/lib/luzeria/house-team.functions";
 import { Avatar } from "./Avatar";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
+import { HouseBrandSwitcher } from "./HouseBrandSwitcher";
 import { houseDateKey, LEAD_ORIGINS, LEAD_ORIGIN_LABEL } from "@/lib/luzeria/house-checklists";
 import { monthLabel, shiftMonth, PROJECT_TEMPLATES } from "@/lib/luzeria/house-projects";
 
@@ -37,9 +39,10 @@ export function HouseOwnerPanel() {
   const fetchPanel = useServerFn(getOwnerPanel);
   const [monthKey, setMonthKey] = useState(() => houseDateKey().slice(0, 7));
   const [configOpen, setConfigOpen] = useState(false);
+  const { brandParam } = useHouseBrand();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["house-owner-panel", monthKey],
-    queryFn: () => fetchPanel({ data: { monthKey } }),
+    queryKey: ["house-owner-panel", monthKey, brandParam ?? "all"],
+    queryFn: () => fetchPanel({ data: { monthKey, brandId: brandParam } }),
     staleTime: 60_000,
   });
   const isMaster = me?.role === "master";
@@ -60,11 +63,13 @@ export function HouseOwnerPanel() {
         </div>
       </div>
 
+      <HouseBrandSwitcher className="mt-4" />
       {isLoading && <div className="mt-8 text-sm text-foreground/40">Calculando o mês…</div>}
       {error && <div className="mt-8 text-sm" style={{ color: "#E76F51" }}>Não consegui carregar o painel.</div>}
       {data && (
         <div className="mt-6 space-y-4">
           <HeroRow data={data} />
+          {data.byBrand.length > 1 && <ByBrandCard data={data} />}
           <div className="grid gap-4 lg:grid-cols-2">
             <LeadsCard data={data} />
             <OriginCard data={data} />
@@ -73,7 +78,7 @@ export function HouseOwnerPanel() {
             <ProjectsCard data={data} onOpen={(id) => navigate({ to: "/projetos", search: { id } as any })} />
             <LateChecklistsCard data={data} />
           </div>
-          <RankingCard monthKey={monthKey} />
+          <RankingCard monthKey={monthKey} brandParam={brandParam} />
           {data.variable && <VariableCard data={data} />}
           <button onClick={() => navigate({ to: "/relatorio", search: { mes: monthKey } as any })}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold"
@@ -84,6 +89,38 @@ export function HouseOwnerPanel() {
       )}
       {configOpen && data && <TargetsModal settings={data.settings} onClose={() => setConfigOpen(false)} />}
     </div>
+  );
+}
+
+function ByBrandCard({ data }: { data: OwnerPanel }) {
+  const pctOf = (done: number, goal: number) => (goal > 0 ? Math.round(Math.min(1, done / goal) * 100) : done > 0 ? 100 : 0);
+  return (
+    <Card icon={<Users size={14} />} title="Por marca">
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-sm min-w-[520px]">
+          <thead>
+            <tr className="text-[10.5px] uppercase tracking-wider text-foreground/45">
+              <th className="text-left font-semibold px-2 py-2">Marca</th>
+              <th className="text-right font-semibold px-2 py-2">Stories</th>
+              <th className="text-right font-semibold px-2 py-2">Posts/Reels</th>
+              <th className="text-right font-semibold px-2 py-2">Leads</th>
+              <th className="text-right font-semibold px-2 py-2">Agendados</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.byBrand.map((b) => (
+              <tr key={b.brandId} className="border-t border-foreground/[0.06]">
+                <td className="px-2 py-2.5 font-semibold text-foreground">{b.name}</td>
+                <td className="text-right tabular-nums px-2 py-2.5 text-foreground/80">{b.stories.done} / {b.stories.goal} <span className="text-foreground/40">({pctOf(b.stories.done, b.stories.goal)}%)</span></td>
+                <td className="text-right tabular-nums px-2 py-2.5 text-foreground/80">{b.posts.done} / {b.posts.goal} <span className="text-foreground/40">({pctOf(b.posts.done, b.posts.goal)}%)</span></td>
+                <td className="text-right tabular-nums px-2 py-2.5 text-foreground/80">{b.leads} / {b.leadsGoal}</td>
+                <td className="text-right tabular-nums px-2 py-2.5 text-foreground/80">{b.scheduled}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
@@ -290,8 +327,11 @@ function VariableCard({ data }: { data: OwnerPanel }) {
 function TargetsModal({ settings, onClose }: { settings: OwnerPanel["settings"]; onClose: () => void }) {
   const qc = useQueryClient();
   const saveFn = useServerFn(saveHouseTargets);
-  const [leadsGoal, setLeadsGoal] = useState(String(settings.leadsGoal));
-  const [scheduledGoal, setScheduledGoal] = useState(String(settings.scheduledGoal));
+  const [leadsGoal] = useState(String(settings.leadsGoal));
+  const [scheduledGoal] = useState(String(settings.scheduledGoal));
+  const [bg, setBg] = useState(settings.brandGoals.map((g) => ({ ...g })));
+  const setBrand = (id: string, k: "storiesPerWorkday" | "feedPostsPerWeek" | "leadsGoalMonth" | "scheduledGoalMonth", v: string) =>
+    setBg((rows) => rows.map((r) => r.brandId === id ? { ...r, [k]: Math.max(0, Math.round(Number(v) || 0)) } : r));
   const [enabled, setEnabled] = useState(settings.variableEnabled);
   const [max, setMax] = useState(settings.variableMaxCents ? String(settings.variableMaxCents / 100) : "");
   const [w, setW] = useState(settings.weights);
@@ -303,6 +343,7 @@ function TargetsModal({ settings, onClose }: { settings: OwnerPanel["settings"];
       variableEnabled: enabled,
       variableMaxCents: Math.max(0, Math.round((Number(String(max).replace(",", ".")) || 0) * 100)),
       weights: w,
+      brandGoals: bg.map((g) => ({ brandId: g.brandId, storiesPerWorkday: g.storiesPerWorkday, feedPostsPerWeek: g.feedPostsPerWeek, leadsGoalMonth: g.leadsGoalMonth, scheduledGoalMonth: g.scheduledGoalMonth })),
     } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["house-owner-panel"] }); qc.invalidateQueries({ queryKey: ["house-report"] }); toast.success("Metas salvas."); onClose(); },
     onError: (e: any) => toastFriendlyError(e, "Não consegui salvar"),
@@ -315,12 +356,19 @@ function TargetsModal({ settings, onClose }: { settings: OwnerPanel["settings"];
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-end md:items-center justify-center" onClick={onClose}>
       <div className="w-full md:max-w-md bg-card rounded-t-2xl md:rounded-2xl p-6 border border-foreground/10 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2"><Target size={16} /> Metas de leads e variável</h3>
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2"><Target size={16} /> Metas e variável</h3>
           <button onClick={onClose} className="p-1 rounded text-foreground/50 hover:text-foreground"><X size={16} /></button>
         </div>
-        <div className="space-y-2.5">
-          <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Leads registrados por mês {num(leadsGoal, setLeadsGoal)}</label>
-          <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Agendamentos por mês {num(scheduledGoal, setScheduledGoal)}</label>
+        <div className="space-y-5">
+          {bg.map((g) => (
+            <div key={g.brandId} className="space-y-2.5">
+              {bg.length > 1 && <div className="text-[11px] uppercase font-bold tracking-wider text-foreground/55">{g.name}</div>}
+              <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Stories por dia útil {num(String(g.storiesPerWorkday), (v) => setBrand(g.brandId, "storiesPerWorkday", v))}</label>
+              <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Posts no feed por semana {num(String(g.feedPostsPerWeek), (v) => setBrand(g.brandId, "feedPostsPerWeek", v))}</label>
+              <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Leads registrados por mês {num(String(g.leadsGoalMonth), (v) => setBrand(g.brandId, "leadsGoalMonth", v))}</label>
+              <label className="flex items-center justify-between gap-3 text-sm text-foreground/80">Agendamentos por mês {num(String(g.scheduledGoalMonth), (v) => setBrand(g.brandId, "scheduledGoalMonth", v))}</label>
+            </div>
+          ))}
         </div>
 
         <div className="mt-6 pt-5 border-t border-foreground/[0.08]">
@@ -364,9 +412,9 @@ function TargetsModal({ settings, onClose }: { settings: OwnerPanel["settings"];
 }
 
 
-function RankingCard({ monthKey }: { monthKey: string }) {
+function RankingCard({ monthKey, brandParam }: { monthKey: string; brandParam?: string }) {
   const fetchRanking = useServerFn(getTeamRanking);
-  const { data: rows = [], isLoading } = useQuery({ queryKey: ["house-ranking", monthKey], queryFn: () => fetchRanking({ data: { monthKey } }), staleTime: 60_000 });
+  const { data: rows = [], isLoading } = useQuery({ queryKey: ["house-ranking", monthKey, brandParam ?? "all"], queryFn: () => fetchRanking({ data: { monthKey, brandId: brandParam } }), staleTime: 60_000 });
   const cols: { key: "stories" | "posts" | "contents" | "demands" | "leads" | "scheduled" | "checklists" | "tasks"; label: string; pts: number }[] = [
     { key: "stories", label: "Stories", pts: RANKING_POINTS.story },
     { key: "posts", label: "Posts/Reels", pts: RANKING_POINTS.post },

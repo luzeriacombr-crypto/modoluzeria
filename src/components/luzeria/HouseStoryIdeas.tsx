@@ -11,6 +11,8 @@ import { useUI } from "@/lib/luzeria/ui-store";
 import { listStoryIdeas, generateStoryIdeas, markStoryIdeaUsed, dismissStoryIdea, type StoryIdeaRow } from "@/lib/luzeria/house-ai.functions";
 import { MOMENTO_LABEL, briefingCompleteness, type StoryIdea } from "@/lib/luzeria/house-brand";
 import { useBrandBriefing } from "./HouseBrandBriefing";
+import { HouseBrandSelect } from "./HouseBrandSwitcher";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
 
 const KEY = ["house-story-ideas"];
 
@@ -22,13 +24,16 @@ export function HouseStoryIdeas() {
   const genFn = useServerFn(generateStoryIdeas);
   const usedFn = useServerFn(markStoryIdeaUsed);
   const dismissFn = useServerFn(dismissStoryIdea);
-  const { data: rows = [] } = useQuery({ queryKey: KEY, queryFn: () => listFn() });
-  const { data: brand } = useBrandBriefing();
+  const { brandParam, writeBrandId, multi } = useHouseBrand();
+  const [pick, setPick] = useState<string | undefined>(undefined);
+  const genBrand = brandParam ?? pick ?? writeBrandId;
+  const { data: rows = [] } = useQuery({ queryKey: [...KEY, brandParam ?? "all"], queryFn: () => listFn({ data: { brandId: brandParam } }) });
+  const { data: brand } = useBrandBriefing(genBrand);
   const [focus, setFocus] = useState("");
   const [showFocus, setShowFocus] = useState(false);
 
   const generate = useMutation({
-    mutationFn: () => genFn({ data: { focus: focus.trim() || undefined } }),
+    mutationFn: () => genFn({ data: { focus: focus.trim() || undefined, brandId: genBrand } }),
     onSuccess: (r) => { qc.invalidateQueries({ queryKey: KEY }); setFocus(""); setShowFocus(false); toast.success(`${r.count} ideias novas.`); },
     onError: (e: any) => toastFriendlyError(e, "Não consegui gerar as ideias"),
   });
@@ -54,6 +59,7 @@ export function HouseStoryIdeas() {
 
   return (
     <section className="bg-card rounded-2xl p-5 border border-foreground/[0.06]">
+      {multi && !brandParam && <div className="mb-3"><HouseBrandSelect value={pick} onChange={setPick} /></div>}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 className="flex items-center gap-2 text-xs uppercase font-bold tracking-wider text-foreground/60">
           <span style={{ color: "var(--lz-accent-ink)" }}><Sparkles size={14} /></span>Ideias de stories

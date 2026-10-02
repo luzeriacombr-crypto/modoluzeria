@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { AlertTriangle, Check, ClipboardList, Plus, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { useMe, profilesQO, contentStatusesQO } from "@/lib/luzeria/queries";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
+import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { listDemands, createDemand, type Demand } from "@/lib/luzeria/house-team.functions";
 import { DEMAND_KINDS, DEMAND_KIND_META, type DemandKind } from "@/lib/luzeria/house-projects";
@@ -20,7 +22,8 @@ const DONE = new Set(["CONCLUIDO", "FINALIZADO"]);
 
 export function HouseDemands() {
   const listFn = useServerFn(listDemands);
-  const { data: demands = [], isLoading } = useQuery({ queryKey: KEY, queryFn: () => listFn() });
+  const { brandParam } = useHouseBrand();
+  const { data: demands = [], isLoading } = useQuery({ queryKey: [...KEY, brandParam ?? "all"], queryFn: () => listFn({ data: { brandId: brandParam } }) });
   const { data: profiles = [] } = useQuery(profilesQO());
   const { data: contentStatuses = [] } = useQuery(contentStatusesQO());
   const labelOverrides = new Map(contentStatuses.map((r) => [r.key, r.label]));
@@ -83,6 +86,7 @@ export function HouseDemands() {
         </button>
       </div>
 
+      <HouseBrandSwitcher className="mt-4" />
       {kindsInUse.length > 1 && (
         <div className="flex flex-wrap gap-1.5 mt-5">
           {(["todas", ...kindsInUse] as const).map((k) => (
@@ -131,8 +135,10 @@ function NewDemandModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [briefing, setBriefing] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [responsibleId, setResponsibleId] = useState(me?.id ?? "");
+  const { brandParam } = useHouseBrand();
+  const [pickBrand, setPickBrand] = useState<string | undefined>(undefined);
   const create = useMutation({
-    mutationFn: () => createFn({ data: { kind, title: title.trim(), briefing: briefing.trim() || undefined, dueDate: dueDate || null, responsibleId: responsibleId || null } }),
+    mutationFn: () => createFn({ data: { kind, title: title.trim(), briefing: briefing.trim() || undefined, dueDate: dueDate || null, responsibleId: responsibleId || null, brandId: pickBrand ?? brandParam } }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: KEY });
       qc.invalidateQueries({ queryKey: ["house-my-day"] });
@@ -149,6 +155,7 @@ function NewDemandModal({ onClose, onCreated }: { onClose: () => void; onCreated
           <h3 className="text-base font-bold text-foreground">Nova demanda</h3>
           <button onClick={onClose} className="p-1 rounded text-foreground/50 hover:text-foreground"><X size={16} /></button>
         </div>
+        <div className="mb-4"><HouseBrandSelect value={pickBrand ?? brandParam} onChange={setPickBrand} /></div>
         <div className="flex flex-wrap gap-1.5">
           {DEMAND_KINDS.map((k) => (
             <button key={k} onClick={() => setKind(k)}

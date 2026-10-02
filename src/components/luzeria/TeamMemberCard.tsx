@@ -16,6 +16,7 @@ import { PasswordInput } from "./PasswordInput";
 import { AvatarEditor, showAvatarError, uploadAvatar } from "./AvatarEditor";
 import { InfoTip } from "./InfoTip";
 import { glassCardStyle } from "@/lib/luzeria/utils";
+import { isHouse } from "@/lib/luzeria/house";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 
 const money = (v: number | null) =>
@@ -64,6 +65,7 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
 
 function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
   const me = useMe().data;
+  const house = isHouse(me);
   const { setUserRole, setUserActive, setExcludeFromRanking, setHideGoalsWidget, deleteUser, adminSendPasswordReset, adminResendWelcomeEmail, adminSetUserPassword, adminUpdateMemberAvatar, setMemberPay, setProfileCargos, setProfileClientAccess } = useApi();
   const { data: cargos = [] } = useQuery(cargosQO());
   const [selectedCargoIds, setSelectedCargoIds] = useState<string[]>(profile.cargoIds ?? []);
@@ -267,15 +269,15 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
       </div>
 
       <div className="pt-4 mt-4 border-t border-foreground/6">
-        <label className="flex items-center gap-2 text-sm text-foreground/70 mb-2" title="Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) os clientes marcados abaixo">
+        <label className="flex items-center gap-2 text-sm text-foreground/70 mb-2" title={house ? "Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) as marcas marcadas abaixo" : "Quando ligado, essa pessoa só enxerga (em qualquer lugar do app) os clientes marcados abaixo"}>
           <input type="checkbox" checked={clientRestricted} disabled={isSelf} onChange={toggleClientRestricted} />
-          Restringir a clientes específicos
+          {house ? "Restringir a marcas específicas (ex.: só a Doctor Fit)" : "Restringir a clientes específicos"}
         </label>
         {clientRestricted && (
           <div>
             <input
               value={clientSearch} onChange={(e) => setClientSearch(e.target.value)}
-              placeholder="Buscar cliente..."
+              placeholder={house ? "Buscar marca..." : "Buscar cliente..."}
               disabled={isSelf}
               className="w-full bg-background border border-foreground/10 rounded-md px-3 py-1.5 text-xs text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))] mb-2 disabled:opacity-50"
             />
@@ -291,12 +293,14 @@ function TeamMemberModal({ profile, onClose }: { profile: Profile; onClose: () =
                     </label>
                   );
                 })}
-              {allClients.length === 0 && <p className="text-[11px] text-foreground/30 px-1">Nenhum cliente cadastrado.</p>}
+              {allClients.length === 0 && <p className="text-[11px] text-foreground/30 px-1">{house ? "Nenhuma marca cadastrada." : "Nenhum cliente cadastrado."}</p>}
             </div>
             <p className="text-[10.5px] text-foreground/30 mt-1.5">
               {selectedClientIds.length === 0
-                ? "Nenhum cliente selecionado — a pessoa não verá nenhum cliente."
-                : `${selectedClientIds.length} cliente${selectedClientIds.length === 1 ? "" : "s"} liberado${selectedClientIds.length === 1 ? "" : "s"}.`}
+                ? (house ? "Nenhuma marca selecionada — a pessoa não verá nenhuma marca." : "Nenhum cliente selecionado — a pessoa não verá nenhum cliente.")
+                : house
+                  ? `${selectedClientIds.length} marca${selectedClientIds.length === 1 ? "" : "s"} liberada${selectedClientIds.length === 1 ? "" : "s"}.`
+                  : `${selectedClientIds.length} cliente${selectedClientIds.length === 1 ? "" : "s"} liberado${selectedClientIds.length === 1 ? "" : "s"}.`}
             </p>
           </div>
         )}

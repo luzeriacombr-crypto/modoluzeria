@@ -10,6 +10,8 @@ import {
   PROJECT_TEMPLATES, addDays, DEFAULT_VARIABLE_WEIGHTS, shiftMonth,
   type ProjectTemplateId, type ProjectStatus, type VariableWeights,
 } from "./house-projects";
+import type { BrandInfo, BrandGoals } from "./house-brands";
+import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brands.server";
 
 const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 const monthKeySchema = z.string().regex(/^\d{4}-\d{2}$/);
@@ -77,6 +79,8 @@ export type MonthNumbers = {
   monthKey: string;
   isCurrent: boolean;
   goalsPct: number;
+  /** Detalhe por marca (só útil quando a House tem 2+ marcas na visão). */
+  byBrand: { brandId: string; name: string; stories: { done: number; goal: number }; posts: { done: number; goal: number }; leads: number; scheduled: number; leadsGoal: number }[];
   stories: { done: number; goal: number; pct: number; source: "instagram" | "app"; trackedDays: number };
   posts: { done: number; goal: number; pct: number; source: "instagram" | "app" };
   planning: { targetMonth: string; deadline: string; delivered: boolean; onTime: boolean | null; deliveredAt: string | null; applies: boolean };
@@ -88,7 +92,7 @@ export type MonthNumbers = {
   variable: null | { weights: VariableWeights; maxCents: number; scores: { goals: number; leads: number; scheduled: number }; totalPct: number; valueCents: number };
 };
 
-async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: string | null, monthKey: string): Promise<MonthNumbers> {
+async function computeMonthNumbers(supabase: any, orgId: string, brands: BrandInfo[], monthKey: string): Promise<MonthNumbers> {
   const todayKey = houseDateKey();
   const b = monthBounds(monthKey, todayKey);
   const fromIso = spStart(b.first);
@@ -97,50 +101,65 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   const admin: any = supabaseAdmin;
 
   const { data: s } = await supabase.from("house_settings").select("*").eq("org_id", orgId).maybeSingle();
+  const goalsByBrand = await loadBrandGoals(supabase, orgId, brands);
+  const totalGoals = sumGoals([...goalsByBrand.values()]);
   // Metas só contam a partir do dia em que a House passou a existir — uma
   // conta criada no meio do mês não "deve" os dias anteriores.
   const { data: orgRow } = await admin.from("orgs").select("created_at").eq("id", orgId).maybeSingle();
   const createdKey = orgRow?.created_at ? houseDateKey(new Date(orgRow.created_at)) : b.first;
   const countFrom = createdKey > b.first ? createdKey : b.first;
-  const storiesPerWorkday = s?.stories_per_workday ?? 0;
-  const postsPerWeek = s?.feed_posts_per_week ?? 0;
   const deadlineDay = s?.planning_deadline_day ?? 25;
-
-  // Stories: retrato diário (Instagram não guarda stories antigos). Sem
-  // nenhum retrato no mês, cai no que saiu pelo app.
-  const { data: dayRows } = await supabase.from("house_daily_stats").select("day, stories")
-    .eq("org_id", orgId).gte("day", b.first).lte("day", b.last);
-  const trackedDays = (dayRows ?? []).length;
-  let storiesDone = ((dayRows ?? []) as any[]).reduce((n, r) => n + (r.stories ?? 0), 0);
-  let storiesSource: "instagram" | "app" = "instagram";
-  // Registro manual da equipe (postado direto no Instagram) — soma quando
-  // não há Instagram conectado; com Instagram, ele já conta tudo.
-  const { data: logRows } = await supabase.from("house_activity_logs").select("kind, qty")
-    .eq("org_id", orgId).gte("day", b.first).lte("day", b.last);
-  const manualStories = ((logRows ?? []) as any[]).filter((l) => l.kind === "story").reduce((n, l) => n + l.qty, 0);
-  const manualPosts = ((logRows ?? []) as any[]).filter((l) => l.kind !== "story").reduce((n, l) => n + l.qty, 0);
-  if (trackedDays === 0) {
-    const { count } = await supabase.from("content_items").select("id", { count: "exact", head: true })
-      .eq("org_id", orgId).eq("type", "story").gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
-    storiesDone = (count ?? 0) + manualStories;
-    storiesSource = "app";
-  }
   const workdays = b.isFuture || countFrom > b.until ? 0 : workdaysBetween(countFrom, b.until);
-  const storiesGoal = storiesPerWorkday * workdays;
-
-  // Posts no feed: direto do Instagram (o histórico existe), senão pelo app.
-  const igPosts = houseClientId ? await countInstagramFeedInMonth(houseClientId, fromIso, toIso) : null;
-  let postsDone = igPosts ?? 0;
-  let postsSource: "instagram" | "app" = "instagram";
-  if (igPosts == null) {
-    const { count } = await supabase.from("content_items").select("id", { count: "exact", head: true })
-      .eq("org_id", orgId).in("type", ["post", "reel"]).gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
-    postsDone = (count ?? 0) + manualPosts;
-    postsSource = "app";
-  }
   const elapsedDays = b.isFuture || countFrom > b.until ? 0
     : Math.round((new Date(`${b.until}T12:00:00Z`).getTime() - new Date(`${countFrom}T12:00:00Z`).getTime()) / 86_400_000) + 1;
-  const postsGoal = Math.round((postsPerWeek * elapsedDays) / 7);
+  const brandIds = brands.map((x) => x.id);
+
+  // Retrato diário do Instagram por marca (stories somem em 24h) e registros
+  // manuais da equipe — buscados uma vez e repartidos por marca.
+  const [{ data: dayRowsAll }, { data: logRowsAll }] = await Promise.all([
+    supabase.from("house_brand_daily_stats").select("client_id, day, stories")
+      .eq("org_id", orgId).in("client_id", brandIds).gte("day", b.first).lte("day", b.last),
+    brandFilter(supabase.from("house_activity_logs").select("client_id, kind, qty")
+      .eq("org_id", orgId).gte("day", b.first).lte("day", b.last), "client_id", brands),
+  ]);
+  const mainId = brands.find((x) => x.isMain)?.id ?? null;
+
+  let storiesDone = 0, storiesGoal = 0, postsDone = 0, postsGoal = 0, trackedDaysMax = 0;
+  let allIgStories = true, allIgPosts = true;
+  const perBrand: MonthNumbers["byBrand"] = [];
+  for (const br of brands) {
+    const g = goalsByBrand.get(br.id)!;
+    const days = ((dayRowsAll ?? []) as any[]).filter((r) => r.client_id === br.id);
+    const logs = ((logRowsAll ?? []) as any[]).filter((l) => (l.client_id ?? mainId) === br.id);
+    const manualStories = logs.filter((l) => l.kind === "story").reduce((n, l) => n + l.qty, 0);
+    const manualPosts = logs.filter((l) => l.kind !== "story").reduce((n, l) => n + l.qty, 0);
+
+    let sDone = days.reduce((n, r) => n + (r.stories ?? 0), 0);
+    trackedDaysMax = Math.max(trackedDaysMax, days.length);
+    if (days.length === 0) {
+      const { count } = await supabase.from("content_items").select("id, months!inner(client_id)", { count: "exact", head: true })
+        .eq("org_id", orgId).eq("months.client_id", br.id).eq("type", "story")
+        .gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
+      sDone = (count ?? 0) + manualStories;
+      allIgStories = false;
+    }
+    const igPosts = await countInstagramFeedInMonth(br.id, fromIso, toIso);
+    let pDone = igPosts ?? 0;
+    if (igPosts == null) {
+      const { count } = await supabase.from("content_items").select("id, months!inner(client_id)", { count: "exact", head: true })
+        .eq("org_id", orgId).eq("months.client_id", br.id).in("type", ["post", "reel"])
+        .gte("ig_published_at", fromIso).lt("ig_published_at", toIso).is("deleted_at", null);
+      pDone = (count ?? 0) + manualPosts;
+      allIgPosts = false;
+    }
+    const sGoal = g.storiesPerWorkday * workdays;
+    const pGoal = Math.round((g.feedPostsPerWeek * elapsedDays) / 7);
+    storiesDone += sDone; storiesGoal += sGoal; postsDone += pDone; postsGoal += pGoal;
+    perBrand.push({ brandId: br.id, name: br.name, stories: { done: sDone, goal: sGoal }, posts: { done: pDone, goal: pGoal }, leads: 0, scheduled: 0, leadsGoal: g.leadsGoalMonth });
+  }
+  const storiesSource: "instagram" | "app" = brands.length > 0 && allIgStories ? "instagram" : "app";
+  const postsSource: "instagram" | "app" = brands.length > 0 && allIgPosts ? "instagram" : "app";
+  const trackedDays = trackedDaysMax;
 
   // Planejamento do mês seguinte, entregue até o dia-limite deste mês.
   const targetMonth = shiftMonth(monthKey, 1);
@@ -164,9 +183,14 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   const checklistPct = ckTotal > 0 ? (ckDone ?? 0) / ckTotal : null;
 
   // Leads do mês.
-  const { data: leadRows } = await supabase.from("instagram_leads").select("origin, agendou_at, compareceu_at")
-    .eq("org_id", orgId).gte("created_at", fromIso).lt("created_at", toIso);
+  const { data: leadRows } = await brandFilter(supabase.from("instagram_leads").select("client_id, origin, agendou_at, compareceu_at")
+    .eq("org_id", orgId).gte("created_at", fromIso).lt("created_at", toIso), "client_id", brands);
   const leads = (leadRows ?? []) as any[];
+  for (const pb of perBrand) {
+    const mine = leads.filter((l) => (l.client_id ?? mainId) === pb.brandId);
+    pb.leads = mine.length;
+    pb.scheduled = mine.filter((l) => l.agendou_at).length;
+  }
   const byOrigin = Object.fromEntries(LEAD_ORIGINS.map((o) => [o, 0])) as Record<LeadOrigin, number>;
   for (const l of leads) byOrigin[l.origin as LeadOrigin] = (byOrigin[l.origin as LeadOrigin] ?? 0) + 1;
   const scheduled = leads.filter((l) => l.agendou_at).length;
@@ -184,8 +208,8 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   ];
   const goalsPct = parts.length ? parts.reduce((a, v) => a + v, 0) / parts.length : 0;
 
-  const leadsGoal = s?.leads_goal_month ?? 0;
-  const scheduledGoal = s?.scheduled_goal_month ?? 0;
+  const leadsGoal = totalGoals.leadsGoalMonth;
+  const scheduledGoal = totalGoals.scheduledGoalMonth;
   let variable: MonthNumbers["variable"] = null;
   if (s?.variable_enabled) {
     const weights: VariableWeights = { ...DEFAULT_VARIABLE_WEIGHTS, ...(s.variable_weights ?? {}) };
@@ -196,7 +220,7 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
   }
 
   return {
-    monthKey, isCurrent: b.isCurrent, goalsPct,
+    monthKey, isCurrent: b.isCurrent, goalsPct, byBrand: perBrand,
     stories: { done: storiesDone, goal: storiesGoal, pct: storiesPct, source: storiesSource, trackedDays },
     posts: { done: postsDone, goal: postsGoal, pct: postsPct, source: postsSource },
     planning: { targetMonth, deadline, delivered: !!deliveredAt, onTime, deliveredAt, applies: planningApplies },
@@ -215,21 +239,29 @@ async function computeMonthNumbers(supabase: any, orgId: string, houseClientId: 
 export type OwnerPanel = MonthNumbers & {
   projects: { id: string; title: string; template: string; eventDate: string | null; done: number; total: number; lateTasks: number }[];
   lateChecklists: { title: string; periodKey: string; at: string }[];
-  settings: { leadsGoal: number; scheduledGoal: number; variableEnabled: boolean; variableMaxCents: number; weights: VariableWeights };
+  brands: BrandInfo[];
+  selectedBrandIds: string[];
+  settings: {
+    leadsGoal: number; scheduledGoal: number; variableEnabled: boolean; variableMaxCents: number; weights: VariableWeights;
+    /** Metas de cada marca (pra tela de metas). */
+    brandGoals: ({ brandId: string; name: string } & BrandGoals)[];
+  };
 };
 
 export const getOwnerPanel = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { monthKey: string }) => z.object({ monthKey: monthKeySchema }).parse(d))
+  .inputValidator((d: { monthKey: string; brandId?: string }) => z.object({ monthKey: monthKeySchema, brandId: z.string().optional() }).parse(d))
   .handler(async ({ data, context }): Promise<OwnerPanel> => {
-    const { houseClientId } = await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
     const db: any = context.supabase;
-    const numbers = await computeMonthNumbers(db, context.orgId, houseClientId, data.monthKey);
+    const numbers = await computeMonthNumbers(db, context.orgId, selected, data.monthKey);
+    const allGoals = await loadBrandGoals(db, context.orgId, brands);
     const todayKey = houseDateKey();
     const b = monthBounds(data.monthKey, todayKey);
 
     const { data: projRows } = await db.from("marketing_projects").select("id, title, template, event_date, marketing_project_tasks(done_at, due_date)")
-      .eq("org_id", context.orgId).in("status", ["planejado", "andamento"]).order("event_date", { ascending: true, nullsFirst: false });
+      .eq("org_id", context.orgId).in("status", ["planejado", "andamento"]).or(`client_id.in.(${selected.map((x) => x.id).join(",")}),client_id.is.null`).order("event_date", { ascending: true, nullsFirst: false });
     const projects = ((projRows ?? []) as any[]).map((p) => {
       const tasks = (p.marketing_project_tasks ?? []) as any[];
       return {
@@ -248,9 +280,11 @@ export const getOwnerPanel = createServerFn({ method: "GET" })
 
     const { data: s } = await db.from("house_settings").select("*").eq("org_id", context.orgId).maybeSingle();
     return {
-      ...numbers, projects, lateChecklists,
+      ...numbers, projects, lateChecklists, brands, selectedBrandIds: selected.map((x) => x.id),
       settings: {
-        leadsGoal: s?.leads_goal_month ?? 20, scheduledGoal: s?.scheduled_goal_month ?? 8,
+        brandGoals: brands.map((x) => ({ brandId: x.id, name: x.name, ...allGoals.get(x.id)! })),
+        leadsGoal: sumGoals(selected.map((x) => allGoals.get(x.id)!)).leadsGoalMonth,
+        scheduledGoal: sumGoals(selected.map((x) => allGoals.get(x.id)!)).scheduledGoalMonth,
         variableEnabled: !!s?.variable_enabled, variableMaxCents: s?.variable_max_cents ?? 0,
         weights: { ...DEFAULT_VARIABLE_WEIGHTS, ...(s?.variable_weights ?? {}) },
       },
@@ -259,8 +293,15 @@ export const getOwnerPanel = createServerFn({ method: "GET" })
 
 export const saveHouseTargets = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { leadsGoal: number; scheduledGoal: number; variableEnabled: boolean; variableMaxCents: number; weights: VariableWeights }) =>
+  .inputValidator((d: { leadsGoal: number; scheduledGoal: number; variableEnabled: boolean; variableMaxCents: number; weights: VariableWeights; brandGoals?: ({ brandId: string } & BrandGoals)[] }) =>
     z.object({
+      brandGoals: z.array(z.object({
+        brandId: z.string().uuid(),
+        storiesPerWorkday: z.number().int().min(0).max(50),
+        feedPostsPerWeek: z.number().int().min(0).max(50),
+        leadsGoalMonth: z.number().int().min(0).max(10000),
+        scheduledGoalMonth: z.number().int().min(0).max(10000),
+      })).max(50).optional(),
       leadsGoal: z.number().int().min(0).max(10000),
       scheduledGoal: z.number().int().min(0).max(10000),
       variableEnabled: z.boolean(),
@@ -268,10 +309,33 @@ export const saveHouseTargets = createServerFn({ method: "POST" })
       weights: z.object({ goals: z.number().min(0).max(100), leads: z.number().min(0).max(100), scheduled: z.number().min(0).max(100) }),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertHouse(context);
+    const { houseClientId } = await assertHouse(context);
     await assertMaster(context);
-    const { error } = await (context.supabase as any).from("house_settings").update({
-      leads_goal_month: data.leadsGoal, scheduled_goal_month: data.scheduledGoal,
+    const db: any = context.supabase;
+    // Metas por marca; a marca principal também espelha em house_settings
+    // (onde ela já morava), pra o que está no ar continuar lendo certo.
+    let leadsGoal = data.leadsGoal, scheduledGoal = data.scheduledGoal;
+    const mainGoal: Partial<{ stories_per_workday: number; feed_posts_per_week: number }> = {};
+    if (data.brandGoals?.length) {
+      const { brands } = await getHouseBrands(context);
+      const allowed = new Set(brands.map((x) => x.id));
+      for (const g of data.brandGoals) {
+        if (!allowed.has(g.brandId)) throw new Error("Marca inválida.");
+        const { error: gErr } = await db.from("house_brand_settings").upsert({
+          client_id: g.brandId, org_id: context.orgId,
+          stories_per_workday: g.storiesPerWorkday, feed_posts_per_week: g.feedPostsPerWeek,
+          leads_goal_month: g.leadsGoalMonth, scheduled_goal_month: g.scheduledGoalMonth, updated_at: new Date().toISOString(),
+        }, { onConflict: "client_id" });
+        if (gErr) throw new Error(gErr.message);
+        if (g.brandId === houseClientId) {
+          leadsGoal = g.leadsGoalMonth; scheduledGoal = g.scheduledGoalMonth;
+          mainGoal.stories_per_workday = g.storiesPerWorkday; mainGoal.feed_posts_per_week = g.feedPostsPerWeek;
+        }
+      }
+    }
+    const { error } = await db.from("house_settings").update({
+      ...mainGoal,
+      leads_goal_month: leadsGoal, scheduled_goal_month: scheduledGoal,
       variable_enabled: data.variableEnabled, variable_max_cents: data.variableMaxCents,
       variable_weights: data.weights, updated_at: new Date().toISOString(),
     }).eq("org_id", context.orgId);
@@ -292,12 +356,12 @@ export const getMonthlyReport = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { monthKey: string }) => z.object({ monthKey: monthKeySchema }).parse(d))
   .handler(async ({ data, context }): Promise<MonthlyReport> => {
-    const { houseClientId } = await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
     const db: any = context.supabase;
     const { data: r } = await db.from("monthly_reports").select("*").eq("org_id", context.orgId).eq("month_key", data.monthKey).maybeSingle();
     // Enviado = números congelados no envio; rascunho = sempre ao vivo.
     const numbers = r?.status === "enviado" && r.numbers ? (r.numbers as MonthNumbers)
-      : await computeMonthNumbers(db, context.orgId, houseClientId, data.monthKey);
+      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
     return {
       monthKey: data.monthKey,
       whatWorked: r?.what_worked ?? "", learned: r?.learned ?? "", nextChanges: r?.next_changes ?? "",
@@ -315,7 +379,7 @@ export const saveMonthlyReport = createServerFn({ method: "POST" })
       submit: z.boolean().optional(), reopen: z.boolean().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { houseClientId } = await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
     const db: any = context.supabase;
     const row: Record<string, unknown> = {
       org_id: context.orgId, month_key: data.monthKey,
@@ -326,7 +390,7 @@ export const saveMonthlyReport = createServerFn({ method: "POST" })
       row.status = "enviado";
       row.submitted_by = context.userId;
       row.submitted_at = new Date().toISOString();
-      row.numbers = await computeMonthNumbers(db, context.orgId, houseClientId, data.monthKey);
+      row.numbers = await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
     }
     if (data.reopen) {
       await assertMaster(context);
@@ -360,11 +424,12 @@ export const exportMonthlyReportPdf = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { monthKey: string }) => z.object({ monthKey: monthKeySchema }).parse(d))
   .handler(async ({ data, context }) => {
-    const { houseClientId, orgName } = await assertHouse(context);
+    const { orgName } = await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
     const db: any = context.supabase;
     const { data: r } = await db.from("monthly_reports").select("*").eq("org_id", context.orgId).eq("month_key", data.monthKey).maybeSingle();
     const numbers = r?.status === "enviado" && r.numbers ? (r.numbers as MonthNumbers)
-      : await computeMonthNumbers(db, context.orgId, houseClientId, data.monthKey);
+      : await computeMonthNumbers(db, context.orgId, brands, data.monthKey);
     const { buildHouseReportPdf } = await import("./house-report-pdf.server");
     const bytes = await buildHouseReportPdf({
       orgName, monthKey: data.monthKey, numbers,
@@ -381,7 +446,7 @@ export type ProjectTask = {
   doneAt: string | null; doneBy: string | null; sortOrder: number;
 };
 export type Project = {
-  id: string; title: string; template: ProjectTemplateId; description: string | null; status: ProjectStatus;
+  clientId: string | null; id: string; title: string; template: ProjectTemplateId; description: string | null; status: ProjectStatus;
   eventDate: string | null; ownerId: string | null; createdBy: string | null; createdAt: string;
   tasks: ProjectTask[];
 };
@@ -394,7 +459,7 @@ function mapTask(t: any): ProjectTask {
 }
 function mapProject(p: any): Project {
   return {
-    id: p.id, title: p.title, template: p.template, description: p.description ?? null, status: p.status,
+    clientId: p.client_id ?? null, id: p.id, title: p.title, template: p.template, description: p.description ?? null, status: p.status,
     eventDate: p.event_date ?? null, ownerId: p.owner_id ?? null, createdBy: p.created_by ?? null, createdAt: p.created_at,
     tasks: ((p.marketing_project_tasks ?? []) as any[]).map(mapTask).sort((a, b) => a.sortOrder - b.sortOrder),
   };
@@ -402,9 +467,12 @@ function mapProject(p: any): Project {
 
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<Project[]> => {
-    const { data, error } = await (context.supabase as any).from("marketing_projects")
-      .select("*, marketing_project_tasks(*)").eq("org_id", context.orgId)
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }): Promise<Project[]> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, input.brandId);
+    const { data, error } = await brandFilter((context.supabase as any).from("marketing_projects")
+      .select("*, marketing_project_tasks(*)").eq("org_id", context.orgId), "client_id", selected)
       .order("event_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map(mapProject);
@@ -412,8 +480,9 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { template: ProjectTemplateId; title: string; eventDate?: string | null; ownerId?: string | null; description?: string | null }) =>
+  .inputValidator((d: { template: ProjectTemplateId; title: string; eventDate?: string | null; ownerId?: string | null; description?: string | null; brandId?: string }) =>
     z.object({
+      brandId: z.string().uuid().optional(),
       template: z.enum(["evento", "radio", "campanha", "livre"]),
       title: z.string().trim().min(1).max(160),
       eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
@@ -421,10 +490,11 @@ export const createProject = createServerFn({ method: "POST" })
       description: z.string().trim().max(5000).nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
+    const brand = pickWriteBrand(brands, data.brandId);
     const db: any = context.supabase;
     const { data: proj, error } = await db.from("marketing_projects").insert({
-      org_id: context.orgId, title: data.title, template: data.template, description: data.description || null,
+      org_id: context.orgId, client_id: brand.id, title: data.title, template: data.template, description: data.description || null,
       event_date: data.eventDate ?? null, owner_id: data.ownerId ?? context.userId, created_by: context.userId,
       status: "andamento",
     }).select("id").single();
@@ -528,16 +598,18 @@ export const deleteProjectTask = createServerFn({ method: "POST" })
 export async function runHouseDailyStats(): Promise<{ recorded: number; skipped: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { countFromInstagram, recordDailyStats } = await import("./house-day.functions");
-  const { data: orgs } = await (supabaseAdmin as any).from("orgs").select("id, house_client_id").eq("account_type", "house");
+  const { data: orgs } = await (supabaseAdmin as any).from("orgs").select("id").eq("account_type", "house");
   const todayKey = houseDateKey();
   let recorded = 0;
   let skipped = 0;
   for (const o of (orgs ?? []) as any[]) {
-    if (!o.house_client_id) { skipped++; continue; }
-    const ig = await countFromInstagram(o.house_client_id, todayKey);
-    if (!ig) { skipped++; continue; }
-    await recordDailyStats(o.id, todayKey, ig.storiesToday, ig.feedToday);
-    recorded++;
+    const { data: clients } = await (supabaseAdmin as any).from("clients").select("id, archived, category").eq("org_id", o.id);
+    for (const c of ((clients ?? []) as any[]).filter((x) => !x.archived && x.category !== "Ex-clientes")) {
+      const ig = await countFromInstagram(c.id, todayKey);
+      if (!ig) { skipped++; continue; }
+      await recordDailyStats(o.id, c.id, todayKey, ig.storiesToday, ig.feedToday);
+      recorded++;
+    }
   }
   return { recorded, skipped };
 }

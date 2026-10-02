@@ -116,7 +116,8 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
   // todos os clientes desde a fase de teste.
   const isLuzeriaOrg = me?.orgId === LUZERIA_ORG_ID;
   // House: a marca principal ganha o bloco guiado "Briefing da marca".
-  const isHouseBrand = isHouse(me) && me?.houseClientId === clientId;
+  // (e cada marca extra da House também — ex.: Doctor Fit no grupo Levive).
+  const isHouseBrand = isHouse(me);
 
   const [groupLink, setGroupLink] = useState("");
   useEffect(() => { setGroupLink(ficha?.whatsappGroupLink ?? ""); }, [ficha?.whatsappGroupLink]);
@@ -219,7 +220,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         ))}
       </div>
 
-      {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing />}
+      {activeTab === "geral" && isHouseBrand && <HouseBrandBriefing clientId={clientId} />}
       {activeTab === "geral" && (
         <div className="grid gap-3 grid-cols-1 @[760px]:grid-cols-2">
         <FichaCard label={isHouseBrand ? "Configuração da marca" : "Configuração do cliente"} wide>

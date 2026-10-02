@@ -5,15 +5,9 @@ import { z } from "zod";
 import { requireActiveProfile } from "./require-active";
 import { houseDateKey } from "./house-checklists";
 import { DEMAND_KINDS, shiftMonth, type DemandKind } from "./house-projects";
+import { getHouseBrands, pickBrands, pickWriteBrand, brandFilter } from "./house-brands.server";
 
 const spStart = (dateKey: string) => new Date(`${dateKey}T03:00:00.000Z`).toISOString();
-
-async function houseInfo(context: { supabase: any; orgId: string }) {
-  const { data } = await context.supabase.from("orgs").select("account_type, house_client_id").eq("id", context.orgId).maybeSingle();
-  if (data?.account_type !== "house") throw new Error("Disponível só em contas House.");
-  if (!data.house_client_id) throw new Error("A House ainda não tem marca principal.");
-  return { houseClientId: data.house_client_id as string };
-}
 
 /* ============== Demandas avulsas ============== */
 
@@ -24,10 +18,14 @@ export type Demand = {
 
 export const listDemands = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<Demand[]> => {
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }): Promise<Demand[]> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, input.brandId);
     const { data, error } = await (context.supabase as any).from("content_items")
       .select("id, demand_kind, title, copy, status, due_date, finished_at, updated_at, months!inner(key, client_id), item_assignees(user_id)")
       .eq("org_id", context.orgId).not("demand_kind", "is", null).is("deleted_at", null)
+      .in("months.client_id", selected.map((b) => b.id))
       .order("due_date", { ascending: true, nullsFirst: false }).limit(300);
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((r) => ({
@@ -42,8 +40,9 @@ export const listDemands = createServerFn({ method: "GET" })
  * na RLS de agência — numa House a equipe toda abre demandas. */
 export const createDemand = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { kind: DemandKind; title: string; briefing?: string; dueDate?: string | null; responsibleId?: string | null }) =>
+  .inputValidator((d: { kind: DemandKind; title: string; briefing?: string; dueDate?: string | null; responsibleId?: string | null; brandId?: string }) =>
     z.object({
+      brandId: z.string().uuid().optional(),
       kind: z.enum(DEMAND_KINDS),
       title: z.string().trim().min(1).max(200),
       briefing: z.string().trim().max(4000).optional(),
@@ -51,7 +50,8 @@ export const createDemand = createServerFn({ method: "POST" })
       responsibleId: z.string().uuid().nullable().optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { houseClientId } = await houseInfo(context);
+    const { brands } = await getHouseBrands(context);
+    const houseClientId = pickWriteBrand(brands, data.brandId).id;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db: any = supabaseAdmin;
     const responsibleId = data.responsibleId ?? context.userId;
@@ -83,11 +83,13 @@ type LogKind = (typeof KINDS)[number];
 
 export const logActivity = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { kind: LogKind; qty?: number }) => z.object({ kind: z.enum(KINDS), qty: z.number().int().min(1).max(50).optional() }).parse(d))
+  .inputValidator((d: { kind: LogKind; qty?: number; brandId?: string }) =>
+    z.object({ kind: z.enum(KINDS), qty: z.number().int().min(1).max(50).optional(), brandId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    await houseInfo(context);
+    const { brands } = await getHouseBrands(context);
+    const brand = pickWriteBrand(brands, data.brandId);
     const { error } = await (context.supabase as any).from("house_activity_logs").insert({
-      org_id: context.orgId, user_id: context.userId, day: houseDateKey(), kind: data.kind, qty: data.qty ?? 1,
+      org_id: context.orgId, user_id: context.userId, client_id: brand.id, day: houseDateKey(), kind: data.kind, qty: data.qty ?? 1,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -96,11 +98,13 @@ export const logActivity = createServerFn({ method: "POST" })
 /** Desfaz o último registro de hoje desse tipo (toque errado). */
 export const undoActivity = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { kind: LogKind }) => z.object({ kind: z.enum(KINDS) }).parse(d))
+  .inputValidator((d: { kind: LogKind; brandId?: string }) => z.object({ kind: z.enum(KINDS), brandId: z.string().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const db: any = context.supabase;
-    const { data: last } = await db.from("house_activity_logs").select("id")
-      .eq("user_id", context.userId).eq("day", houseDateKey()).eq("kind", data.kind)
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const { data: last } = await brandFilter(db.from("house_activity_logs").select("id")
+      .eq("user_id", context.userId).eq("day", houseDateKey()).eq("kind", data.kind), "client_id", selected)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (!last) return { ok: true };
     const { error } = await db.from("house_activity_logs").delete().eq("id", last.id);
@@ -108,15 +112,17 @@ export const undoActivity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export type ActivityLogRow = { id: string; kind: LogKind; qty: number; day: string; createdAt: string; userId: string; userName: string };
+export type ActivityLogRow = { clientId: string | null; clientName: string; id: string; kind: LogKind; qty: number; day: string; createdAt: string; userId: string; userName: string };
 
 /** Registros dos últimos 7 dias — os da própria pessoa, ou (só o gestor,
  * scope "team") os de toda a equipe, pra limpar um registro de teste. */
 export const listActivityLogs = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { scope?: "mine" | "team" }) => z.object({ scope: z.enum(["mine", "team"]).optional() }).parse(d ?? {}))
+  .inputValidator((d: { scope?: "mine" | "team"; brandId?: string }) => z.object({ scope: z.enum(["mine", "team"]).optional(), brandId: z.string().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }): Promise<ActivityLogRow[]> => {
-    await houseInfo(context);
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const brandName = new Map(brands.map((b) => [b.id, b.name]));
     const db: any = context.supabase;
     if (data.scope === "team") {
       const { data: isMaster } = await db.rpc("is_master", { _user_id: context.userId });
@@ -124,8 +130,9 @@ export const listActivityLogs = createServerFn({ method: "GET" })
     }
     const since = new Date(Date.now() - 7 * 86_400_000);
     const sinceKey = houseDateKey(since);
-    let q = db.from("house_activity_logs").select("id, kind, qty, day, created_at, user_id")
-      .eq("org_id", context.orgId).gte("day", sinceKey).order("created_at", { ascending: false }).limit(100);
+    let q = db.from("house_activity_logs").select("id, kind, qty, day, created_at, user_id, client_id")
+      .eq("org_id", context.orgId).gte("day", sinceKey);
+    q = brandFilter(q, "client_id", selected).order("created_at", { ascending: false }).limit(100);
     if (data.scope !== "team") q = q.eq("user_id", context.userId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -133,6 +140,7 @@ export const listActivityLogs = createServerFn({ method: "GET" })
     const { data: people } = ids.length ? await db.from("profiles").select("id, name").in("id", ids) : { data: [] };
     const nameById = new Map(((people ?? []) as any[]).map((p) => [p.id, p.name as string]));
     return ((rows ?? []) as any[]).map((r) => ({
+      clientId: r.client_id ?? null, clientName: brandName.get(r.client_id) ?? "",
       id: r.id, kind: r.kind, qty: r.qty, day: r.day, createdAt: r.created_at, userId: r.user_id, userName: nameById.get(r.user_id) ?? "",
     }));
   });
@@ -160,9 +168,11 @@ export type RankingRow = {
 
 export const getTeamRanking = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { monthKey: string }) => z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/) }).parse(d))
+  .inputValidator((d: { monthKey: string; brandId?: string }) => z.object({ monthKey: z.string().regex(/^\d{4}-\d{2}$/), brandId: z.string().optional() }).parse(d))
   .handler(async ({ data, context }): Promise<RankingRow[]> => {
-    await houseInfo(context);
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const brandIds = selected.map((b) => b.id);
     const db: any = context.supabase;
     const first = `${data.monthKey}-01`;
     const nextFirst = `${shiftMonth(data.monthKey, 1)}-01`;
@@ -171,11 +181,11 @@ export const getTeamRanking = createServerFn({ method: "GET" })
 
     const [people, logs, fins, leads, sched, checks, tasks] = await Promise.all([
       db.from("profiles").select("id, name, color, avatar_url").eq("org_id", context.orgId).eq("active", true),
-      db.from("house_activity_logs").select("user_id, kind, qty").eq("org_id", context.orgId).gte("day", first).lt("day", nextFirst),
-      db.from("finalizations").select("user_id, content_items!inner(org_id, demand_kind)")
-        .eq("content_items.org_id", context.orgId).gte("finalized_at", fromIso).lt("finalized_at", toIso),
-      db.from("instagram_leads").select("created_by").eq("org_id", context.orgId).gte("created_at", fromIso).lt("created_at", toIso),
-      db.from("instagram_leads").select("created_by").eq("org_id", context.orgId).gte("agendou_at", fromIso).lt("agendou_at", toIso),
+      brandFilter(db.from("house_activity_logs").select("user_id, kind, qty").eq("org_id", context.orgId).gte("day", first).lt("day", nextFirst), "client_id", selected),
+      db.from("finalizations").select("user_id, content_items!inner(org_id, demand_kind, months!inner(client_id))")
+        .eq("content_items.org_id", context.orgId).in("content_items.months.client_id", brandIds).gte("finalized_at", fromIso).lt("finalized_at", toIso),
+      brandFilter(db.from("instagram_leads").select("created_by").eq("org_id", context.orgId).gte("created_at", fromIso).lt("created_at", toIso), "client_id", selected),
+      brandFilter(db.from("instagram_leads").select("created_by").eq("org_id", context.orgId).gte("agendou_at", fromIso).lt("agendou_at", toIso), "client_id", selected),
       db.from("house_checklist_completions").select("done_by").eq("org_id", context.orgId).gte("done_at", fromIso).lt("done_at", toIso),
       db.from("marketing_project_tasks").select("done_by").eq("org_id", context.orgId).gte("done_at", fromIso).lt("done_at", toIso),
     ]);
@@ -216,7 +226,10 @@ export const getTeamRanking = createServerFn({ method: "GET" })
 
 export const listUnassignedItems = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data: input, context }) => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, input.brandId);
     const today = houseDateKey();
     const from = shiftMonth(today.slice(0, 7), -1);
     const { data } = await (context.supabase as any).from("content_items")
@@ -224,6 +237,7 @@ export const listUnassignedItems = createServerFn({ method: "GET" })
       .eq("org_id", context.orgId).is("deleted_at", null)
       .not("status", "in", "(FINALIZADO,CONCLUIDO,PLANEJAMENTO)")
       .gte("months.key", from)
+      .in("months.client_id", selected.map((b) => b.id))
       .order("due_date", { ascending: true, nullsFirst: false }).limit(80);
     return ((data ?? []) as any[])
       .filter((r) => (r.item_assignees ?? []).length === 0)

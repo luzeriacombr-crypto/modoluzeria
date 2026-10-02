@@ -6,6 +6,8 @@ import {
   houseDateKey, isoWeekday, weekStartKey, checklistPeriodKey, checklistAppliesToday, checklistIsLate,
   LEAD_ORIGINS, LEAD_STATUSES, type ChecklistCadence, type LeadOrigin, type LeadStatus,
 } from "./house-checklists";
+import type { BrandInfo, BrandGoals } from "./house-brands";
+import { getHouseBrands, pickBrands, pickWriteBrand, loadBrandGoals, sumGoals, brandFilter } from "./house-brands.server";
 
 const IG_GRAPH_API = "https://graph.instagram.com/v21.0";
 
@@ -153,16 +155,16 @@ export const getChecklistHistory = createServerFn({ method: "GET" })
 
 /** Guarda o maior número visto no dia — stories somem depois de 24h, então
  * uma leitura mais tarde no mesmo dia nunca pode apagar o que já contou. */
-export async function recordDailyStats(orgId: string, dayKey: string, stories: number, feed: number) {
+export async function recordDailyStats(orgId: string, clientId: string, dayKey: string, stories: number, feed: number) {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db: any = supabaseAdmin;
-    const { data: cur } = await db.from("house_daily_stats").select("stories, feed").eq("org_id", orgId).eq("day", dayKey).maybeSingle();
-    await db.from("house_daily_stats").upsert({
-      org_id: orgId, day: dayKey,
+    const { data: cur } = await db.from("house_brand_daily_stats").select("stories, feed").eq("client_id", clientId).eq("day", dayKey).maybeSingle();
+    await db.from("house_brand_daily_stats").upsert({
+      org_id: orgId, client_id: clientId, day: dayKey,
       stories: Math.max(stories, cur?.stories ?? 0), feed: Math.max(feed, cur?.feed ?? 0),
       source: "instagram", updated_at: new Date().toISOString(),
-    }, { onConflict: "org_id,day" });
+    }, { onConflict: "client_id,day" });
   } catch (e) {
     console.error("Falha ao gravar retrato diário da House:", e);
   }
@@ -198,19 +200,19 @@ export async function countFromInstagram(clientId: string, todayKey: string): Pr
   }
 }
 
-async function countFromApp(supabase: any, orgId: string, todayKey: string) {
+async function countFromApp(supabase: any, orgId: string, brand: BrandInfo, todayKey: string) {
   const dayStart = spDayStartUtc(todayKey).toISOString();
   const weekStart = spDayStartUtc(weekStartKey(todayKey)).toISOString();
   // + o que a equipe registrou à mão (postado direto no Instagram).
-  const { data: logs } = await supabase.from("house_activity_logs").select("day, kind, qty")
-    .eq("org_id", orgId).gte("day", weekStartKey(todayKey)).lte("day", todayKey);
+  const { data: logs } = await brandFilter(supabase.from("house_activity_logs").select("day, kind, qty")
+    .eq("org_id", orgId).gte("day", weekStartKey(todayKey)).lte("day", todayKey), "client_id", [brand]);
   const manualStories = ((logs ?? []) as any[]).filter((l) => l.kind === "story" && l.day === todayKey).reduce((n, l) => n + l.qty, 0);
   const manualPosts = ((logs ?? []) as any[]).filter((l) => l.kind !== "story").reduce((n, l) => n + l.qty, 0);
   const [{ count: stories }, { count: posts }] = await Promise.all([
-    supabase.from("content_items").select("id", { count: "exact", head: true })
-      .eq("org_id", orgId).eq("type", "story").gte("ig_published_at", dayStart).is("deleted_at", null),
-    supabase.from("content_items").select("id", { count: "exact", head: true })
-      .eq("org_id", orgId).in("type", ["post", "reel"]).gte("ig_published_at", weekStart).is("deleted_at", null),
+    supabase.from("content_items").select("id, months!inner(client_id)", { count: "exact", head: true })
+      .eq("org_id", orgId).eq("months.client_id", brand.id).eq("type", "story").gte("ig_published_at", dayStart).is("deleted_at", null),
+    supabase.from("content_items").select("id, months!inner(client_id)", { count: "exact", head: true })
+      .eq("org_id", orgId).eq("months.client_id", brand.id).in("type", ["post", "reel"]).gte("ig_published_at", weekStart).is("deleted_at", null),
   ]);
   return { storiesToday: (stories ?? 0) + manualStories, postsWeek: (posts ?? 0) + manualPosts };
 }
@@ -222,6 +224,11 @@ function nextMonthKey(todayKey: string) {
 
 export type MyDay = {
   todayKey: string;
+  /** Marcas que a pessoa enxerga (a principal primeiro) e as que entraram na conta. */
+  brands: BrandInfo[];
+  selectedBrandIds: string[];
+  /** Metas e andamento por marca — pra mostrar o detalhe quando há 2+. */
+  byBrand: { brandId: string; name: string; stories: GoalCount; posts: GoalCount }[];
   isWorkday: boolean;
   checklist: (ChecklistItem & { done: boolean; late: boolean; mine: boolean })[];
   stories: GoalCount;
@@ -234,16 +241,20 @@ export type MyDay = {
 
 export const getMyDay = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .handler(async ({ context }): Promise<MyDay> => {
-    const { houseClientId } = await assertHouse(context);
+  .inputValidator((d: { brandId?: string } | undefined) => z.object({ brandId: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }): Promise<MyDay> => {
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    const goalsByBrand = await loadBrandGoals(context.supabase, context.orgId, selected);
+    const total = sumGoals([...goalsByBrand.values()]);
     const db: any = context.supabase;
     const todayKey = houseDateKey();
     const admin = await isAdmin(context);
 
     const { data: settings } = await db.from("house_settings")
-      .select("stories_per_workday, feed_posts_per_week, planning_deadline_day").eq("org_id", context.orgId).maybeSingle();
-    const storiesGoal = settings?.stories_per_workday ?? 0;
-    const postsGoal = settings?.feed_posts_per_week ?? 0;
+      .select("planning_deadline_day").eq("org_id", context.orgId).maybeSingle();
+    const storiesGoal = total.storiesPerWorkday;
+    const postsGoal = total.feedPostsPerWeek;
     const deadlineDay = settings?.planning_deadline_day ?? 25;
 
     // Checklist do período atual.
@@ -265,15 +276,32 @@ export const getMyDay = createServerFn({ method: "GET" })
     });
 
     // Metas: Instagram de verdade quando conectado; senão, o que saiu pelo app.
-    const ig = houseClientId ? await countFromInstagram(houseClientId, todayKey) : null;
-    const counts = ig ?? await countFromApp(db, context.orgId, todayKey);
-    const source = ig ? "instagram" : "app";
-    const { data: myLogs } = await db.from("house_activity_logs").select("kind, qty")
-      .eq("user_id", context.userId).eq("day", todayKey);
+    const perBrand = await Promise.all(selected.map(async (b) => {
+      const ig = await countFromInstagram(b.id, todayKey);
+      const counts = ig ?? await countFromApp(db, context.orgId, b, todayKey);
+      // Retrato do dia pro painel do dono (o Instagram não guarda stories antigos).
+      if (ig) await recordDailyStats(context.orgId, b.id, todayKey, ig.storiesToday, ig.feedToday);
+      return { brand: b, counts, source: (ig ? "instagram" : "app") as "instagram" | "app" };
+    }));
+    const counts = {
+      storiesToday: perBrand.reduce((n, x) => n + x.counts.storiesToday, 0),
+      postsWeek: perBrand.reduce((n, x) => n + x.counts.postsWeek, 0),
+    };
+    // "instagram" só se todas as marcas vistas estão conectadas.
+    const source: "instagram" | "app" = perBrand.length > 0 && perBrand.every((x) => x.source === "instagram") ? "instagram" : "app";
+    const byBrand = perBrand.map((x) => {
+      const g = goalsByBrand.get(x.brand.id)!;
+      return {
+        brandId: x.brand.id, name: x.brand.name,
+        stories: { done: x.counts.storiesToday, goal: g.storiesPerWorkday, source: x.source },
+        posts: { done: x.counts.postsWeek, goal: g.feedPostsPerWeek, source: x.source },
+      };
+    });
+    let myLogsQ = db.from("house_activity_logs").select("kind, qty").eq("user_id", context.userId).eq("day", todayKey);
+    myLogsQ = brandFilter(myLogsQ, "client_id", selected);
+    const { data: myLogs } = await myLogsQ;
     const myLogsToday = { story: 0, post: 0, reel: 0 };
     for (const l of (myLogs ?? []) as any[]) myLogsToday[l.kind as "story" | "post" | "reel"] += l.qty;
-    // Retrato do dia pro painel do dono (o Instagram não guarda stories antigos).
-    if (ig) await recordDailyStats(context.orgId, todayKey, ig.storiesToday, ig.feedToday);
 
     // Planejamento do mês seguinte: entregue se já existe planejamento/roteiro
     // pra ele (target_month_key), ou um planejamento escrito neste mês.
@@ -300,6 +328,7 @@ export const getMyDay = createServerFn({ method: "GET" })
     const { data: itemsRows, error: itemsErr } = await db.from("content_items")
       .select("id, title, type, status, due_date, months!inner(key, client_id, clients!months_client_id_fkey(name)), item_assignees(user_id)")
       .eq("org_id", context.orgId).is("deleted_at", null).not("due_date", "is", null)
+      .in("months.client_id", selected.map((b) => b.id))
       .not("status", "in", "(FINALIZADO,CONCLUIDO)")
       .order("due_date", { ascending: true }).limit(40);
     if (itemsErr) console.error("Meu dia: falha ao listar próximos conteúdos:", itemsErr.message);
@@ -317,6 +346,7 @@ export const getMyDay = createServerFn({ method: "GET" })
 
     return {
       todayKey,
+      brands, selectedBrandIds: selected.map((b) => b.id), byBrand,
       isWorkday: isoWeekday(todayKey) <= 5,
       checklist,
       myLogsToday,
@@ -330,29 +360,31 @@ export const getMyDay = createServerFn({ method: "GET" })
 /* ============== Leads do Instagram ============== */
 
 export type InstagramLead = {
-  id: string; name: string; origin: LeadOrigin; note: string | null; status: LeadStatus;
+  id: string; clientId: string | null; name: string; origin: LeadOrigin; note: string | null; status: LeadStatus;
   createdBy: string | null; createdAt: string; statusChangedAt: string;
 };
 
 function mapLead(r: any): InstagramLead {
   return {
-    id: r.id, name: r.name, origin: r.origin, note: r.note ?? null, status: r.status,
+    id: r.id, clientId: r.client_id ?? null, name: r.name, origin: r.origin, note: r.note ?? null, status: r.status,
     createdBy: r.created_by ?? null, createdAt: r.created_at, statusChangedAt: r.status_changed_at,
   };
 }
 
 export const createInstagramLead = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { name: string; origin: LeadOrigin; note?: string }) =>
+  .inputValidator((d: { name: string; origin: LeadOrigin; note?: string; brandId?: string }) =>
     z.object({
+      brandId: z.string().uuid().optional(),
       name: z.string().trim().min(1).max(120),
       origin: z.enum(LEAD_ORIGINS),
       note: z.string().trim().max(1000).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
-    const { houseClientId } = await assertHouse(context);
+    const { brands } = await getHouseBrands(context);
+    const brand = pickWriteBrand(brands, data.brandId);
     const { data: row, error } = await (context.supabase as any).from("instagram_leads").insert({
-      org_id: context.orgId, client_id: houseClientId, name: data.name, origin: data.origin,
+      org_id: context.orgId, client_id: brand.id, name: data.name, origin: data.origin,
       note: data.note || null, created_by: context.userId,
     }).select("*").single();
     if (error) throw new Error(error.message);
@@ -361,11 +393,13 @@ export const createInstagramLead = createServerFn({ method: "POST" })
 
 export const listInstagramLeads = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { from?: string; origin?: LeadOrigin }) =>
-    z.object({ from: z.string().datetime().optional(), origin: z.enum(LEAD_ORIGINS).optional() }).parse(d))
+  .inputValidator((d: { from?: string; origin?: LeadOrigin; brandId?: string }) =>
+    z.object({ from: z.string().datetime().optional(), origin: z.enum(LEAD_ORIGINS).optional(), brandId: z.string().optional() }).parse(d))
   .handler(async ({ data, context }): Promise<InstagramLead[]> => {
-    let q = (context.supabase as any).from("instagram_leads").select("*")
-      .eq("org_id", context.orgId).order("created_at", { ascending: false }).limit(500);
+    const { brands } = await getHouseBrands(context);
+    const selected = pickBrands(brands, data.brandId);
+    let q = brandFilter((context.supabase as any).from("instagram_leads").select("*")
+      .eq("org_id", context.orgId), "client_id", selected).order("created_at", { ascending: false }).limit(500);
     if (data.from) q = q.gte("created_at", data.from);
     if (data.origin) q = q.eq("origin", data.origin);
     const { data: rows, error } = await q;

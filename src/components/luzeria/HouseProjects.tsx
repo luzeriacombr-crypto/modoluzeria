@@ -16,6 +16,8 @@ import {
 import { PROJECT_TEMPLATES, PROJECT_STATUS_LABEL, type ProjectStatus, type ProjectTemplateId } from "@/lib/luzeria/house-projects";
 import { houseDateKey } from "@/lib/luzeria/house-checklists";
 import { Avatar } from "./Avatar";
+import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
+import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
 
 const KEY = ["house-projects"];
 const TEMPLATE_ICON: Record<ProjectTemplateId, typeof PartyPopper> = { evento: PartyPopper, radio: Mic, campanha: Megaphone, livre: FilePlus2 };
@@ -23,7 +25,8 @@ const fmtDate = (d: string | null) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` 
 
 export function HouseProjects({ projectId, onOpen }: { projectId?: string; onOpen: (id: string | undefined) => void }) {
   const listFn = useServerFn(listProjects);
-  const { data: projects = [], isLoading } = useQuery({ queryKey: KEY, queryFn: () => listFn() });
+  const { brandParam } = useHouseBrand();
+  const { data: projects = [], isLoading } = useQuery({ queryKey: [...KEY, brandParam ?? "all"], queryFn: () => listFn({ data: { brandId: brandParam } }) });
   const [creating, setCreating] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const open = projects.find((p) => p.id === projectId);
@@ -46,6 +49,7 @@ export function HouseProjects({ projectId, onOpen }: { projectId?: string; onOpe
         </button>
       </div>
 
+      <HouseBrandSwitcher className="mt-4" />
       {isLoading ? <div className="mt-8 text-sm text-foreground/40">Carregando…</div> : (
         <div className="mt-6 space-y-3">
           {active.length === 0 && (
@@ -114,10 +118,12 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [ownerId, setOwnerId] = useState(me?.id ?? "");
+  const { brandParam } = useHouseBrand();
+  const [pickBrand, setPickBrand] = useState<string | undefined>(undefined);
   const tpl = PROJECT_TEMPLATES.find((t) => t.id === template)!;
   const taskCount = tpl.stages.reduce((n, s) => n + s.tasks.length, 0);
   const create = useMutation({
-    mutationFn: () => createFn({ data: { template, title: title.trim(), eventDate: eventDate || null, ownerId: ownerId || null } }),
+    mutationFn: () => createFn({ data: { template, title: title.trim(), eventDate: eventDate || null, ownerId: ownerId || null, brandId: pickBrand ?? brandParam } }),
     onSuccess: (r) => { qc.invalidateQueries({ queryKey: KEY }); toast.success("Projeto criado."); onCreated(r.id); },
     onError: (e: any) => toastFriendlyError(e, "Não consegui criar o projeto"),
   });
@@ -129,6 +135,7 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
           <h3 className="text-base font-bold text-foreground">Novo projeto</h3>
           <button onClick={onClose} className="p-1 rounded text-foreground/50 hover:text-foreground"><X size={16} /></button>
         </div>
+        <div className="mb-4"><HouseBrandSelect value={pickBrand ?? brandParam} onChange={setPickBrand} /></div>
         <div className="grid grid-cols-2 gap-2">
           {PROJECT_TEMPLATES.map((t) => {
             const Icon = TEMPLATE_ICON[t.id];
