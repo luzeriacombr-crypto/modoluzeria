@@ -57,6 +57,7 @@ export function MemberGoalsTab() {
   );
 
   const [draft, setDraft] = useState<Record<string, Row>>({});
+  const [autoCopied, setAutoCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const next: Record<string, Row> = {};
@@ -72,7 +73,37 @@ export function MemberGoalsTab() {
       };
     });
     setDraft(next);
-  }, [goals, activeMembers]);
+    setAutoCopied(null);
+
+    // Mês sem nenhuma meta salva ainda (ex: acabou de virar o mês)? Preenche
+    // sozinho a partir do mês anterior — ainda em rascunho, precisa salvar
+    // pra valer, então nunca escreve nada sem a pessoa revisar. Pedido do
+    // Junior (02/10): "deixar as metas mais automatizadas de um mês pro
+    // outro" em vez de depender de lembrar de clicar "Copiar do mês anterior".
+    if (goals.length === 0 && activeMembers.length > 0) {
+      let cancelled = false;
+      const prev = shiftMonth(monthKey, -1);
+      listGoals({ data: { monthKey: prev } }).then((prevGoals: any[]) => {
+        if (cancelled || !prevGoals.length) return;
+        setDraft((d) => {
+          const merged = { ...d };
+          let count = 0;
+          prevGoals.forEach((g: any) => {
+            if (merged[g.userId]) {
+              merged[g.userId] = {
+                posts: g.postsGoal, reels: g.reelsGoal, stories: g.storiesGoal,
+                gravacao: g.gravacaoGoal ?? 0, outros: g.outrosGoal ?? 0, publicacoes: g.publicacoesGoal ?? 0,
+              };
+              count++;
+            }
+          });
+          if (count > 0) setAutoCopied(labelFor(prev));
+          return merged;
+        });
+      }).catch(() => {});
+      return () => { cancelled = true; };
+    }
+  }, [goals, activeMembers, monthKey]);
 
   const update = (uid: string, field: keyof Row, value: number) =>
     setDraft((d) => ({ ...d, [uid]: { ...d[uid], [field]: Math.max(0, Math.min(9999, value || 0)) } }));
@@ -203,6 +234,13 @@ export function MemberGoalsTab() {
         do feed (social media) — conta post/reel/story em que a pessoa é a responsável, não quem editou.
         Rotina não tem meta — só mostra quantas tarefas do dia a dia a pessoa já concluiu.
       </p>
+
+      {autoCopied && (
+        <div className="flex items-center gap-2 text-[11.5px] font-semibold px-3 py-2 rounded-lg mb-3"
+          style={{ background: "rgba(91,168,138,0.14)", color: "#7FCBAA" }}>
+          <Sparkles size={12} /> Metas de {labelFor(monthKey)} copiadas automaticamente de {autoCopied} — revise e clique em "Salvar tudo" pra confirmar.
+        </div>
+      )}
 
       <div className="space-y-3">
         {activeMembers.length === 0 && (

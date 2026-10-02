@@ -28,10 +28,26 @@ const ROLE_LABEL: Record<Role, string> = {
   member: "Membro",
 };
 
+// Cada Função com sua própria cor — antes as três usavam o mesmo verde da
+// marca (só Membro ficava "apagado" por estar inativo), difícil de
+// diferenciar o nível de acesso num olhar rápido pelo quadro. Auditoria
+// visual + pedido do Junior (02/10).
+const ROLE_COLOR: Record<Role, { bg: string; color: string }> = {
+  member: { bg: "rgba(138,141,145,0.16)", color: "#C7C9CC" },
+  setor: { bg: "rgba(74,158,255,0.16)", color: "#8FC2FF" },
+  master: { bg: "rgba(var(--lz-brand-light-rgb),0.15)", color: "var(--lz-accent-ink)" },
+};
+
 const EASE = { transitionTimingFunction: "var(--ease-premium)" as const };
 
 export function TeamMemberCard({ profile }: { profile: Profile }) {
   const [open, setOpen] = useState(false);
+  const { data: cargos = [] } = useQuery(cargosQO());
+  const cargoNames = (profile.cargoIds ?? [])
+    .map((id) => cargos.find((c) => c.id === id)?.name)
+    .filter(Boolean)
+    .join(", ");
+  const roleStyle = ROLE_COLOR[profile.role];
   return (
     <>
       <button
@@ -48,12 +64,12 @@ export function TeamMemberCard({ profile }: { profile: Profile }) {
           )}
         </div>
         <div className="text-sm font-semibold text-foreground truncate w-full">{profile.name}</div>
+        {cargoNames && <div className="text-[11px] text-foreground/40 truncate w-full -mt-1">{cargoNames}</div>}
         <span
           className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-          style={{
-            backgroundColor: profile.active ? "rgba(var(--lz-brand-light-rgb),0.15)" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
-            color: profile.active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 40%, transparent)",
-          }}
+          style={profile.active
+            ? { backgroundColor: roleStyle.bg, color: roleStyle.color }
+            : { backgroundColor: "color-mix(in srgb, var(--foreground) 6%, transparent)", color: "color-mix(in srgb, var(--foreground) 40%, transparent)" }}
         >
           {ROLE_LABEL[profile.role]}
         </span>
