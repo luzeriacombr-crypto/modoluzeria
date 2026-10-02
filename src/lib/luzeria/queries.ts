@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { reportHandledError } from "./error-monitoring";
 import { toastFriendlyError } from "./friendly-error";
+import { useClientReactivate } from "./client-reactivate-store";
 import { getClientContract } from "./client-contracts.functions";
 import { getHouseSettings } from "./house.functions";
 import { getProductionAudit } from "./production-audit.functions";
@@ -846,6 +847,17 @@ export function useApi() {
   // havia como saber se tinha salvo. Só usar em mutation SEM onError no
   // ponto de chamada, senão o aviso aparece duas vezes.
   const fail = (msg: string) => (e: any) => {
+    // Cliente arquivado/"Ex-clientes" (ver require-active.ts ->
+    // assertClientActive): em vez do toast de erro de sempre, abre o modal
+    // de "reativar?" — não é bem um erro, é uma decisão da pessoa.
+    const raw = typeof e?.message === "string" ? e.message : "";
+    if (raw.startsWith("CLIENT_ARCHIVED::")) {
+      try {
+        const { id, name } = JSON.parse(raw.slice("CLIENT_ARCHIVED::".length));
+        useClientReactivate.getState().prompt(id, name);
+        return;
+      } catch { /* cai pro toast normal abaixo */ }
+    }
     toastFriendlyError(e, msg);
     reportHandledError(e, { origem: "mutation", aviso: msg });
   };

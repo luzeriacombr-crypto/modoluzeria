@@ -64,6 +64,24 @@ export const requireActiveProfile = createMiddleware({ type: "function" })
  * coluna nasce `false`, então essa checagem some (early return) em todo o
  * resto do produto.
  */
+/**
+ * Bloqueia criar conteúdo novo (post, reel, etc) dentro de um cliente
+ * arquivado ou movido pra "Ex-clientes" — antes dava pra continuar
+ * trabalhando normalmente lá dentro, o que não fazia sentido pra um
+ * cliente que já não é mais ativo (pedido do Junior, 01/10). A mensagem
+ * vem com um prefixo (CLIENT_ARCHIVED::) que o front reconhece (ver
+ * queries.ts -> fail()) pra abrir um modal de "reativar?" em vez de só um
+ * toast de erro — reativar conta como cliente ativo de novo no plano.
+ */
+export async function assertClientActive(supabase: any, clientId: string): Promise<void> {
+  const { data: client } = await supabase
+    .from("clients").select("name, archived, category").eq("id", clientId).maybeSingle();
+  if (!client) return;
+  if (client.archived || client.category === "Ex-clientes") {
+    throw new Error(`CLIENT_ARCHIVED::${JSON.stringify({ id: clientId, name: client.name })}`);
+  }
+}
+
 export async function assertNotDemoReadOnly(
   supabase: any, orgId: string, userId: string,
 ): Promise<void> {

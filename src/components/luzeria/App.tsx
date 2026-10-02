@@ -31,6 +31,7 @@ import { AiPlanningJobsTray } from "./AiPlanningJobsTray";
 import { AgencyLevelModal } from "./AgencyLevelModal";
 import { AppTour } from "./AppTour";
 import { GuidedTutorialRunner } from "./GuidedTutorialRunner";
+import { ClientReactivateModal } from "./ClientReactivateModal";
 import { LuzeriaLoader } from "./LuzeriaLoader";
 import { TrialEndingBanner } from "./TrialEndingBanner";
 import { PastDueBanner } from "./PastDueBanner";
@@ -399,6 +400,7 @@ export function App() {
       <MobileNav onCreateClient={(category) => setCreating({ category })} />
       <AppTour />
       <GuidedTutorialRunner />
+      <ClientReactivateModal />
       <GlobalConfirmDialog />
       <SupportChatWidget />
       {me.data?.accountType === "house" && <QuickLeadButton />}

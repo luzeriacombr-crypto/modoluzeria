@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
+import { requireActiveProfile, assertNotDemoReadOnly, assertClientActive } from "./require-active";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS, BRAND_ADVANCED_COLOR_KEYS } from "./types";
@@ -2746,6 +2746,7 @@ export const addContentItem = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
+    await assertClientActive(context.supabase, data.clientId);
     let { data: month } = await context.supabase
       .from("months").select("id").eq("client_id", data.clientId).eq("key", data.key).maybeSingle();
     if (!month) {
