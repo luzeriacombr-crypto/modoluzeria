@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMe, useApi } from "@/lib/luzeria/queries";
+import { isHouse } from "@/lib/luzeria/house";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Role = "master" | "setor" | "member";
@@ -156,6 +157,91 @@ const STEPS: Step[] = [
   },
 ];
 
+// Tour da conta House (equipe interna de uma empresa, sem "clientes" nem
+// "agência"): mesma mecânica, outro texto e outros caminhos.
+const HOUSE_STEPS: Step[] = [
+  {
+    id: "intro",
+    eyebrow: "Começando agora",
+    icon: Sparkles,
+    title: "Bem-vindo ao Modo Criador",
+    desc: "Aqui é o espaço de marketing da sua empresa: planejar, produzir, publicar e acompanhar os resultados num lugar só. São poucos passos. Pode avançar, voltar ou pular quando quiser.",
+    serif: true,
+  },
+  {
+    id: "meu-dia",
+    eyebrow: "Sua base diária",
+    icon: ClipboardList,
+    title: "Meu dia",
+    desc: "A tela que você abre todo dia: o checklist do que precisa ser feito, as metas de stories e posts, o botão \"Postei agora\" pra registrar o que você publicou direto no Instagram e ideias de stories pra hoje.",
+    to: "/meu-dia",
+  },
+  {
+    id: "sidebar",
+    eyebrow: "Menu da equipe",
+    icon: Folder,
+    title: "Publicações, leads e demandas",
+    desc: "No menu ficam Meu dia, Publicações (o planejamento e os conteúdos de cada marca da empresa), Leads, Demandas avulsas (banner, folder, convite…), Projetos e o Playbook com o passo a passo da função.",
+    spotLabel: "Menu",
+    target: '[data-tour="sidebar"]',
+  },
+  {
+    id: "leads",
+    eyebrow: "Vendas pelo Instagram",
+    icon: Instagram,
+    title: "Registre os leads",
+    desc: "Alguém chamou no direct, respondeu um story ou comentou? Toque em \"+ Lead\", escolha a origem e pronto. Depois é só arrastar o lead pelas etapas: conversa, agendou, compareceu. É daqui que sai a taxa de agendamento da empresa.",
+    to: "/leads",
+  },
+  {
+    id: "playbook",
+    eyebrow: "Passo a passo",
+    icon: ListChecks,
+    title: "Playbook da função",
+    desc: "O guia de como o marketing da empresa funciona: fluxo de produção, stories, reels, atendimento no direct e mais. Marque cada página como lida; o gestor acompanha o progresso de cada pessoa.",
+    to: "/playbook",
+  },
+  {
+    id: "painel",
+    eyebrow: "Visão do dono",
+    icon: BarChart3,
+    title: "Painel do dono",
+    desc: "As metas do mês, leads por origem, alcance e seguidores, tráfego pago, projetos em andamento e o ranking da equipe. No fim do mês, o relatório sai daqui, com PDF.",
+    to: "/painel",
+    roles: ["master"],
+  },
+  {
+    id: "equipe",
+    eyebrow: "Sua equipe",
+    icon: Users,
+    title: "Equipe e acesso por marca",
+    desc: "Convide as pessoas e defina o que cada uma vê. Se a empresa tem mais de uma marca, dá pra liberar só uma delas pra cada pessoa, ou todas.",
+    spotLabel: "Configurações → Equipe",
+    to: "/configuracoes",
+    search: { tab: "team" },
+    target: '[data-tour="team-tab"]',
+    roles: ["master", "setor"],
+  },
+  {
+    id: "bell",
+    eyebrow: "Fique de olho",
+    icon: Bell,
+    title: "Notificações",
+    desc: "Avisos de prazo, menções (@nome) e demandas novas chegam por aqui. Clicar leva direto pro item, então nada se perde.",
+    spotLabel: "Notificações",
+    target: '[data-tour="notifications"]',
+  },
+  {
+    id: "done",
+    eyebrow: "Pronto",
+    icon: PartyPopper,
+    title: "Agora é com você",
+    desc: "Isso é o essencial. Qualquer dúvida, clique no ícone (?) em qualquer tela: lá tem tutoriais, perguntas frequentes e dá pra refazer esse tour quando quiser.",
+    serif: true,
+    finale: true,
+  },
+];
+
 const PAD = 10;
 const CARD_W = 380;
 const CONFETTI_COLORS = ["rgb(var(--lz-brand-rgb))", "#6FA8DC", "#FF6B6B", "#B892FF", "rgba(var(--lz-brand-rgb),0.5)"];
@@ -171,7 +257,7 @@ export function AppTour() {
   const autoStartedRef = useRef(false);
 
   const disabledFeatures = new Set(me?.disabledFeatures ?? []);
-  const visibleSteps = STEPS.filter((s) =>
+  const visibleSteps = (isHouse(me) ? HOUSE_STEPS : STEPS).filter((s) =>
     (!s.roles || (me?.role && s.roles.includes(me.role as Role))) &&
     (!s.hideIfDisabled || !disabledFeatures.has(s.hideIfDisabled))
   );

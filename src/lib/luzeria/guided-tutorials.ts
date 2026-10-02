@@ -10,6 +10,8 @@
 // guie" aparece (ou não) em cada card da aba Tutoriais.
 export type GuidedStep = {
   text: string;
+  /** Texto alternativo pra contas House (empresa com equipe interna: sem "agência"/"cliente"). */
+  houseText?: string;
   /** Seletor `data-tour="..."` do elemento a destacar — sem isso, mostra um cartão centralizado (sem apontar pra nada). */
   target?: string;
   /** Rota pra navegar antes desse passo aparecer. */
@@ -32,6 +34,7 @@ export const GUIDED_TUTORIALS: Record<string, GuidedTutorial> = {
         to: "/configuracoes", search: { tab: "integrations" },
         target: '[data-tour="drive-wizard"]',
         text: "Esse é o assistente de conexão do Google Drive — são 3 passos: Conectar conta, Pasta raiz e Vincular clientes. Siga as instruções que aparecem aqui, um passo de cada vez.",
+        houseText: "Esse é o assistente de conexão do Google Drive: são 3 passos (Conectar conta, Pasta raiz e Vincular marcas). Siga as instruções que aparecem aqui, um passo de cada vez.",
       },
     ],
   },
@@ -58,6 +61,7 @@ export const GUIDED_TUTORIALS: Record<string, GuidedTutorial> = {
       {
         target: '[data-tour="knowledge-save"]',
         text: "Depois é só clicar em \"Salvar nota\". Isso já entra na próxima prévia de planejamento com IA de qualquer cliente da agência.",
+        houseText: "Depois é só clicar em \"Salvar nota\". Isso já entra nas próximas ideias e planejamentos da IA de qualquer marca da empresa.",
       },
     ],
   },
@@ -67,6 +71,7 @@ export const GUIDED_TUTORIALS: Record<string, GuidedTutorial> = {
         to: "/configuracoes", search: { tab: "general" },
         target: '[data-tour="org-branding"]',
         text: "Aqui você troca a logo (uma versão pro modo escuro, outra pro claro), o nome/slogan da agência e as cores — principal, clara, da barra lateral e de destaque nos gráficos.",
+        houseText: "Aqui você troca a logo (uma versão pro modo escuro, outra pro claro), o nome da empresa e as cores: principal, clara, da barra lateral e de destaque nos gráficos.",
       },
     ],
   },
@@ -77,11 +82,13 @@ export const GUIDED_TUTORIALS: Record<string, GuidedTutorial> = {
         openClientFicha: true,
         target: '[data-tour="client-instagram-section"]',
         text: "Essa é a seção do Instagram na Ficha desse cliente. Role até ela se não aparecer de cara.",
+        houseText: "Essa é a seção do Instagram na ficha dessa marca. Role até ela se não aparecer de cara.",
       },
       {
         openClientFicha: true,
         target: '[data-tour="client-instagram-section"]',
         text: "Clique em \"Gerar link\" — ele cria um link com a marca da sua agência. Depois clique em \"Copiar\" e manda pro próprio cliente pelo WhatsApp, pra ele conectar o Instagram dele sem te passar a senha.",
+        houseText: "Clique em \"Gerar link\" e depois em \"Copiar\". Mande o link pra quem administra o Instagram da marca (pelo WhatsApp), pra conectar a conta sem te passar a senha.",
       },
     ],
   },

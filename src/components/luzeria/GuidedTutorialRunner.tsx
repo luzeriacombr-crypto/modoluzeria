@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { X, ArrowLeft, ArrowRight, Check, Compass, Search } from "lucide-react";
 import { useGuidedTutorial } from "@/lib/luzeria/guided-tutorial-store";
 import { GUIDED_TUTORIALS } from "@/lib/luzeria/guided-tutorials";
-import { clientsQO } from "@/lib/luzeria/queries";
+import { clientsQO, useMe } from "@/lib/luzeria/queries";
+import { isHouse } from "@/lib/luzeria/house";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 
@@ -23,6 +24,7 @@ export function GuidedTutorialRunner() {
   const navigate = useNavigate();
   const openFicha = useUI((s) => s.openFicha);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const house = isHouse(useMe().data);
 
   const guide = activeTitle ? GUIDED_TUTORIALS[activeTitle] : null;
   const steps = guide ? (typeof guide.steps === "function" ? guide.steps(clientId ?? "") : guide.steps) : [];
@@ -124,7 +126,7 @@ export function GuidedTutorialRunner() {
             {activeTitle}
           </div>
         </div>
-        <p className="text-foreground/70 text-[13px] leading-relaxed mb-4">{step.text}</p>
+        <p className="text-foreground/70 text-[13px] leading-relaxed mb-4">{house && step.houseText ? step.houseText : step.text}</p>
         <div className="h-[3px] w-full rounded-full bg-foreground/8 mb-4 overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${((stepIdx + 1) / steps.length) * 100}%`, backgroundColor: "rgb(var(--lz-brand-rgb))" }} />
         </div>
@@ -152,6 +154,7 @@ export function GuidedTutorialRunner() {
 
 function ClientPickerModal({ onPick, onClose }: { onPick: (clientId: string) => void; onClose: () => void }) {
   const { data: clients = [] } = useQuery(clientsQO());
+  const house = isHouse(useMe().data);
   const [search, setSearch] = useState("");
   const list = clients
     .filter((c) => !c.archived)
@@ -161,19 +164,19 @@ function ClientPickerModal({ onPick, onClose }: { onPick: (clientId: string) => 
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.72)" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border p-5 text-foreground" style={{ background: "var(--card)", borderColor: "rgba(var(--lz-brand-rgb),0.18)" }}>
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-extrabold text-[15px]">Em qual cliente?</h3>
+          <h3 className="font-extrabold text-[15px]">{house ? "Em qual marca?" : "Em qual cliente?"}</h3>
           <button onClick={onClose} className="text-foreground/40 hover:text-foreground" aria-label="Fechar"><X size={16} /></button>
         </div>
-        <p className="text-foreground/55 text-[12px] mb-3">Esse tutorial é dentro de um cliente — escolha qual pra eu te levar até lá.</p>
+        <p className="text-foreground/55 text-[12px] mb-3">{house ? "Esse tutorial é dentro da ficha de uma marca. Escolha qual pra eu te levar até lá." : "Esse tutorial é dentro de um cliente — escolha qual pra eu te levar até lá."}</p>
         <div className="relative mb-3">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/35" />
           <input
-            autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cliente…"
+            autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder={house ? "Buscar marca…" : "Buscar cliente…"}
             className="w-full bg-background border border-foreground/10 rounded-md pl-8 pr-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
           />
         </div>
         <div className="max-h-72 overflow-y-auto -mx-1 px-1 space-y-1">
-          {list.length === 0 && <p className="text-xs text-foreground/35 text-center py-6">Nenhum cliente encontrado.</p>}
+          {list.length === 0 && <p className="text-xs text-foreground/35 text-center py-6">{house ? "Nenhuma marca encontrada." : "Nenhum cliente encontrado."}</p>}
           {list.map((c) => (
             <button
               key={c.id} onClick={() => onPick(c.id)}
