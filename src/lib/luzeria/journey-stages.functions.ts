@@ -237,6 +237,9 @@ export type ClientOperationsRow = {
   stageId: string | null;
   stageName: string | null;
   stageTrack: JourneyTrack | null;
+  stageSortOrder: number | null;
+  /** Desde quando o cliente está na etapa atual — vem de client_stage_history. */
+  currentStageEnteredAt: string | null;
   lastGravacaoAt: string | null;
   gravacaoVideoCount: number | null;
   gravacaoMonthlyTarget: number;
@@ -271,7 +274,7 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
 
     const { data: stages } = await context.supabase
       .from("client_journey_stages")
-      .select("id, name, track, milestone_type")
+      .select("id, name, track, milestone_type, sort_order")
       .eq("org_id", context.orgId);
     const stageMap = new Map((stages ?? []).map((s: any) => [s.id, s]));
     const analiseStageIds = (stages ?? []).filter((s: any) => s.milestone_type === "analise").map((s: any) => s.id);
@@ -287,6 +290,21 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
     const lastAnaliseByClient = new Map<string, string>();
     (history ?? []).forEach((h: any) => {
       if (!lastAnaliseByClient.has(h.client_id)) lastAnaliseByClient.set(h.client_id, h.entered_at);
+    });
+
+    // Desde quando cada cliente está na SUA etapa atual (pra mostrar "há 12
+    // dias" no quadro macro) — primeira entrada de cada par cliente/etapa,
+    // já que a lista vem ordenada da mais recente pra mais antiga.
+    const { data: currentStageHistory } = await context.supabase
+      .from("client_stage_history")
+      .select("client_id, stage_id, entered_at")
+      .in("client_id", clientIds)
+      .order("entered_at", { ascending: false });
+    const currentStageEnteredAtByClient = new Map<string, string>();
+    (currentStageHistory ?? []).forEach((h: any) => {
+      if (currentStageEnteredAtByClient.has(h.client_id)) return;
+      const c = list.find((x: any) => x.id === h.client_id);
+      if (c && c.current_stage_id === h.stage_id) currentStageEnteredAtByClient.set(h.client_id, h.entered_at);
     });
 
     // "Última gravação" e "vídeos gravados" vêm direto de Mais Atividades —
@@ -333,6 +351,8 @@ export const getClientOperationsOverview = createServerFn({ method: "GET" })
       return {
         clientId: c.id, clientName: c.name, clientColor: c.color,
         stageId: stage?.id ?? null, stageName: stage?.name ?? null, stageTrack: stage?.track ?? null,
+        stageSortOrder: stage?.sort_order ?? null,
+        currentStageEnteredAt: currentStageEnteredAtByClient.get(c.id) ?? null,
         lastGravacaoAt, gravacaoVideoCount, gravacaoMonthlyTarget, nextGravacaoDue,
         lastAnaliseAt: lastAnaliseByClient.get(c.id) ?? null,
       };
