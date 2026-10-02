@@ -37,30 +37,22 @@ async function getAiPlanningLimitState(supabase: any, orgId: string): Promise<{
   const { data: org } = await supabase.from("orgs").select("plan_id, asaas_subscription_id").eq("id", orgId).maybeSingle();
   const hasSubscription = !!org?.asaas_subscription_id;
   const planId = (org?.plan_id as string) ?? "solo";
+  // "Traga sua IA": com chave própria não há limite de clientes.
+  const { hasOwnAiKey } = await import("./ai-client.server");
+  if (await hasOwnAiKey(orgId)) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
   const countEnabled = async () => {
     const { count } = await supabase.from("clients")
       .select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("ai_planning_enabled", true);
     return count ?? 0;
   };
-  // House: IA é decidida só pelo plano (House + IA libera tudo, inclusive
-  // no teste de 7 dias; House sem IA não libera nenhuma marca).
-  const { data: plan } = await supabase.from("plans").select("*").eq("id", planId).maybeSingle();
-  if ((plan?.account_type ?? "agency") === "house") {
-    if (plan?.features?.ai_planning) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
-    return { limited: true, quota: 0, enabledCount: await countEnabled(), hasSubscription, planId, houseWithoutAi: true };
-  }
-  const limited = !hasSubscription || planId === "solo";
-  if (!limited) return { limited: false, quota: null, enabledCount: 0, hasSubscription, planId };
+  // Sem chave própria: só as 2 primeiras vagas grátis, em qualquer plano.
   return { limited: true, quota: AI_PLANNING_FREE_QUOTA, enabledCount: await countEnabled(), hasSubscription, planId };
 }
 
-const HOUSE_NO_AI_MESSAGE = "O planejamento com IA faz parte do plano House + IA. Troque de plano em Financeiro → Meu plano pra liberar.";
+const HOUSE_NO_AI_MESSAGE = "Conecte a sua IA em Configurações → Integrações → Inteligência artificial pra usar o planejamento com IA.";
 
-function aiPlanningLimitMessage(hasSubscription: boolean, houseWithoutAi?: boolean): string {
-  if (houseWithoutAi) return HOUSE_NO_AI_MESSAGE;
-  return hasSubscription
-    ? `No plano Solo, a IA de planejamento fica disponível pra até ${AI_PLANNING_FREE_QUOTA} clientes. Pra liberar em mais clientes, faça upgrade pro plano Pro em Configurações → Cobrança.`
-    : `Você atingiu o limite de ${AI_PLANNING_FREE_QUOTA} clientes com IA de planejamento do teste grátis. Pra continuar usando, cadastre uma forma de pagamento em Configurações → Cobrança — seu teste de 30 dias continua ativo, a cobrança só começa depois dele.`;
+function aiPlanningLimitMessage(_hasSubscription: boolean, _houseWithoutAi?: boolean): string {
+  return `Você já usou os ${AI_PLANNING_FREE_QUOTA} clientes grátis da IA de planejamento. Pra usar em mais clientes, conecte a sua IA em Configurações → Integrações → Inteligência artificial. Sem isso, o planejamento continua funcionando do jeito manual.`;
 }
 
 // Formato de casa da Luzeria, exatamente como o Junior manda — a IA deve
@@ -290,13 +282,12 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     // desativar, mas a geração para até a contagem voltar a caber).
     const { LUZERIA_ORG_ID } = await import("./api.functions");
     if (context.orgId !== LUZERIA_ORG_ID) {
-      if (!c.ai_planning_enabled) {
+      const st = await getAiPlanningLimitState(context.supabase, context.orgId);
+      if (st.limited && !c.ai_planning_enabled) {
         throw new Error("Esse cliente ainda não foi ativado pra IA de planejamento — ative na Ficha do Cliente.");
       }
-      const st = await getAiPlanningLimitState(context.supabase, context.orgId);
-      if (st.houseWithoutAi) throw new Error(HOUSE_NO_AI_MESSAGE);
       if (st.limited && st.enabledCount > st.quota!) {
-        throw new Error(`Sua agência tem mais clientes com IA de planejamento ativada do que o plano atual permite. Desative em algum cliente ou faça upgrade em Configurações → Cobrança pra continuar gerando.`);
+        throw new Error(`Há mais clientes com IA ativada do que as ${st.quota} vagas grátis. Desative em algum cliente ou conecte a sua IA em Configurações → Integrações → Inteligência artificial pra continuar gerando.`);
       }
     }
 
@@ -434,8 +425,9 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       HOUSE_STYLE_GUIDE,
     ];
 
-    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
-    const anthropic = getAnthropicClient();
+    const { PLANNING_MODEL } = await import("./ai-client.server");
+    const { getAiClientForOrg } = await import("./ai-client.server");
+    const anthropic = (await getAiClientForOrg(context.orgId)).client;
 
     async function runBatch(want: PlanCounts, alreadyTitles: string[], allowWebSearch: boolean) {
       const wantCount = planTotal(want);

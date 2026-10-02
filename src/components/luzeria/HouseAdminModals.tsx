@@ -10,9 +10,10 @@ import {
   adminCreateHouse, adminCreateHouseInvite, adminListHouseInvites, adminListOrgClients, adminConvertToHouse,
 } from "@/lib/luzeria/house.functions";
 
+// A IA não é mais um plano: 2 marcas grátis pra testar e, depois, a pessoa
+// conecta a IA dela. O plano house_ia continua existindo só pra contas antigas.
 const HOUSE_PLANS = [
-  { id: "house", label: "House — R$ 149,00/mês (sem IA)" },
-  { id: "house_ia", label: "House + IA — R$ 249,00/mês" },
+  { id: "house", label: "House — R$ 149,00/mês" },
 ] as const;
 type HousePlanId = (typeof HOUSE_PLANS)[number]["id"];
 

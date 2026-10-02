@@ -88,12 +88,11 @@ export const organizeBriefingWithAI = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { text: string }) => z.object({ text: z.string().trim().min(40).max(20000) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { planId } = await houseBrand(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: plan } = await (supabaseAdmin as any).from("plans").select("features").eq("id", planId).maybeSingle();
-    if (!plan?.features?.ai_planning) throw new Error("Organizar com IA faz parte do plano House + IA. Você pode salvar o texto como está.");
-    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
-    const res = await getAnthropicClient().messages.create({
+    const { clientId: brandId } = await houseBrand(context);
+    const { resolveAi } = await import("./ai-access.server");
+    const ai = await resolveAi(context.orgId, brandId);
+    const { PLANNING_MODEL } = await import("./ai-client.server");
+    const res = await ai.client.messages.create({
       model: PLANNING_MODEL,
       max_tokens: 3000,
       thinking: { type: "disabled" },
@@ -218,13 +217,11 @@ export const generateStoryIdeas = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { focus?: string; brandId?: string }) => z.object({ focus: z.string().trim().max(500).optional(), brandId: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
-    const { clientId, planId } = await houseBrand(context, data.brandId);
+    const { clientId } = await houseBrand(context, data.brandId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin: any = supabaseAdmin;
-    const { data: plan } = await admin.from("plans").select("features").eq("id", planId).maybeSingle();
-    if (!plan?.features?.ai_planning) {
-      throw new Error("As ideias com IA fazem parte do plano House + IA. Troque de plano em Financeiro → Meu plano pra liberar.");
-    }
+    const { resolveAi } = await import("./ai-access.server");
+    const ai = await resolveAi(context.orgId, clientId);
 
     const context_text = await buildBrandContext(admin, context.orgId, clientId);
     const today = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "numeric", month: "long" }).format(new Date());
@@ -248,8 +245,8 @@ export const generateStoryIdeas = createServerFn({ method: "POST" })
       "Devolva usando a ferramenta report_story_ideas.",
     ].filter((l) => l !== "").join("\n");
 
-    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
-    const res = await getAnthropicClient().messages.create({
+    const { PLANNING_MODEL } = await import("./ai-client.server");
+    const res = await ai.client.messages.create({
       model: PLANNING_MODEL,
       max_tokens: 4000,
       thinking: { type: "disabled" },

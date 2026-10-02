@@ -76,8 +76,9 @@ export const formatClientDocWithAI = createServerFn({ method: "POST" })
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { getAnthropicClient, IMPORT_MODEL } = await import("./ai-client.server");
-    const anthropic = getAnthropicClient();
+    const { IMPORT_MODEL } = await import("./ai-client.server");
+    const { requireOwnAi } = await import("./ai-access.server");
+    const anthropic = (await requireOwnAi(context.orgId)).client;
     const prompt = CLIENT_DOC_PROMPT[data.type].replace(
       "[COLE AQUI O TEXTO OU ANEXE O ARQUIVO]",
       data.rawMaterial,
@@ -584,8 +585,9 @@ export const regenerateRoteiroDoc = createServerFn({ method: "POST" })
       doc.content,
     ].filter(Boolean).join("\n");
 
-    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
-    const anthropic = getAnthropicClient();
+    const { PLANNING_MODEL } = await import("./ai-client.server");
+    const { requireOwnAi } = await import("./ai-access.server");
+    const anthropic = (await requireOwnAi(context.orgId)).client;
     const response = await anthropic.messages.create({
       model: PLANNING_MODEL,
       max_tokens: 16000,

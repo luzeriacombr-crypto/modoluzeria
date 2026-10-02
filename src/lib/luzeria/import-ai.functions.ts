@@ -59,9 +59,9 @@ export const extractClientsFromFiles = createServerFn({ method: "POST" })
     const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
     if (!isAdmin) throw new Error("Forbidden");
 
-    const { getAnthropicClient, IMPORT_MODEL } = await import("./ai-client.server");
+    const { getAiClientForOrg, IMPORT_MODEL } = await import("./ai-client.server");
     const XLSX = await import("xlsx");
-    const anthropic = getAnthropicClient();
+    const anthropic = (await getAiClientForOrg(context.orgId)).client;
 
     const contentBlocks: any[] = [];
     let sheetText = "";

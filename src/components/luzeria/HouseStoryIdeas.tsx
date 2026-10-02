@@ -99,7 +99,7 @@ export function HouseStoryIdeas() {
       {batch.length === 0 ? (
         <p className="text-sm text-foreground/50">
           A IA sugere ideias pra gravar hoje, usando o briefing da marca, o playbook e o que tem gerado lead.
-          {me?.role === "member" ? "" : " Disponível no plano House + IA."}
+          {me?.role === "member" ? "" : " Grátis pra testar em 2 marcas; depois, conecte a sua IA em Configurações → Integrações."}
         </p>
       ) : (
         <div className="space-y-4">

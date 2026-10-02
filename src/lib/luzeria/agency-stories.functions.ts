@@ -289,8 +289,9 @@ export const gerarStoriesInspiracoes = createServerFn({ method: "POST" })
       `- Termine SEMPRE chamando a tool report_stories_routine.`,
     ].join("\n");
 
-    const { getAnthropicClient, PLANNING_MODEL } = await import("./ai-client.server");
-    const anthropic = getAnthropicClient();
+    const { PLANNING_MODEL } = await import("./ai-client.server");
+    const { requireOwnAi } = await import("./ai-access.server");
+    const anthropic = (await requireOwnAi(context.orgId)).client;
     const resposta = await anthropic.messages.create({
       model: PLANNING_MODEL,
       max_tokens: 4000,

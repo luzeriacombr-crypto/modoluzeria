@@ -15,6 +15,7 @@ import { FeedPreview } from "./FeedPreview";
 import { ClientFichaContent, OnboardingBanner } from "./ClientFichaPanel";
 import { formatMonth, nextMonthKey } from "@/lib/luzeria/utils";
 import { useMe } from "@/lib/luzeria/queries";
+import { getAiConnection } from "@/lib/luzeria/ai-credentials.functions";
 import { MaisAtividadesTab } from "./MaisAtividadesTab";
 import { ClientDocsTab } from "./ClientDocsTab";
 import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
@@ -264,7 +265,8 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // Dentro da cota calculada acima, ESSE cliente precisa estar marcado
   // (client.aiPlanningEnabled, escolhido na Ficha).
   const isLuzeriaOrgForAi = me?.orgId === LUZERIA_ORG_ID;
-  const aiPlanningLimited = !isLuzeriaOrgForAi && (!orgPlanStatus?.hasAsaasSubscription || orgPlanStatus?.planId === "solo");
+  const { data: aiConn } = useQuery({ queryKey: ["ai-connection"], queryFn: () => getAiConnection() });
+  const aiPlanningLimited = !isLuzeriaOrgForAi && !aiConn?.connected;
   const aiPlanningQuota = aiPlanningLimited ? 2 : Infinity;
   const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
   const aiPlanningClientEnabled = !!(client as any)?.aiPlanningEnabled;

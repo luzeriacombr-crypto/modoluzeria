@@ -131,13 +131,11 @@ export function ClientDocsTab({
     // vez se ela não tiver mais vaga.
     if (aiPlanningLimited) {
       if ((aiPlanningUsed ?? 0) >= (aiPlanningQuota ?? 0)) {
-        toast.error(aiPlanningHasSubscription
-          ? `Você já usou os ${aiPlanningQuota} clientes liberados no plano Solo. Faça upgrade pro plano Pro em Configurações → Cobrança pra usar em mais clientes.`
-          : `Você já usou os ${aiPlanningQuota} clientes liberados no teste grátis. Cadastre uma forma de pagamento em Configurações → Cobrança pra usar em mais clientes.`);
+        toast.error(`Você já usou os ${aiPlanningQuota} clientes grátis da IA. Pra usar em mais, conecte a sua IA em Configurações → Integrações → Inteligência artificial. Sem isso, o planejamento segue manual.`);
         return;
       }
       const ok = await requestConfirm(
-        `No seu plano atual, você só pode usar a IA de planejamento em até ${aiPlanningQuota} clientes. Usar aqui em "${clientName}" vai contar um deles. Deseja continuar?`,
+        `A IA é grátis pra testar em até ${aiPlanningQuota} clientes. Usar aqui em "${clientName}" vai ocupar uma dessas vagas. Deseja continuar?`,
       );
       if (!ok) return;
     }

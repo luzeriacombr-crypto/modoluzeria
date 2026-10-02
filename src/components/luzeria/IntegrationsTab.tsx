@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Instagram, FolderTree, CalendarClock, Bot } from "lucide-react";
+import { Instagram, FolderTree, CalendarClock, Bot, Sparkles } from "lucide-react";
 import { instagramConnectionSummaryQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { DriveSettingsTab } from "./DriveSettingsTab";
 import { GoogleCalendarSection } from "./ProfilePage";
 import { McpSection } from "./McpSection";
+import { AiConnectionSection } from "./AiConnectionSection";
 
 function InstagramSummaryCard() {
   const { data, isLoading } = useQuery(instagramConnectionSummaryQO());
@@ -55,6 +56,12 @@ function InstagramSummaryCard() {
 export function IntegrationsTab({ disabledFeatures }: { disabledFeatures: string[] }) {
   return (
     <div className="space-y-10">
+      <div data-tour="ai-connection">
+        <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
+          <Sparkles size={12} /> Inteligência artificial
+        </h2>
+        <AiConnectionSection />
+      </div>
       {!disabledFeatures.includes("drive") && (
         <div>
           <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
@@ -64,7 +71,7 @@ export function IntegrationsTab({ disabledFeatures }: { disabledFeatures: string
         </div>
       )}
       {!disabledFeatures.includes("google_calendar") && (
-        <div className={disabledFeatures.includes("drive") ? "" : "pt-2 border-t border-foreground/10"}>
+        <div className="pt-2 border-t border-foreground/10">
           <h2 className="text-xs uppercase font-bold text-foreground/50 tracking-wider mb-3 flex items-center gap-1.5">
             <CalendarClock size={12} /> Google Agenda
           </h2>
