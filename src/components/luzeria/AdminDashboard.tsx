@@ -176,9 +176,9 @@ export function AdminDashboard() {
           border: "1px solid rgba(var(--lz-hero-a-rgb),0.18)",
         }}>
         {/* Glow blobs */}
-        <div className="pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
+        <div className="lz-dash-blob1 pointer-events-none absolute -top-20 -left-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
           style={{ background: "rgb(var(--lz-hero-a-rgb))" }} />
-        <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+        <div className="lz-dash-blob2 pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
           style={{ background: "rgb(var(--lz-hero-blob-b-rgb))" }} />
 
 
@@ -189,7 +189,7 @@ export function AdminDashboard() {
               <Sparkles size={11} /> Dashboard
             </div>
             <h1
-              className="mt-3 text-foreground font-bold text-[36px] md:text-[48px] leading-tight tracking-tight"
+              className="mt-3 text-foreground font-extrabold text-[40px] md:text-[56px] leading-none tracking-[-0.035em]"
             >
               ENTREGAS
             </h1>
@@ -217,34 +217,26 @@ export function AdminDashboard() {
             <BigDonut percent={overall} done={t?.done ?? 0} total={t?.planned ?? 0} />
           </div>
         </div>
+
+        {/* Indicadores principais dentro do cabeçalho, em linha aberta (sem cartões) — pedido do Junior, 02/10. */}
+        {(() => {
+          const missing = (t?.planned ?? 0) - (t?.done ?? 0);
+          return (
+            <div className="relative grid grid-cols-3 mx-6 md:mx-8 border-t border-foreground/10">
+              <MetricStat tone={PALETTE.lime} label="Clientes ativos" value={t?.clients ?? 0} hint="não arquivados"
+                info="Quantidade de clientes ativos (não arquivados) na agência." />
+              <MetricStat tone={PALETTE.blue} label="Meta do mês" value={t?.planned ?? 0}
+                hint={missing > 0 ? `faltam ${missing} · ver lista →` : "meta batida"} hintTone={missing > 0 ? "#FF6B5A" : undefined}
+                onHintClick={missing > 0 ? () => { setFilterMode("metric"); setSelectedFilter("pending"); } : undefined}
+                info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado. Clique em 'ver lista' pra ver o que ainda falta." />
+              <MetricStat tone={PALETTE.lime} valueColor="var(--lz-accent-ink)" label="Entregues" value={t?.done ?? 0} hint={`${overall}% da meta`}
+                onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
+                info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Metric strip — 4 cards. Arrastar/redimensionar só faz sentido em
-          telas largas (md+); no celular continua a grade fixa 2x2 de sempre. */}
-      {(() => {
-        const cardClients = <MetricCard tone={PALETTE.lime} icon={<Users size={16} />} label="Clientes ativos" value={t?.clients ?? 0}
-          info="Quantidade de clientes ativos (não arquivados) na agência." />;
-        const cardGoal = <MetricCard tone={PALETTE.blue} icon={<Target size={16} />} label="Meta do mês" value={t?.planned ?? 0}
-          info="Total de itens planejados pra esse mês, somando todos os clientes ativos — é a meta de entregas do período selecionado." />;
-        const cardDone = <MetricCard tone={PALETTE.lime} icon={<Package size={16} />} label="Entregues" value={t?.done ?? 0}
-          onClick={() => { setFilterMode("metric"); setSelectedFilter("done"); }}
-          info="Itens já finalizados (prontos pra publicar, finalizados ou concluídos) dentro do período selecionado. Clique pra ver a lista." />;
-        const missing = (t?.planned ?? 0) - (t?.done ?? 0);
-        const cardMissing = <MetricCard
-          tone={missing > 0 ? "#FF4444" : "var(--lz-accent-ink)"}
-          icon={<Clock size={16} />}
-          label="Falta"
-          value={missing}
-          valueColor={missing > 0 ? "#FF4444" : "var(--lz-accent-ink)"}
-          onClick={() => { setFilterMode("metric"); setSelectedFilter("pending"); }}
-          info="Meta do mês menos Entregues — quantos itens ainda faltam pra bater a meta do período. Clique pra ver a lista."
-        />;
-        return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 lz-stagger">
-            {cardClients}{cardGoal}{cardDone}{cardMissing}
-          </div>
-        );
-      })()}
 
       {/* Saúde da Operação — admin master only */}
       {me?.role === "master" && (
@@ -256,26 +248,26 @@ export function AdminDashboard() {
       )}
 
       {/* Top members */}
-      <div className="rounded-xl bg-card border border-foreground/7 p-5 mb-6 relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: PALETTE.lime }} />
-        <div className="flex items-center justify-start md:justify-between flex-wrap gap-3 mb-5 relative">
-          <h2 className="text-foreground font-semibold inline-flex items-center gap-2">
-            <Trophy size={16} className="text-[var(--lz-accent-ink)]" />
-            Top Membros <span className="text-foreground/40 font-normal">— {PERIOD_LABEL[period]} ({periodRangeLabel(period, selectedMonthKey)})</span>
+      <div className="mb-12 relative">
+        <div className="flex items-center gap-3 flex-wrap mb-4">
+          <h2 className="text-[11px] uppercase font-bold tracking-[0.14em] text-foreground/60 inline-flex items-center gap-2">
+            Top membros <span className="font-medium normal-case tracking-normal text-foreground/35">{PERIOD_LABEL[period]} · {periodRangeLabel(period, selectedMonthKey)}</span>
           </h2>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1 bg-background rounded-md p-1 text-xs">
+          <span className="hidden md:block h-px flex-1 bg-foreground/8" />
+          <div className="flex items-center gap-4 flex-wrap text-xs">
+            <div className="flex items-center gap-4">
               {(["meta", "geral"] as const).map((m) => (
-                <button key={m} onClick={() => setRankingMode(m)}
-                  className={`px-3 py-1.5 rounded transition ${rankingMode === m ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-foreground/60 hover:text-foreground"}`}>
+                <button key={m} onClick={() => setRankingMode(m)} aria-pressed={rankingMode === m}
+                  className={`py-1 border-b-[1.5px] font-semibold transition-colors ${rankingMode === m ? "text-foreground border-[var(--lz-accent-ink)]" : "text-foreground/40 border-transparent hover:text-foreground"}`}>
                   {m === "meta" ? "Por meta" : "Geral"}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1 bg-background rounded-md p-1 text-xs">
+            <span className="h-3.5 w-px bg-foreground/10" />
+            <div className="flex items-center gap-4">
               {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
-                <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 rounded transition ${period === p ? "bg-[rgb(var(--lz-brand-rgb))] text-[#0D0D0D] font-semibold" : "text-foreground/60 hover:text-foreground"}`}>
+                <button key={p} onClick={() => setPeriod(p)} aria-pressed={period === p}
+                  className={`py-1 border-b-[1.5px] font-semibold transition-colors ${period === p ? "text-foreground border-[var(--lz-accent-ink)]" : "text-foreground/40 border-transparent hover:text-foreground"}`}>
                   {PERIOD_LABEL[p]}
                 </button>
               ))}
@@ -364,11 +356,11 @@ export function AdminDashboard() {
       )}
 
       {/* Clients table */}
-      <div className="rounded-xl bg-card border border-foreground/7 overflow-hidden mb-6">
-        <div className="px-5 py-3.5 border-b border-foreground/7 flex items-center justify-start gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ background: PALETTE.lime }} />
-          <span className="text-[11px] uppercase tracking-wider text-foreground/70 font-bold">Clientes</span>
-          <span className="text-[11px] text-foreground/30">— {formatMonth(selectedMonthKey)}</span>
+      <div className="mb-12">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-[11px] uppercase tracking-[0.14em] text-foreground/60 font-bold">Clientes</span>
+          <span className="text-[11px] text-foreground/35">{formatMonth(selectedMonthKey)}</span>
+          <span className="h-px flex-1 bg-foreground/8" />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -447,24 +439,24 @@ export function AdminDashboard() {
         />
       )}
 
-      {/* Category breakdown */}
+      {/* Categorias — colunas abertas, sem cartões */}
       {byCategory.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 lz-stagger">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-8 mb-6">
           {byCategory.map((c) => {
             const color = CAT_COLOR[c.name] ?? PALETTE.green;
             return (
               <button key={c.name} onClick={() => { setFilterMode("category"); setSelectedFilter(c.name); }}
-                className="relative overflow-hidden rounded-xl p-4 bg-card border border-foreground/6 text-left hover:border-foreground/12 transition-all hover:bg-card cursor-pointer">
-                <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
-                <div className="flex flex-row md:flex-row items-start md:items-center justify-between relative">
-                  <div className="text-[11px] uppercase tracking-wider font-bold" style={{ color }}>{c.name}</div>
-                  <div className="text-foreground text-sm font-bold tabular-nums">{c.percent}%</div>
+                className="text-left cursor-pointer group">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="h-1.5 w-1.5 rounded-full shrink-0 self-center" style={{ background: color }} />
+                  <span className="text-sm font-semibold text-foreground group-hover:underline">{c.name}</span>
+                  <span className="ml-auto text-[15px] font-bold tabular-nums text-foreground/70">{c.percent}%</span>
                 </div>
-                <div className="mt-2 text-foreground/60 text-xs">
-                  <span className="text-foreground font-semibold">{c.done}</span> de {c.total} entregues
+                <div className="mt-1.5 text-xs text-foreground/45">
+                  <span className="text-foreground/80 font-semibold">{c.done}</span> de {c.total} entregues
                 </div>
                 <div className="mt-3">
-                  <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} className="max-w-[200px]" />
+                  <GrowBar pct={c.percent} gradient={`linear-gradient(90deg, ${color}, ${PALETTE.lime})`} />
                 </div>
               </button>
             );
@@ -704,31 +696,27 @@ function formatFinalized(iso: string) {
     " · " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function MetricCard({
-  icon, label, value, tone, valueColor, onClick, info,
-}: { icon: React.ReactNode; label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string }) {
+function MetricStat({
+  label, value, tone, valueColor, onClick, info, hint, hintTone, onHintClick,
+}: { label: string; value: number | string; tone: string; valueColor?: string; onClick?: () => void; info?: string; hint?: string; hintTone?: string; onHintClick?: () => void }) {
   const animated = useCountUp(typeof value === "number" ? value : 0);
   const display = typeof value === "number" ? Math.round(animated) : value;
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
-      className={`relative overflow-hidden rounded-xl p-4 transition-transform hover:-translate-y-0.5 text-center md:text-left ${onClick ? "cursor-pointer hover:border-foreground/30" : ""}`}
-      style={{
-        background: `linear-gradient(160deg, ${hexA(tone, 0.16)} 0%, var(--card) 70%)`,
-        border: `1px solid ${hexA(tone, 0.22)}`,
-      }}>
-      <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
-      <div className="relative flex items-center justify-center md:justify-between mb-3">
-        <div className="h-7 w-7 rounded-md inline-flex items-center justify-center"
-          style={{ background: hexA(tone, 0.18), color: tone }}>
-          {icon}
-        </div>
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      className={`px-3 md:px-6 py-5 border-l border-foreground/10 first:border-l-0 first:pl-1.5 ${onClick ? "cursor-pointer" : ""}`}>
+      <div className="flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-[0.14em] font-bold text-foreground/60">
+        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: tone }} />
+        {label}
         {info && <InfoTip text={info} />}
       </div>
-      <div className="relative text-[34px] font-extrabold leading-none mb-1.5 tabular-nums"
+      <div className="mt-2.5 text-[34px] md:text-[46px] font-extrabold leading-none tracking-[-0.045em] tabular-nums"
         style={{ color: valueColor ?? "var(--foreground)" }}>
         {display}
       </div>
-      <div className="relative text-[10.5px] uppercase tracking-wider font-bold" style={{ color: hexA(tone, 0.9) }}>{label}</div>
+      {hint && (onHintClick
+        ? <button type="button" onClick={(e) => { e.stopPropagation(); onHintClick(); }} className="mt-2 text-xs font-semibold hover:underline" style={{ color: hintTone }}>{hint}</button>
+        : <div className="mt-2 text-xs font-medium" style={{ color: hintTone ?? "color-mix(in srgb, var(--foreground) 40%, transparent)" }}>{hint}</div>)}
     </div>
   );
 }
@@ -736,33 +724,41 @@ function MetricCard({
 function GrowBar({ pct, gradient, className = "" }: { pct: number; gradient: string; className?: string }) {
   const grown = useGrowIn(pct);
   return (
-    <div className={`h-1.5 rounded-full bg-foreground/[0.06] overflow-hidden ${className}`}>
+    <div className={`h-1 rounded-full bg-foreground/[0.07] overflow-hidden ${className}`}>
       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${grown}%`, background: gradient }} />
     </div>
   );
 }
 
 function BigDonut({ percent, done, total }: { percent: number; done: number; total: number }) {
-  const size = 168, stroke = 14, r = (size - stroke) / 2;
+  const box = 232, size = 196, stroke = 14, r = (size - stroke) / 2, mid = box / 2;
   const c = 2 * Math.PI * r;
   const animatedPercent = useCountUp(percent);
+  const dash = { strokeDasharray: c, strokeDashoffset: c * (1 - animatedPercent / 100) };
   return (
-    <div className="relative shrink-0 mx-auto md:mx-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div className="relative shrink-0 mx-auto md:mx-0" style={{ width: box, height: box }}>
+      <svg width={box} height={box} aria-hidden="true">
         <defs>
           <linearGradient id="bigdonut" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="var(--lz-donut-stop1)" />
             <stop offset="100%" stopColor="var(--lz-donut-stop2)" />
           </linearGradient>
+          <filter id="bigdonut-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" /></filter>
         </defs>
-        <circle cx={size/2} cy={size/2} r={r} stroke="color-mix(in srgb, var(--foreground) 6%, transparent)" strokeWidth={stroke} fill="none" />
-        <circle cx={size/2} cy={size/2} r={r} stroke="url(#bigdonut)" strokeWidth={stroke} fill="none"
-          strokeDasharray={c} strokeDashoffset={c * (1 - animatedPercent/100)} strokeLinecap="round" />
+        {/* Anel pontilhado por fora, girando muito devagar */}
+        <circle className="lz-donut-spin" cx={mid} cy={mid} r={r + 19} fill="none" stroke="var(--foreground)" strokeOpacity={0.24} strokeWidth={1.4} strokeLinecap="round" strokeDasharray="1 8" />
+        <g transform={`rotate(-90 ${mid} ${mid})`}>
+          <circle cx={mid} cy={mid} r={r} stroke="color-mix(in srgb, var(--foreground) 7%, transparent)" strokeWidth={stroke} fill="none" />
+          <circle className="lz-donut-glow" cx={mid} cy={mid} r={r} stroke="url(#bigdonut)" strokeWidth={stroke + 2} fill="none" filter="url(#bigdonut-blur)"
+            style={dash} strokeLinecap="round" />
+          <circle cx={mid} cy={mid} r={r} stroke="url(#bigdonut)" strokeWidth={stroke} fill="none"
+            style={dash} strokeLinecap="round" />
+        </g>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-[44px] font-extrabold tabular-nums leading-none text-foreground">{Math.round(animatedPercent)}%</div>
-        <div className="text-[10px] uppercase tracking-wider text-foreground/50 font-bold mt-1">Entregue</div>
-        <div className="text-[11px] text-foreground/70 mt-0.5"><span className="font-bold text-[var(--lz-accent-ink)]">{done}</span> / {total}</div>
+        <div className="text-[56px] font-extrabold tabular-nums leading-none tracking-[-0.05em] text-foreground">{Math.round(animatedPercent)}<span className="text-[26px] tracking-normal text-foreground/55 ml-0.5">%</span></div>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-foreground/55 font-bold mt-2">Entregue</div>
+        <div className="text-xs text-foreground/50 mt-1"><span className="font-bold text-[var(--lz-accent-ink)]">{done}</span> / {total}</div>
       </div>
     </div>
   );
@@ -897,13 +893,13 @@ function OperationHealth({ data, onOpenBlocked, onOpenRework }: {
   }
 
   return (
-    <div className="rounded-xl bg-card border border-foreground/7 p-5 mb-6 relative overflow-hidden">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity size={16} className="text-[var(--lz-accent-ink)]" />
-        <h2 className="text-foreground font-semibold">Saúde da operação</h2>
-        <span className="text-[10px] text-foreground/30 ml-1">— mês atual</span>
+    <div className="mb-10">
+      <div className="flex items-center gap-3 mb-1">
+        <h2 className="text-[11px] uppercase font-bold tracking-[0.14em] text-foreground/60">Saúde da operação</h2>
+        <span className="text-[11px] text-foreground/35">mês atual</span>
+        <span className="h-px flex-1 bg-foreground/8" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4">
         <HealthCard icon={<Clock size={14} />} tone="#4A9EFF" label="Lead time médio" value={formatHours(leadAvg)} sub={`${data?.leadTime.count ?? 0} entregas`}
           info="Tempo médio entre o item ser criado e ser finalizado, considerando as entregas do mês atual — mede a velocidade de entrega da equipe." />
         <HealthCard icon={<AlertOctagon size={14} />} tone={blocked > 0 ? "#FF6B6B" : "var(--lz-accent-ink)"} label="Travados" value={blocked} sub={blocked > 0 ? "precisam de ação" : "tudo fluindo"} valueColor={blocked > 0 ? "#FF6B6B" : "var(--lz-accent-ink)"} onClick={blocked > 0 ? onOpenBlocked : undefined}
@@ -923,18 +919,16 @@ function HealthCard({ icon, tone, label, value, sub, valueColor, onClick, info }
   return (
     <div onClick={onClick} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      className={`relative overflow-hidden rounded-lg bg-card border border-foreground/6 p-4 text-left w-full transition-all ${onClick ? "hover:border-foreground/12 hover:bg-foreground/5 cursor-pointer" : ""}`}>
-      <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: tone }} />
-      <div className="relative">
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider" style={{ color: tone }}>
-            {icon} {label}
-          </div>
-          {info && <InfoTip text={info} />}
+      className={`px-6 py-3.5 border-l border-foreground/8 max-md:odd:border-l-0 max-md:odd:pl-1.5 md:first:border-l-0 md:first:pl-1.5 text-left w-full ${onClick ? "cursor-pointer" : ""}`}>
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-2 text-xs font-medium text-foreground/60">
+          <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: tone }} />
+          {label}
         </div>
-        <div className="text-2xl font-bold tabular-nums mt-1.5" style={{ color: valueColor ?? "var(--foreground)" }}>{value}</div>
-        <div className="text-[10px] text-foreground/40 mt-0.5">{sub}</div>
+        {info && <InfoTip text={info} />}
       </div>
+      <div className="text-[22px] font-bold tabular-nums leading-none tracking-[-0.03em] mt-2" style={{ color: valueColor ?? "var(--foreground)" }}>{value}</div>
+      <div className="text-[11px] text-foreground/40 mt-1">{sub}</div>
     </div>
   );
 }

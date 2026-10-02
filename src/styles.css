@@ -1033,3 +1033,16 @@ iframe.skiptranslate,
 body { top: 0 !important; }
 .goog-text-highlight,
 .VIpgJd-yAWNEb-VIpgJd-fmcmS-sn54Q { background: none !important; box-shadow: none !important; }
+
+/* Dashboard (02/10): brilho do cabeçalho e anel do donut com movimento bem suave. */
+@keyframes lz-dash-drift1 { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(140px,60px,0) scale(1.15); } }
+@keyframes lz-dash-drift2 { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-150px,-40px,0) scale(1.12); } }
+.lz-dash-blob1 { animation: lz-dash-drift1 38s ease-in-out infinite alternate; will-change: transform; }
+.lz-dash-blob2 { animation: lz-dash-drift2 46s ease-in-out infinite alternate; will-change: transform; }
+@keyframes lz-donut-spin { to { transform: rotate(360deg); } }
+.lz-donut-spin { transform-box: fill-box; transform-origin: center; animation: lz-donut-spin 140s linear infinite; }
+@keyframes lz-donut-breathe { from { opacity: 0.3; } to { opacity: 0.62; } }
+.lz-donut-glow { opacity: 0.45; animation: lz-donut-breathe 7s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) {
+  .lz-dash-blob1, .lz-dash-blob2, .lz-donut-spin, .lz-donut-glow { animation: none; }
+}
