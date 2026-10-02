@@ -112,9 +112,18 @@ function PublicUploadPage() {
     if (ok.length) setQueue((q) => [...q, ...ok]);
   }
 
+  // Abre uma sessão por vez: a primeira do nome cria a pasta "Itens enviados por …" no Drive, e as
+  // outras só podem começar depois, senão duas criariam a mesma pasta.
+  const startLock = useRef<Promise<unknown>>(Promise.resolve());
+  function startSerial(payload: Parameters<typeof start>[0]) {
+    const run = startLock.current.catch(() => undefined).then(() => start(payload));
+    startLock.current = run;
+    return run;
+  }
+
   async function uploadOne(item: QItem) {
     try {
-      const { uploadUrl, sig } = await start({ data: { token, uploaderName: uploaderName.trim(), name: item.file.name, mimeType: item.mime, size: item.file.size } });
+      const { uploadUrl, sig } = await startSerial({ data: { token, uploaderName: uploaderName.trim(), name: item.file.name, mimeType: item.mime, size: item.file.size } });
       const total = item.file.size;
       let offset = 0;
       let doneMeta: { id: string } | null = null;

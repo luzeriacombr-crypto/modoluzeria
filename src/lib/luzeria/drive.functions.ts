@@ -2025,6 +2025,20 @@ function cleanUploaderName(raw: string): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, 60);
 }
 
+/** "Itens enviados por Fulano": subpasta dentro de "Materiais Brutos" com o nome da
+ * pessoa que enviou pelo link. O mapa evita criar a pasta em duplicidade quando dois
+ * arquivos dela começam ao mesmo tempo na mesma instância do servidor. */
+const _uploaderFolderLocks = new Map<string, Promise<string>>();
+async function ensureUploaderFolder(rawFolderId: string, uploader: string): Promise<string> {
+  const label = `Itens enviados por ${uploader.replace(/[\\/']/g, "").trim() || "pessoa sem nome"}`;
+  const key = `${rawFolderId}|${label}`;
+  const pending = _uploaderFolderLocks.get(key);
+  if (pending) return pending;
+  const p = ensureMonthFolder(rawFolderId, label).finally(() => { setTimeout(() => _uploaderFolderLocks.delete(key), 5000); });
+  _uploaderFolderLocks.set(key, p);
+  return p;
+}
+
 function cleanFileName(raw: string): string {
   return raw.replace(/[\\/\u0000-\u001f]+/g, "_").trim().slice(0, 200) || "arquivo";
 }
@@ -2177,7 +2191,8 @@ export const startPublicUpload = createServerFn({ method: "POST" })
     if ((count ?? 0) >= UPLOAD_LINK_MAX_FILES) throw new Error("Esse link atingiu o limite de arquivos. Peça um novo à agência.");
 
     return withDriveOrg(r.org_id, async () => {
-      const targetParentId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const rawFolderId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const targetParentId = rawFolderId ? await ensureUploaderFolder(rawFolderId, cleanUploaderName(data.uploaderName)) : null;
       const metadata: any = { name: cleanFileName(data.name), mimeType: data.mimeType };
       if (targetParentId) metadata.parents = [targetParentId];
       const sessionRes = await fetch(
@@ -2259,14 +2274,15 @@ export const finalizePublicUpload = createServerFn({ method: "POST" })
     const db = await uploadAdminDb();
 
     const meta = await withDriveOrg(r.org_id, async () => {
-      const targetParentId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const rawFolderId = await resolveTargetFolderForItem(db, r.created_by ?? "", r.item_id, { kind: "raw" });
+      const targetParentId = rawFolderId ? await ensureUploaderFolder(rawFolderId, uploader) : null;
       const res = await fetch(
         `${DRIVE_BASE}/files/${encodeURIComponent(data.driveFileId)}?supportsAllDrives=true&fields=${encodeURIComponent(`${DRIVE_FIELDS},parents`)}`,
         { headers: await driveHeaders() },
       );
       if (!res.ok) throw new Error("Não consegui confirmar o arquivo no Drive.");
       const m: any = await res.json();
-      // Só entra o que está de fato na pasta de brutos desse link — o freelancer não consegue "anexar" outro arquivo do Drive.
+      // Só entra o que está de fato na subpasta dessa pessoa dentro dos brutos desse link — o freelancer não consegue "anexar" outro arquivo do Drive.
       if (targetParentId && !(m.parents ?? []).includes(targetParentId)) throw new Error("Arquivo fora da pasta esperada.");
       if (!UPLOAD_LINK_ALLOWED.test(m.mimeType ?? "")) throw new Error("Tipo de arquivo não permitido.");
       return m;
