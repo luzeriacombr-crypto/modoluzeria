@@ -212,6 +212,11 @@ export interface ContentItem {
   /** Quando true, esse item some de Posts/Reels/Preview de Feed — só
    * existe dentro da própria campanha. Irrelevante se campaignId é null. */
   campaignInternal?: boolean;
+  /** "Post extra"/"Reels extra" — marca um item entregue além do que foi
+   * combinado no Volume mensal do cliente. Independe de campanha; não
+   * esconde o item de ninguém, é só pra contabilizar quanto foi entregue
+   * a mais (ver ClientView.tsx — contador por tipo no mês). */
+  isExtra?: boolean;
   /** Grupo dentro da grade de um cliente Avulso (ex.: "Projeto X") — null
    * quando o item não está em nenhum grupo. Só usado hoje pra clientes com
    * category === "Avulsos" (ver content-groups.functions.ts). */

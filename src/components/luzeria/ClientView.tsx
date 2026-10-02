@@ -578,8 +578,34 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
               </div>
             );
           }
+          // Contratado x entregue no mês, por tipo — pra flagrar quando a
+          // agência já passou do Volume mensal combinado. Conta TODOS os
+          // itens do mês (não só os visíveis na aba, que escondem
+          // finalizados conforme a config), menos os internos de campanha.
+          // Pedido do Junior (01/10).
+          const deliveredThisMonth = (type: "post" | "reel") =>
+            notCampaignInternal(type === "post" ? (month?.posts ?? []) : (month?.reels ?? [])).length;
+          const contractedVolume = (type: "post" | "reel") =>
+            (type === "post" ? client.customFields.postsPerWeek : client.customFields.reelsPerWeek) ?? 0;
           return (
             <>
+              {(tab === "posts" || tab === "reels") && contractedVolume(cfg.type) > 0 && (() => {
+                const delivered = deliveredThisMonth(cfg.type);
+                const contracted = contractedVolume(cfg.type);
+                const extra = Math.max(0, delivered - contracted);
+                return (
+                  <div className="flex items-center gap-2 mb-2 text-[11px] text-foreground/40">
+                    <span>Contratado: <strong className="text-foreground/70">{contracted}</strong></span>
+                    <span>·</span>
+                    <span>Esse mês: <strong className="text-foreground/70">{delivered}</strong></span>
+                    {extra > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(255,159,74,0.15)", color: "#FF9F4A" }}>
+                        +{extra} {cfg.type === "post" ? "post" : "reel"}{extra > 1 ? "s" : ""} extra
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               {selectMode ? (
                 <div className="flex items-center justify-between gap-2 mb-3 rounded-lg px-3 py-2" style={{ background: "rgba(var(--lz-brand-rgb),0.1)", border: "1px solid rgba(var(--lz-brand-rgb),0.3)" }}>
                   <span className="text-xs font-semibold text-foreground">

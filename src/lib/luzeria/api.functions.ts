@@ -2229,7 +2229,7 @@ export const getMonth = createServerFn({ method: "GET" })
     if (!month) return null;
     const { data: items } = (await context.supabase
       .from("content_items")
-      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal, group_id, fb_auto_publish, fb_media_id")
+      .select("id, type, idx, title, status, copy, drive_link, caption, updated_at, reel_type, post_format, editor_id, due_date, scheduled_at, started_at, finished_at, blocked_reason, checklist, rework_count, quality_rating, feed_order, cover_path, cover_source, ig_auto_publish, ig_published_at, story_fit, ig_collaborators, activity_location, activity_quantity, campaign_id, campaign_internal, is_extra, group_id, fb_auto_publish, fb_media_id")
       .eq("month_id", month.id).order("type").order("idx")) as any as { data: any[] | null };
     const itemIds = (items ?? []).map((it: any) => it.id);
     const [{ data: assignees }, { data: comments }] = await Promise.all([
@@ -2293,6 +2293,7 @@ export const getMonth = createServerFn({ method: "GET" })
       campaignId: (it as any).campaign_id ?? null,
       campaignName: (it as any).campaign_id ? campaignNameById.get((it as any).campaign_id) ?? null : null,
       campaignInternal: (it as any).campaign_internal ?? false,
+      isExtra: (it as any).is_extra ?? false,
       groupId: (it as any).group_id ?? null,
     }));
     const coverPaths = (items ?? []).map((it: any) => it.cover_path).filter(Boolean);
@@ -2335,6 +2336,7 @@ export const updateItem = createServerFn({ method: "POST" })
       activity_location?: string | null; activity_quantity?: number | null;
       ig_collaborators?: string | null;
       story_fit?: "blur" | "white" | "black" | "crop" | null;
+      is_extra?: boolean;
     };
   }) => d)
   .handler(async ({ data, context }) => {

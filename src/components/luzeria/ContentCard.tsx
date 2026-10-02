@@ -121,6 +121,14 @@ export function ContentCard({
         >
           {String(idx).padStart(2, "0")}
         </span>
+        {item.isExtra && (
+          <span
+            className="absolute bottom-2 left-2 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide"
+            style={{ backgroundColor: "rgba(0,0,0,0.6)", color: "#FF9F4A" }}
+          >
+            Extra
+          </span>
+        )}
         {selectMode ? (
           <span
             className="absolute top-2 right-2 h-5 w-5 rounded-md flex items-center justify-center border transition-colors"

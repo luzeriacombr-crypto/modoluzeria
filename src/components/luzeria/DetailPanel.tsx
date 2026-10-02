@@ -1381,6 +1381,20 @@ export function DetailPanel() {
               </ModalSection>
             )}
 
+            {/* Extra — independe de campanha. Rótulo pra contabilizar entrega
+             * além do Volume mensal combinado (ver contador no topo de
+             * Posts/Reels em ClientView.tsx). Não esconde o item de
+             * ninguém, só marca pra controle. Pedido do Junior (01/10). */}
+            {isAdmin && (item.type === "post" || item.type === "reel") && (
+              <ModalSection label="Entrega">
+                <label className="flex items-center gap-2 text-xs text-foreground/60">
+                  <input type="checkbox" checked={item.isExtra ?? false}
+                    onChange={(e) => updateItem.mutate({ data: { id: item.id, patch: { is_extra: e.target.checked } } })} />
+                  {item.type === "post" ? "Post extra" : "Reels extra"} — entregue além do combinado no Volume mensal
+                </label>
+              </ModalSection>
+            )}
+
         {/* Responsáveis */}
         <ModalSection label="Responsáveis">
           <div className="flex items-center gap-2 flex-wrap">
