@@ -249,6 +249,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </div>
       )}
 
+      {/* key = aba principal: ao trocar de pasta o conteúdo entra com uma animaçãozinha (sub-abas de Equipe não remontam). */}
+      <div key={(tab === "report" || tab === "rotina") ? "team" : (tab === "margem" || tab === "journey") ? "cliente" : (["afiliados", "revenda", "indicacoes", "pagamentos", "orcamentos"] as string[]).includes(tab) ? "cobranca" : tab} className="lz-tab-in">
       <Suspense fallback={<TabLoadingFallback />}>
       {tab === "general" ? <GeneralSettings /> :
        tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos" ? (
@@ -441,6 +443,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         </>
        ) : null}
       </Suspense>
+      </div>
 
       {adding && (
         <AddMemberModal

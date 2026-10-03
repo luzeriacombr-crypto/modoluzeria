@@ -1115,3 +1115,25 @@ body { top: 0 !important; }
   border-radius: 0 0 3px 3px;
   background: rgb(var(--lz-brand-rgb));
 }
+
+/* Animações da troca de abas (só pra quem não pediu movimento reduzido). */
+@keyframes lz-tab-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lz-ftab-line {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes lz-ftab-pop {
+  0% { transform: scale(0.6) rotate(-12deg); }
+  60% { transform: scale(1.2) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lz-tab-in { animation: lz-tab-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .lz-ftab { transition: color 180ms, background-color 180ms, padding 180ms, transform 180ms; }
+  .lz-ftab:not([aria-selected="true"]):hover { transform: translateY(-2px); }
+  .lz-ftab[aria-selected="true"]::before { animation: lz-ftab-line 380ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .lz-ftab[aria-selected="true"] .lz-ftab-icon { animation: lz-ftab-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+}
