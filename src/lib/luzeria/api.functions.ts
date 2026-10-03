@@ -1223,14 +1223,121 @@ export const deleteOrg = createServerFn({ method: "POST" })
  * agência. Cancela a assinatura e apaga tudo (irreversível). Bloqueia a
  * Luzeria e agências revendedoras com revendidas ativas (essas precisam do
  * suporte pra não deixar as revendidas órfãs). */
+/** Reconfirma que quem está apagando é mesmo o dono da conta: senha (login por e-mail) ou, quando a
+ * conta entra só com Google e não tem senha, o próprio e-mail digitado. */
+async function verifyOwnCredential(supabaseAdmin: any, userId: string, input: { password?: string; confirmEmail?: string }) {
+  const { data: u, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const email = (u?.user?.email as string | undefined) ?? "";
+  if (error || !email) throw new Error("Não foi possível confirmar a sua identidade. Tente de novo.");
+  const hasPassword = ((u.user.identities ?? []) as { provider: string }[]).some((i) => i.provider === "email");
+  if (hasPassword) {
+    if (!input.password) throw new Error("Digite a sua senha para confirmar.");
+    const { createClient: createSb } = await import("@supabase/supabase-js");
+    const sb = createSb(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error: signErr } = await sb.auth.signInWithPassword({ email, password: input.password });
+    if (signErr) throw new Error("Senha incorreta.");
+  } else if ((input.confirmEmail ?? "").trim().toLowerCase() !== email.toLowerCase()) {
+    throw new Error("Digite o seu e-mail para confirmar (sua conta entra com Google e não tem senha).");
+  }
+}
+
+const DELETION_FEEDBACK_SHAPE = z.object({
+  reasons: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
+  comment: z.string().trim().max(2000).optional(),
+});
+
+/** Guarda por que a pessoa está saindo (motivos + comentário). Nunca impede a exclusão: se falhar, só registra no log. */
+async function saveDeletionFeedback(
+  supabaseAdmin: any,
+  ctx: { userId: string; orgId: string; scope: "org" | "me" },
+  input: { reasons?: string[]; comment?: string },
+) {
+  try {
+    const { data: prof } = await supabaseAdmin.from("profiles").select("name, email").eq("id", ctx.userId).maybeSingle();
+    const { data: org } = await supabaseAdmin.from("orgs")
+      .select("name, account_type, subscription_status").eq("id", ctx.orgId).maybeSingle();
+    const { data: role } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", ctx.userId).maybeSingle();
+    const { error } = await supabaseAdmin.from("account_deletion_feedback").insert({
+      scope: ctx.scope,
+      org_id: ctx.orgId,
+      org_name: (org as any)?.name ?? null,
+      account_type: (org as any)?.account_type ?? null,
+      subscription_status: (org as any)?.subscription_status ?? null,
+      user_name: (prof as any)?.name ?? null,
+      user_email: (prof as any)?.email ?? null,
+      user_role: (role as any)?.role ?? null,
+      reasons: input.reasons ?? [],
+      comment: input.comment || null,
+    });
+    if (error) console.error("[deletion-feedback] não salvou:", error.message);
+  } catch (e) {
+    console.error("[deletion-feedback] falhou:", e);
+  }
+}
+
+/** O que a tela "Apagar minha conta" precisa saber antes de pedir a confirmação. */
+export const getDeleteAccountInfo = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const hasPassword = ((u?.user?.identities ?? []) as { provider: string }[]).some((i) => i.provider === "email");
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    let onlyMaster = false;
+    if (isMaster) {
+      const { data: members } = await supabaseAdmin.from("profiles").select("id").eq("org_id", context.orgId).eq("active", true);
+      const ids = (members ?? []).map((m: any) => m.id);
+      const { data: masters } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master").in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+      onlyMaster = (masters ?? []).length <= 1;
+    }
+    return {
+      hasPassword, email: (u?.user?.email as string | undefined) ?? "",
+      isMaster: !!isMaster, onlyMaster, isLuzeria: context.orgId === LUZERIA_ORG_ID,
+    };
+  });
+
+/** Apaga só a conta de quem pediu (a agência e a equipe continuam). Exige o nome da agência e a senha.
+ * O único master não pode sair assim: a agência ficaria sem ninguém no comando. */
+export const deleteMyAccount = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { confirmName: string; password?: string; confirmEmail?: string; reasons?: string[]; comment?: string }) =>
+    z.object({ confirmName: z.string(), password: z.string().max(200).optional(), confirmEmail: z.string().max(200).optional() }).merge(DELETION_FEEDBACK_SHAPE).parse(d))
+  .handler(async ({ data, context }) => {
+    if (context.orgId === LUZERIA_ORG_ID) throw new Error("Contas da equipe Luzeria não podem ser apagadas por aqui.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: org } = await supabaseAdmin.from("orgs").select("id, name").eq("id", context.orgId).maybeSingle();
+    if (!org) throw new Error("Agência não encontrada.");
+    if ((org as any).name.trim().toLowerCase() !== data.confirmName.trim().toLowerCase()) {
+      throw new Error("O nome digitado não confere com o nome da agência.");
+    }
+    await verifyOwnCredential(supabaseAdmin, context.userId, data);
+    const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
+    if (isMaster) {
+      const { data: members } = await supabaseAdmin.from("profiles").select("id").eq("org_id", context.orgId).eq("active", true);
+      const ids = (members ?? []).map((m: any) => m.id);
+      const { data: masters } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "master").in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+      if ((masters ?? []).length <= 1) {
+        throw new Error("Você é o único administrador master. Passe o cargo de master para outra pessoa antes, ou apague a agência inteira.");
+      }
+    }
+    await saveDeletionFeedback(supabaseAdmin, { userId: context.userId, orgId: context.orgId, scope: "me" }, data);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteMyOrg = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { confirmName: string }) => z.object({ confirmName: z.string() }).parse(d))
+  .inputValidator((d: { confirmName: string; password?: string; confirmEmail?: string; reasons?: string[]; comment?: string }) =>
+    z.object({ confirmName: z.string(), password: z.string().max(200).optional(), confirmEmail: z.string().max(200).optional() }).merge(DELETION_FEEDBACK_SHAPE).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Só o administrador master da agência pode excluir a conta.");
     if (context.orgId === LUZERIA_ORG_ID) throw new Error("Não é possível remover a agência da Luzeria.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await verifyOwnCredential(supabaseAdmin, context.userId, data);
     const { data: org } = await supabaseAdmin
       .from("orgs").select("id, name, asaas_subscription_id, is_reseller").eq("id", context.orgId).maybeSingle();
     if (!org) throw new Error("Agência não encontrada.");
@@ -1240,6 +1347,7 @@ export const deleteMyOrg = createServerFn({ method: "POST" })
     const { count: resold } = await supabaseAdmin
       .from("orgs").select("id", { count: "exact", head: true }).eq("reseller_org_id", context.orgId);
     if ((resold ?? 0) > 0) throw new Error("Sua agência tem agências revendidas ativas. Fale com o suporte para encerrar a conta com segurança.");
+    await saveDeletionFeedback(supabaseAdmin, { userId: context.userId, orgId: context.orgId, scope: "org" }, data);
     await performOrgDeletion(supabaseAdmin, context.orgId, org as any);
     return { ok: true };
   });

@@ -14,6 +14,7 @@ import { roleLabel } from "./Sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { clearOneSignalUserId } from "@/lib/luzeria/push-notifications";
 import { PasswordInput } from "./PasswordInput";
+import { DeleteAccountProfileRow } from "./DeleteAccountSection";
 
 export function ProfilePage() {
   const me = useMe().data;
@@ -374,6 +375,8 @@ export function ProfilePage() {
           <LogOut size={13} /> Sair
         </button>
       </div>
+
+      <DeleteAccountProfileRow />
     </div>
   );
 }

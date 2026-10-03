@@ -63,7 +63,7 @@ export const FAQ: HelpFaqGroup[] = [
     items: [
       { q: "Preciso cadastrar cartão de crédito pra testar o Modo Criador?", a: "Não. Os 30 dias de teste grátis (45 se você entrou por indicação) não pedem cartão nem PIX. No último dia do teste avisamos você pra decidir se quer continuar." },
       { q: "Clicar em \"Assinar\" vai me cobrar na hora?", a: "Não. Clicar em \"Assinar\" pede uma confirmação antes, mostrando a data real de vencimento — se você ainda está no teste grátis, essa data só cai no fim do seu teste, nunca hoje. Nada é cobrado automaticamente: só é gerada uma fatura (boleto/PIX/cartão) que você mesmo escolhe pagar quando quiser continuar." },
-      { q: "Posso excluir minha conta?", a: "Sim, quem é Admin Master pode fazer isso sozinho em Configurações → Plano e Cobrança, na seção \"Excluir conta\" (no fim da página) — precisa digitar o nome da agência pra confirmar, e não dá pra desfazer. Se você só está no teste grátis, nem precisa excluir: ele acaba sozinho e não há cobrança." },
+      { q: "Posso excluir minha conta?", a: "Sim. Em Meu perfil, no fim da página, logo abaixo de \"Sair da conta\", clique em \"Apagar minha conta\". Quem é Admin Master escolhe entre apagar a agência inteira (com a própria conta) ou só a própria conta; os demais apagam só a própria. Precisa digitar o nome da agência e a senha, e pode contar por que está saindo. Não dá pra desfazer. O Admin Master também encontra a exclusão da agência em Configurações → Plano e Cobrança. Se você só está no teste grátis, nem precisa excluir: ele acaba sozinho e não há cobrança." },
     ],
   },
   {

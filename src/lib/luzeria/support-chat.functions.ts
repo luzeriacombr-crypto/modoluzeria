@@ -122,7 +122,7 @@ export const sendSupportMessage = createServerFn({ method: "POST" })
       ``,
       buildHelpKnowledgeText(),
       ``,
-      `Excluir a conta: quem é administrador master da agência pode excluir sozinho em **Configurações → Plano e Cobrança**, na seção **Excluir conta** (no fim da página). Isso apaga tudo e cancela a assinatura, e não dá pra desfazer; a pessoa precisa digitar o nome da agência pra confirmar. Se estiver no teste grátis, não precisa excluir: o teste acaba sozinho e não há cobrança. Se quem perguntou não for master, precisa pedir a quem é master. Explique isso diretamente, sem chamar o Junior, a menos que a pessoa tenha algum problema ao excluir.`,
+      `Excluir a conta: qualquer pessoa pode apagar a própria conta em **Meu perfil**, no fim da página, em **Apagar minha conta** (pede o nome da agência e a senha). O administrador master também pode escolher apagar a agência inteira, o que apaga tudo e cancela a assinatura, e é pelo mesmo lugar ou em **Configurações → Plano e Cobrança → Excluir conta**. Não dá pra desfazer. O único master não consegue apagar só a própria conta: precisa passar o cargo de master para outra pessoa antes ou apagar a agência. Se estiver no teste grátis, não precisa excluir: o teste acaba sozinho e não há cobrança. Se quem perguntou não for master, precisa pedir a quem é master. Explique isso diretamente, sem chamar o Junior, a menos que a pessoa tenha algum problema ao excluir.`,
       ``,
       `Quem está perguntando agora: ${profile?.name ?? "um usuário"}, da agência ${org?.name ?? "—"}.`,
       ``,
