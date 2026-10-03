@@ -11,8 +11,10 @@ import type { Role } from "@/lib/luzeria/types";
 import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasPermission, SETOR_PERMISSION_KEYS, SETOR_PERMISSION_LABEL, PERMISSION_KEYS, PERMISSION_LABEL, CUSTOMIZABLE_BUILTIN_STATUS_KEYS, PROTECTED_STATUS_KEYS, type SetorPermissionKey, type Profile, type BrandAdvancedColors } from "@/lib/luzeria/types";
 import { toast } from "sonner";
 import { isHouse, term, HOUSE_HIDDEN_FEATURES } from "@/lib/luzeria/house";
+import { CleaningView } from "./CleaningView";
+import { HouseChecklists } from "./HouseChecklists";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw, Folder, FolderOpen } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -54,8 +56,8 @@ function TabLoadingFallback() {
   );
 }
 
-type SettingsTab = "team" | "report" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "emails" | "journey" | "cliente" | "knowledge";
-const VALID_TABS: SettingsTab[] = ["team", "report", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
+type SettingsTab = "team" | "report" | "rotina" | "automations" | "integrations" | "general" | "cobranca" | "margem" | "pagamentos" | "orcamentos" | "afiliados" | "revenda" | "indicacoes" | "plataforma" | "updates" | "site" | "blog" | "emails" | "journey" | "cliente" | "knowledge";
+const VALID_TABS: SettingsTab[] = ["team", "report", "rotina", "automations", "integrations", "general", "cobranca", "margem", "pagamentos", "orcamentos", "afiliados", "revenda", "indicacoes", "plataforma", "updates", "site", "blog", "emails", "journey", "cliente", "knowledge"];
 
 /** Redimensiona qualquer imagem pra um PNG quadrado (contain, fundo transparente). */
 async function toSquarePng(file: File, size: number): Promise<Blob> {
@@ -102,7 +104,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
     ...(hasSetorPermission(me, "settings_journey") ? (["journey", "cliente"] as SettingsTab[]) : []),
     ...(hasSetorPermission(me, "team_reports") ? (["report"] as SettingsTab[]) : []),
     ...(hasPermission(me, "view_financeiro") ? (["cobranca", "margem", "pagamentos", "orcamentos", "cliente"] as SettingsTab[]) : []),
-    ...(hasPermission(me, "manage_team") ? (["team"] as SettingsTab[]) : []),
+    ...(hasPermission(me, "manage_team") ? (["team", "rotina"] as SettingsTab[]) : []),
     // Estas duas permissões apareciam no editor de cargos com rótulo e
     // descrição, mas nunca eram conferidas em lugar nenhum: o master
     // marcava, salvava, e nada mudava. Agora valem de verdade.
@@ -117,6 +119,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
   // é só tirar essa linha.
   const HIDDEN_TABS: SettingsTab[] = [
     "afiliados", "revenda",
+    // Rotina some daqui quando a agência desligou o recurso (igual na barra lateral).
+    ...(((me.disabledFeatures ?? []) as string[]).includes("rotina") ? (["rotina"] as SettingsTab[]) : []),
     // House: sem jornada/margem/visão geral de clientes, pagamentos por
     // cliente nem indicação entre agências.
     ...(isHouse(me) ? (["indicacoes", "journey", "cliente", "pagamentos"] as SettingsTab[]) : []),
@@ -147,7 +151,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         <div>
           <h1 className="text-[32px] font-bold text-foreground tracking-tight">Configurações</h1>
           <p className="text-sm text-foreground/50 mt-2">
-            {tab === "team" || tab === "report" ? "Gerencie acessos, funções, metas e o relatório da equipe." :
+            {tab === "team" || tab === "report" || tab === "rotina" ? "Gerencie acessos, funções, metas, a rotina e o relatório da equipe." :
              tab === "integrations" ? "Conecte o Google Drive da agência, a sua Google Agenda e acompanhe o Instagram de cada cliente." :
              tab === "automations" ? "Lembretes automáticos e rotinas que o sistema executa sozinho." :
              tab === "cobranca" || tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos" ? "Seu plano, indicações e o financeiro da agência." :
@@ -181,7 +185,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
         ].filter((t) => allowedTabs.includes(t.id as SettingsTab));
         const isActive = (id: string) =>
           tab === (id as any) ||
-          (id === "team" && tab === "report") ||
+          (id === "team" && (tab === "report" || tab === "rotina")) ||
           (id === "cliente" && (tab === "margem" || tab === "journey")) ||
           (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos"));
         return (
@@ -196,16 +200,25 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               </select>
               <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/50" />
             </div>
-            <div className="hidden md:flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar" data-tour="settings-tabs">
+            {/* Abas em formato de pastinha (divisória de arquivo), quebrando em quantas linhas precisar:
+              * antes era uma barra única com rolagem que, com muitas abas, escondia as últimas. */}
+            <div className="hidden md:flex flex-wrap items-end gap-x-1.5 gap-y-2 mb-6" data-tour="settings-tabs" role="tablist">
               {tabItems.map((t) => {
                 const active = isActive(t.id);
+                const FolderIcon = active ? FolderOpen : Folder;
                 return (
-                  <button key={t.id} onClick={() => setTab(t.id as any)}
-                    className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
-                    style={{
-                      color: active ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
-                      borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
+                  <button key={t.id} role="tab" aria-selected={active} onClick={() => setTab(t.id as any)}
+                    className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase tracking-wider rounded-t-xl rounded-b-md border transition-colors"
+                    style={active ? {
+                      color: "var(--foreground)",
+                      background: "rgba(var(--lz-brand-rgb), 0.16)",
+                      borderColor: "rgba(var(--lz-brand-rgb), 0.55)",
+                    } : {
+                      color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
+                      background: "color-mix(in srgb, var(--foreground) 4%, transparent)",
+                      borderColor: "color-mix(in srgb, var(--foreground) 10%, transparent)",
                     }}>
+                    <FolderIcon size={14} style={active ? { color: "var(--lz-accent-ink)" } : undefined} />
                     {t.label}
                   </button>
                 );
@@ -327,19 +340,23 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "integrations" ? <IntegrationsTab disabledFeatures={me.disabledFeatures ?? []} /> :
        tab === "automations" ? <AutomationsTab /> :
        tab === "knowledge" ? <OrgKnowledgeSettings /> :
-       tab === "team" || tab === "report" ? (
+       tab === "team" || tab === "report" || tab === "rotina" ? (
         <>
-      {allowedTabs.includes("report") && (
+      {(allowedTabs.includes("report") || allowedTabs.includes("rotina")) && (
         <div className="flex items-center gap-1 mb-6 -mt-2">
           {[
             { id: "team" as const, label: "Equipe" },
+            ...(allowedTabs.includes("rotina") ? [{ id: "rotina" as const, label: isHouse(me) ? "Checklists" : "Rotina" }] : []),
             ...(allowedTabs.includes("report") ? [{ id: "report" as const, label: "Relatório" }] : []),
           ].map((s) => (
             <SubTabPill key={s.id} active={tab === s.id} onClick={() => setTab(s.id)} label={s.label} />
           ))}
         </div>
       )}
-      {tab === "report" ? <ReportsTab /> : (
+      {tab === "report" ? <ReportsTab /> : tab === "rotina" ? (
+        // As telas de Rotina/Checklists já trazem o próprio espaçamento de página; compensa pra não dobrar a margem aqui dentro.
+        <div className="-mx-4 sm:-mx-6 md:-mx-10 -mt-6 md:-mt-10">{isHouse(me) ? <HouseChecklists /> : <CleaningView />}</div>
+      ) : (
         <>
       {pending.length > 0 && (
         <>
