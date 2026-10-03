@@ -76,10 +76,22 @@ async function admin() {
  * sair antes do Junior testar. */
 export const AUTO_SETTING_KEY = "whatsapp_auto_enabled";
 
-export async function autoMessagesEnabled() {
+export const WELCOME_SETTING_KEY = "whatsapp_welcome_enabled";
+
+async function settingEnabled(key: string) {
   const db = await admin();
-  const { data } = await db.from("app_settings").select("value").eq("key", AUTO_SETTING_KEY).maybeSingle();
+  const { data } = await db.from("app_settings").select("value").eq("key", key).maybeSingle();
   return (data?.value as any)?.enabled === true;
+}
+
+/** Alerta de suporte no WhatsApp do Junior + cópia da resposta na agência. */
+export async function autoMessagesEnabled() {
+  return settingEnabled(AUTO_SETTING_KEY);
+}
+
+/** Boas-vindas no WhatsApp de quem acabou de cadastrar a agência (chave à parte). */
+export async function welcomeMessagesEnabled() {
+  return settingEnabled(WELCOME_SETTING_KEY);
 }
 
 export async function isOptedOut(phone: string) {

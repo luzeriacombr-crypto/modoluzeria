@@ -7,6 +7,7 @@ import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { listInactiveOrgsForReengagement, sendReengagementEmails, getReengagementWhatsappLinks, getMessageTemplateOverrides, saveMessageTemplate } from "@/lib/luzeria/reengagement.functions";
 import type { InactiveOrgRow, MessageTemplateKey } from "@/lib/luzeria/reengagement.functions";
 import { WhatsappCampaignSender } from "./WhatsappCampaignSender";
+import { WhatsappAutoSwitches } from "./WhatsappAutoSwitches";
 
 function formatDate(iso: string | null) {
   if (!iso) return "Nunca";
@@ -191,6 +192,8 @@ export function MessagesPanel({ openPreset, onConsumeOpenPreset }: { openPreset?
 
       {open && (
         <div className="mt-4 space-y-5">
+          <WhatsappAutoSwitches />
+
           <div>
             <p className="text-[11px] font-bold uppercase text-foreground/40 tracking-wider mb-2">Campanhas prontas — agências em teste</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Send } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { getWhatsappSetup, sendWhatsappCampaign, getWhatsappCampaignStatus, getRecentWhatsappRecipients, getWhatsappAutoEnabled, setWhatsappAutoEnabled } from "@/lib/luzeria/whatsapp.functions";
+import { getWhatsappSetup, sendWhatsappCampaign, getWhatsappCampaignStatus, getRecentWhatsappRecipients } from "@/lib/luzeria/whatsapp.functions";
 
 // Preço aproximado da Meta por mensagem no Brasil (só pra dar uma noção
 // antes de disparar — o valor real vem na fatura da Meta).
@@ -45,20 +45,6 @@ export function WhatsappCampaignSender({ selectedIds, defaultText, presetKey }: 
   const [extra, setExtra] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [ignoreCooldown, setIgnoreCooldown] = useState(false);
-  const qc = useQueryClient();
-  const { data: auto } = useQuery({
-    queryKey: ["whatsapp-auto-enabled"],
-    queryFn: () => getWhatsappAutoEnabled(),
-    enabled: !!setup?.configured,
-  });
-  const toggleAuto = useMutation({
-    mutationFn: useServerFn(setWhatsappAutoEnabled),
-    onSuccess: (r: any) => {
-      qc.setQueryData(["whatsapp-auto-enabled"], r);
-      toast.success(r.enabled ? "Mensagens automáticas ligadas." : "Mensagens automáticas desligadas.");
-    },
-    onError: (e: any) => toastFriendlyError(e, "Não consegui mudar a chave."),
-  });
   const [result, setResult] = useState<{ campaignId: string; sent: number; failed: { orgName: string; reason: string }[]; skipped: { orgName: string; reason: string }[] } | null>(null);
 
   // Agências da seleção que já receberam campanha nos últimos dias — puladas
@@ -136,17 +122,6 @@ export function WhatsappCampaignSender({ selectedIds, defaultText, presetKey }: 
   return (
     <div className="rounded-lg border p-3 space-y-3" style={{ borderColor: "#25D36655" }}>
       <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#25D366" }}>WhatsApp oficial — envio automático</p>
-      <label className="flex items-start gap-2 text-[12px] text-foreground/75 cursor-pointer">
-        <input
-          type="checkbox" checked={!!auto?.enabled} disabled={!auto || toggleAuto.isPending}
-          onChange={(e) => toggleAuto.mutate({ data: { enabled: e.target.checked } })}
-          className="mt-0.5 accent-[#25D366]"
-        />
-        <span>
-          <strong>Mensagens automáticas {auto?.enabled ? "ligadas" : "desligadas"}</strong>
-          <span className="block text-[11px] text-foreground/45">Boas-vindas no cadastro, alerta de suporte no seu WhatsApp e cópia da sua resposta no WhatsApp da agência. Desligado, nada disso sai (o disparo em massa abaixo continua manual).</span>
-        </span>
-      </label>
       {setup.health && (
         <div className="text-[12px] text-foreground/70 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1.5">

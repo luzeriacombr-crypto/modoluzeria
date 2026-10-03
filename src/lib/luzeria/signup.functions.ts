@@ -74,7 +74,7 @@ function looksLikeFakeName(name: string): boolean {
 async function sendWelcomeWhatsapp(params: { orgId: string; whatsapp: string; ownerName: string; agencyName: string }) {
   try {
     const wa = await import("./whatsapp.server");
-    if (!wa.whatsappConfigured() || !(await wa.autoMessagesEnabled())) return;
+    if (!wa.whatsappConfigured() || !(await wa.welcomeMessagesEnabled())) return;
     const firstName = params.ownerName.split(" ")[0] || params.ownerName;
     const r = await wa.sendTemplate(params.whatsapp, wa.WA_TEMPLATES.welcome, [firstName, params.agencyName], {
       kind: "welcome", orgId: params.orgId,

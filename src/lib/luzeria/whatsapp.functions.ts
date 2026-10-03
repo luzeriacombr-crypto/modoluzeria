@@ -171,29 +171,31 @@ export const getWhatsappCampaignStatus = createServerFn({ method: "GET" })
     return counts;
   });
 
-/** Chave liga/desliga das mensagens automáticas (boas-vindas, alerta de
- * suporte, cópia da resposta no WhatsApp da agência) — ver whatsapp.server.ts. */
-export const getWhatsappAutoEnabled = createServerFn({ method: "GET" })
+/** Chaves liga/desliga das mensagens automáticas (ver whatsapp.server.ts):
+ * "welcome" = boas-vindas no cadastro; "support" = alerta de suporte no
+ * WhatsApp do Junior + cópia da resposta no WhatsApp da agência. */
+export const getWhatsappAutoSettings = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await assertPlatformAdmin(context);
-    const { autoMessagesEnabled } = await import("./whatsapp.server");
-    return { enabled: await autoMessagesEnabled() };
+    const { autoMessagesEnabled, welcomeMessagesEnabled } = await import("./whatsapp.server");
+    return { welcome: await welcomeMessagesEnabled(), support: await autoMessagesEnabled() };
   });
 
-export const setWhatsappAutoEnabled = createServerFn({ method: "POST" })
-  .inputValidator((d: { enabled: boolean }) => z.object({ enabled: z.boolean() }).parse(d))
+export const setWhatsappAutoSetting = createServerFn({ method: "POST" })
+  .inputValidator((d: { which: "welcome" | "support"; enabled: boolean }) =>
+    z.object({ which: z.enum(["welcome", "support"]), enabled: z.boolean() }).parse(d))
   .middleware([requireActiveProfile])
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
-    const { AUTO_SETTING_KEY } = await import("./whatsapp.server");
+    const { AUTO_SETTING_KEY, WELCOME_SETTING_KEY } = await import("./whatsapp.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await (supabaseAdmin as any).from("app_settings").upsert({
-      key: AUTO_SETTING_KEY,
+      key: data.which === "welcome" ? WELCOME_SETTING_KEY : AUTO_SETTING_KEY,
       value: { enabled: data.enabled },
       updated_at: new Date().toISOString(),
       updated_by: context.userId,
     });
     if (error) throw new Error(error.message);
-    return { enabled: data.enabled };
+    return { which: data.which, enabled: data.enabled };
   });
