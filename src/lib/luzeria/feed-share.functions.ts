@@ -432,7 +432,12 @@ export const getPublicFeed = createServerFn({ method: "GET" })
       // o link público mostra a miniatura do primeiro arquivo em vez da capa
       // que a agência escolheu.
       const coverUrl = it.cover_path ? signedCovers.get(it.cover_path) ?? null : null;
-      const gridThumb = coverUrl ?? files[0]?.thumbUrl ?? null;
+      // Na grade (miniaturas de ~200 px) usa versões leves: capa reduzida pelo nosso
+      // servidor e miniatura menor do Drive. O modal continua com a imagem grande.
+      const firstThumb = files[0]?.thumbUrl ?? null;
+      const gridThumb = coverUrl
+        ? `/api/public-cover?token=${encodeURIComponent(data.token)}&itemId=${encodeURIComponent(it.id)}&w=480`
+        : firstThumb ? firstThumb.replace(/=s720$/i, "=s400") : null;
       const status = it.status as Status;
       const stage = mapStatusToClientStage(status);
       const blockedReason: string | null = it.blocked_reason ?? null;
@@ -640,13 +645,16 @@ export const approvePublicItem = createServerFn({ method: "POST" })
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
     );
-    const { error } = await supabase.rpc("add_public_feedback", {
+    const { data: saved, error } = await supabase.rpc("add_public_feedback", {
       _token: data.token,
       _item_id: data.itemId,
       _author_name: data.authorName,
       _text: "✅ APROVADO",
     });
     if (error) throw new Error(error.message);
+    // A função devolve NULL (sem erro) quando o link foi revogado ou o item não é do mês ativo:
+    // antes isso virava "aprovado" na tela sem ter registrado nada.
+    if (!saved) throw new Error("Não foi possível registrar a aprovação. Peça um link novo à sua agência.");
     return { ok: true };
   });
 

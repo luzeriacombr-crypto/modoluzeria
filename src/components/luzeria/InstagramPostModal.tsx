@@ -91,18 +91,51 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 
 const SCALE = 0.65; // controls appear at 65% size
 
+// Vídeo do link público: mostra "Carregando…" enquanto o arquivo (pode ter 60+ MB) chega e uma
+// mensagem clara se falhar, em vez de ficar numa tela preta que parece travada.
+function PublicVideo({ token, fileId }: { token: string; fileId: string }) {
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [attempt, setAttempt] = useState(0);
+  const src = `/api/public-drive-file?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(fileId)}`;
+  return (
+    <div className="absolute inset-0 bg-black">
+      <video
+        key={attempt}
+        src={src}
+        controls autoPlay playsInline preload="auto"
+        onLoadedData={() => setState("ready")}
+        onCanPlay={() => setState("ready")}
+        onWaiting={() => setState((s) => (s === "error" ? s : "loading"))}
+        onPlaying={() => setState("ready")}
+        onError={() => setState("error")}
+        className="absolute inset-0 w-full h-full object-contain"
+      />
+      {state === "loading" && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+          <div className="flex flex-col items-center gap-2 text-white/80 text-[12px]">
+            <Loader2 size={26} className="animate-spin" />
+            Carregando o vídeo… pode levar alguns segundos
+          </div>
+        </div>
+      )}
+      {state === "error" && (
+        <div className="absolute inset-0 grid place-items-center p-6 text-center text-white/85 text-[13px]">
+          <div>
+            Não foi possível carregar o vídeo agora.
+            <div className="text-white/55 text-[12px] mt-1">Confira sua internet e tente de novo, ou use "Baixar em alta qualidade" abaixo.</div>
+            <button onClick={() => { setState("loading"); setAttempt((n) => n + 1); }} className="mt-3 underline text-white">Tentar de novo</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VideoPlayer({ fileId, publicToken }: { fileId: string; publicToken?: string | null }) {
   // Link público: toca pelo nosso servidor (não depende do cliente ter acesso
   // ao arquivo no Google Drive — a tela "Você precisa ter acesso" não aparece mais).
   if (publicToken) {
-    return (
-      <video
-        key={fileId}
-        src={`/api/public-drive-file?token=${encodeURIComponent(publicToken)}&fileId=${encodeURIComponent(fileId)}`}
-        controls autoPlay playsInline
-        className="absolute inset-0 w-full h-full bg-black object-contain"
-      />
-    );
+    return <PublicVideo key={fileId} token={publicToken} fileId={fileId} />;
   }
   return (
     <div className="absolute inset-0 bg-black" style={{ overflow: "hidden" }}>
@@ -564,7 +597,8 @@ export function InstagramPostModal({
                     onClick={async () => {
                       if (!onApproveItem) return;
                       setItemApproving(true);
-                      try { await onApproveItem(); setItemApproved(true); } catch {}
+                      try { await onApproveItem(); setItemApproved(true); }
+                      catch (e: any) { toast.error(e?.message ? `Não deu pra aprovar: ${e.message}` : "Não deu pra aprovar agora. Confira sua internet e toque em Aprovar de novo."); }
                       setItemApproving(false);
                     }}
                     disabled={itemApproving || !onApproveItem}

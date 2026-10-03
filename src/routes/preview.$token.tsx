@@ -249,7 +249,8 @@ function PublicPreviewPage() {
             // genérico "Cliente" (que aparecia sem graça nas notificações).
             const author = savedName || client.name;
             await approveItem({ data: { token, itemId: activeItem!.id, authorName: author } });
-            await q.refetch();
+            // A aprovação já foi gravada; se só a atualização da tela falhar, não deve parecer erro.
+            try { await q.refetch(); } catch {}
           }}
           onSubmitFeedback={async (author, text, category) => {
             await addFb({ data: { token, itemId: activeItem!.id, authorName: author, text, category } });

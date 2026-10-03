@@ -49,6 +49,7 @@ import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar_.completar'
 import { Route as ApiPublicDriveFileRouteImport } from './routes/api.public-drive-file'
+import { Route as ApiPublicCoverRouteImport } from './routes/api.public-cover'
 import { Route as ApiNativoAcervoRouteImport } from './routes/api.nativo-acervo'
 import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
@@ -306,6 +307,11 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
 const ApiPublicDriveFileRoute = ApiPublicDriveFileRouteImport.update({
   id: '/api/public-drive-file',
   path: '/api/public-drive-file',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCoverRoute = ApiPublicCoverRouteImport.update({
+  id: '/api/public-cover',
+  path: '/api/public-cover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiNativoAcervoRoute = ApiNativoAcervoRouteImport.update({
@@ -641,6 +647,7 @@ export interface FileRoutesByFullPath {
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
   '/api/nativo-acervo': typeof ApiNativoAcervoRoute
+  '/api/public-cover': typeof ApiPublicCoverRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -735,6 +742,7 @@ export interface FileRoutesByTo {
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
   '/api/nativo-acervo': typeof ApiNativoAcervoRoute
+  '/api/public-cover': typeof ApiPublicCoverRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -831,6 +839,7 @@ export interface FileRoutesById {
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
   '/api/nativo-acervo': typeof ApiNativoAcervoRoute
+  '/api/public-cover': typeof ApiPublicCoverRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar_/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
@@ -927,6 +936,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/api/mcp'
     | '/api/nativo-acervo'
+    | '/api/public-cover'
     | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
@@ -1021,6 +1031,7 @@ export interface FileRouteTypes {
     | '/vendas'
     | '/api/mcp'
     | '/api/nativo-acervo'
+    | '/api/public-cover'
     | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
@@ -1116,6 +1127,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendas'
     | '/api/mcp'
     | '/api/nativo-acervo'
+    | '/api/public-cover'
     | '/api/public-drive-file'
     | '/assinar_/completar'
     | '/blog_/$slug'
@@ -1189,6 +1201,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   ApiMcpRoute: typeof ApiMcpRoute
   ApiNativoAcervoRoute: typeof ApiNativoAcervoRoute
+  ApiPublicCoverRoute: typeof ApiPublicCoverRoute
   ApiPublicDriveFileRoute: typeof ApiPublicDriveFileRoute
   AssinarCompletarRoute: typeof AssinarCompletarRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1508,6 +1521,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public-drive-file'
       fullPath: '/api/public-drive-file'
       preLoaderRoute: typeof ApiPublicDriveFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public-cover': {
+      id: '/api/public-cover'
+      path: '/api/public-cover'
+      fullPath: '/api/public-cover'
+      preLoaderRoute: typeof ApiPublicCoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/nativo-acervo': {
@@ -1986,6 +2006,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   ApiMcpRoute: ApiMcpRoute,
   ApiNativoAcervoRoute: ApiNativoAcervoRoute,
+  ApiPublicCoverRoute: ApiPublicCoverRoute,
   ApiPublicDriveFileRoute: ApiPublicDriveFileRoute,
   AssinarCompletarRoute: AssinarCompletarRoute,
   BlogSlugRoute: BlogSlugRoute,
