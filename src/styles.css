@@ -1063,15 +1063,15 @@ body { top: 0 !important; }
 }
 
 
-/* Abas de Configurações em formato de divisória de pasta. A aba ativa usa a cor da página, cobre a linha de baixo
- * e tem "orelhas" curvas com contorno nas laterais, ligando-se à página; as outras ficam num tom mais escuro. */
+/* Abas de Configurações em formato de divisória de pasta. A aba ativa usa a cor da página e cobre a linha de baixo,
+ * abrindo-se pra página; as outras ficam num tom mais escuro. */
 .lz-ftab-row {
   --lz-ftab-line: color-mix(in srgb, var(--foreground) 14%, transparent);
   --lz-ftab-idle: color-mix(in srgb, var(--foreground) 6%, var(--color-background));
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 3px;
+  gap: 5px;
   padding: 0 12px;
   border-bottom: 1px solid var(--lz-ftab-line);
 }
@@ -1101,23 +1101,17 @@ body { top: 0 !important; }
   padding-bottom: 11px;
   color: var(--foreground);
   background: var(--color-background);
-  box-shadow: inset 0 2px 0 rgb(var(--lz-brand-rgb)), 0 -6px 14px -8px rgba(0, 0, 0, 0.45);
 }
 .lz-ftab[aria-selected="true"] .lz-ftab-icon { color: var(--lz-accent-ink); }
-.lz-ftab[aria-selected="true"]::before,
-.lz-ftab[aria-selected="true"]::after {
+/* Traço de destaque no topo da aba atual (reto, sem acompanhar a curva do canto). */
+.lz-ftab[aria-selected="true"]::before {
   content: "";
   position: absolute;
-  bottom: -1px;
-  width: 12px;
-  height: 12px;
   z-index: 3;
-}
-.lz-ftab[aria-selected="true"]::before {
-  left: -12px;
-  background: radial-gradient(circle at 0 0, transparent 11px, var(--lz-ftab-line) 11px, var(--lz-ftab-line) 12px, var(--color-background) 12px);
-}
-.lz-ftab[aria-selected="true"]::after {
-  right: -12px;
-  background: radial-gradient(circle at 100% 0, transparent 11px, var(--lz-ftab-line) 11px, var(--lz-ftab-line) 12px, var(--color-background) 12px);
+  left: 16px;
+  right: 16px;
+  top: -1px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: rgb(var(--lz-brand-rgb));
 }
