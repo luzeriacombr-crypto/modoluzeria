@@ -382,6 +382,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 @layer base {
+  /* Tamanho-base fixo: o layout todo (larguras máximas, espaçamentos, textos) é em rem. Sem isso, quem
+   * tem a fonte do navegador menor que 16px (ex.: "Pequena", 12px) via tudo encolhido e uma coluna
+   * estreita no meio da tela, enquanto a barra lateral (em px) continuava do mesmo tamanho. Em
+   * monitores bem largos o tamanho cresce de leve (16px até 1920px de largura, 20px a partir de 2560px)
+   * pra a tela não ficar com um mar de espaço vazio. */
+  html {
+    font-size: clamp(16px, calc(0.625vw + 4px), 20px);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   * {
     border-color: var(--color-border);
   }
