@@ -3,7 +3,8 @@ import { ChevronDown, Folder, FolderOpen } from "lucide-react";
 
 export type FolderTabItem = { id: string; label: string; badge?: number | string | null };
 
-type Layout = { kind: "rows"; rows: FolderTabItem[][] } | { kind: "select" };
+type Layout = { kind: "rows"; rows: FolderTabItem[][]; level: 0 | 1 | 2 } | { kind: "select" };
+const LEVEL_CLASS = ["", "lz-ftabs--compact", "lz-ftabs--compact lz-ftabs--noicon"] as const;
 
 const GAP = 5; // mesmo gap do .lz-ftab-row
 const ROW_PADDING = 24; // padding horizontal do .lz-ftab-row (12px de cada lado)
@@ -26,7 +27,7 @@ export function FolderTabs({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<Layout>({ kind: "rows", rows: [items] });
+  const [layout, setLayout] = useState<Layout>({ kind: "rows", rows: [items], level: 0 });
   const itemsKey = items.map((i) => `${i.id}:${i.label}:${i.badge ?? ""}`).join("|");
 
   useLayoutEffect(() => {
@@ -34,18 +35,23 @@ export function FolderTabs({
     const measure = measureRef.current;
     if (!wrap || !measure) return;
     const compute = () => {
-      const widths = Array.from(measure.children).map((c) => (c as HTMLElement).getBoundingClientRect().width);
-      if (widths.length !== items.length || widths.some((w) => w === 0)) return;
+      const levels = Array.from(measure.children).map((row) => Array.from(row.firstElementChild!.children).map((c) => (c as HTMLElement).getBoundingClientRect().width));
+      if (levels.length !== 3 || levels.some((w) => w.length !== items.length || w.some((x) => x === 0))) return;
       const avail = wrap.clientWidth - ROW_PADDING - (trailing ? 44 : 0);
-      const sum = (a: number, b: number) => widths.slice(a, b).reduce((t, w) => t + w, 0) + GAP * Math.max(0, b - a - 1);
-      if (sum(0, items.length) <= avail) { setLayout({ kind: "rows", rows: [items] }); return; }
+      const sum = (widths: number[], a: number, b: number) => widths.slice(a, b).reduce((t, w) => t + w, 0) + GAP * Math.max(0, b - a - 1);
+      // 1) tudo em uma linha, apertando um pouco se precisar (espaçamento menor, depois sem ícones)
+      for (let lv = 0; lv < 3; lv++) {
+        if (sum(levels[lv], 0, items.length) <= avail) { setLayout({ kind: "rows", rows: [items], level: lv as 0 | 1 | 2 }); return; }
+      }
+      // 2) no máximo duas linhas (tamanho normal)
+      const w0 = levels[0];
       let best = -1, bestMax = Infinity;
       for (let k = 1; k < items.length; k++) {
-        const m = Math.max(sum(0, k), sum(k, items.length));
+        const m = Math.max(sum(w0, 0, k), sum(w0, k, items.length));
         if (m < bestMax) { bestMax = m; best = k; }
       }
-      if (best > 0 && bestMax <= avail) setLayout({ kind: "rows", rows: [items.slice(0, best), items.slice(best)] });
-      else setLayout({ kind: "select" });
+      if (best > 0 && bestMax <= avail) setLayout({ kind: "rows", rows: [items.slice(0, best), items.slice(best)], level: 0 });
+      else setLayout({ kind: "select" }); // 3) tela estreita: caixa de seleção
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -70,10 +76,16 @@ export function FolderTabs({
   const lastRow = rows.length - 1;
 
   return (
-    <div ref={wrapRef} className={`lz-ftabs ${size === "sm" ? "lz-ftabs--sm" : ""} lz-no-print relative ${className}`} data-tour={rest["data-tour"]}>
+    <div ref={wrapRef} className={`lz-ftabs ${size === "sm" ? "lz-ftabs--sm" : ""} ${layout.kind === "rows" ? LEVEL_CLASS[layout.level] : ""} lz-no-print relative ${className}`} data-tour={rest["data-tour"]}>
       {/* Linha invisível só pra medir a largura natural de cada aba. */}
-      <div ref={measureRef} aria-hidden className="lz-ftab-row" style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", height: 0, overflow: "hidden", whiteSpace: "nowrap", borderBottom: 0 }}>
-        {items.map((t) => tabButton(t, false))}
+      <div ref={measureRef} aria-hidden style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", height: 0, overflow: "hidden", whiteSpace: "nowrap" }}>
+        {LEVEL_CLASS.map((cls, lv) => (
+          <div key={lv} className={cls}>
+            <div className="lz-ftab-row" style={{ borderBottom: 0, flexWrap: "nowrap", width: "max-content" }}>
+              {items.map((t) => tabButton(t, false))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {layout.kind === "select" ? (

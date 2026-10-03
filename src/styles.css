@@ -1157,3 +1157,7 @@ body { top: 0 !important; }
 .lz-ftab[aria-selected="true"] .lz-ftab-badge { background: rgba(var(--lz-brand-rgb), 0.25); color: var(--lz-accent-ink); }
 .lz-ftab-trailing { margin-left: auto; align-self: center; padding-bottom: 2px; }
 .lz-ftabs { margin-bottom: 1.5rem; }
+
+/* Aperta as abas pra caber numa linha só (FolderTabs): primeiro espaçamento menor, depois sem os ícones de pasta. */
+.lz-ftabs--compact .lz-ftab { padding-left: 11px; padding-right: 11px; letter-spacing: 0.03em; font-size: 11px; gap: 5px; }
+.lz-ftabs--noicon .lz-ftab-icon { display: none; }
