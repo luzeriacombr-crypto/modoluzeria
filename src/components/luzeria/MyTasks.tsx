@@ -757,12 +757,13 @@ export function MyTasks() {
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        {/* flex-wrap: se não couber lado a lado, o botão desce pra linha de baixo em vez de ficar por cima do seletor. */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2 min-w-0">
           {isAdmin && (<>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 max-w-full">
               <span className="text-xs text-foreground/40 shrink-0">Ver como:</span>
               <select value={viewAs} onChange={(e) => setViewAs(e.target.value)}
-                className="bg-card border border-foreground/10 text-sm text-foreground rounded-lg px-3 py-2 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 flex-1 sm:flex-none">
+                className="bg-card border border-foreground/10 text-sm text-foreground rounded-lg px-3 py-2 outline-none focus:border-[rgb(var(--lz-brand-rgb))] min-w-0 max-w-[16rem] flex-1 sm:flex-initial truncate">
                 <option value="">{me?.name} (eu)</option>
                 {profiles.filter((p) => p.id !== me?.id).map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
