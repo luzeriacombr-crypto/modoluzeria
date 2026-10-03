@@ -5,7 +5,7 @@ import { Loader2, Power } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { getWhatsappAutoSettings, setWhatsappAutoSetting } from "@/lib/luzeria/whatsapp.functions";
 
-type Which = "welcome" | "support";
+type Which = "welcome" | "support" | "activation";
 
 const ITEMS: { which: Which; title: string; text: string; example?: string }[] = [
   {
@@ -13,6 +13,11 @@ const ITEMS: { which: Which; title: string; text: string; example?: string }[] =
     title: "Boas-vindas no WhatsApp",
     text: "Toda agência que se cadastrar recebe uma mensagem no WhatsApp que informou, na hora do cadastro.",
     example: "Oi Maria, a conta da Agência Luz no Modo Criador foi criada com sucesso! Para acessar, entre em modocriador.com.br com o e-mail que você cadastrou…",
+  },
+  {
+    which: "activation",
+    title: "Mensagens de ativação (48h depois do cadastro)",
+    text: "Quem se cadastrou há 2 a 14 dias e ainda está sem clientes, com poucos clientes ou sem equipe recebe, uma vez, a mensagem certa com os botões Já fiz / Preciso de ajuda / Agora não. Sai todo dia às 9h. Depende dos modelos novos estarem aprovados na Meta.",
   },
   {
     which: "support",
@@ -61,7 +66,7 @@ export function WhatsappAutoSwitches() {
               style={on ? { border: "2px solid #E5484D", color: "#E5484D" } : { backgroundColor: "#25D366", color: "#fff" }}
             >
               {pending ? <Loader2 size={14} className="animate-spin" /> : <Power size={14} />}
-              {on ? "Desligar" : item.which === "welcome" ? "Ativar boas-vindas" : "Ativar alertas"}
+              {on ? "Desligar" : item.which === "welcome" ? "Ativar boas-vindas" : item.which === "activation" ? "Ativar mensagens de ativação" : "Ativar alertas"}
             </button>
           </div>
         );

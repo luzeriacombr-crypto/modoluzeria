@@ -9,6 +9,7 @@ import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, adminResendWelcomeEmail, sendOrgDeactivationNotice, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
+import { WelcomeBadge, WelcomeStatusBlock } from "@/components/luzeria/WhatsappWelcomeStatus";
 import { CreateHouseModal, HouseInviteModal, ConvertToHouseModal, HouseOfferModal } from "@/components/luzeria/HouseAdminModals";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
@@ -630,6 +631,7 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
                         {o.resellerOrgName && (
                           <span className="text-[10px] text-foreground/35 shrink-0">via {o.resellerOrgName}</span>
                         )}
+                        <WelcomeBadge orgId={o.id} createdAt={o.createdAt ?? null} />
                         {o.accountType === "house" && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
                             style={{ backgroundColor: "rgba(74,158,255,0.15)", color: "#4A9EFF" }}>
@@ -1236,6 +1238,8 @@ function AgencyInfoModal({ org, onClose }: { org: any; onClose: () => void }) {
               <p className="text-foreground/30 text-[13px]">Não cadastrado.</p>
             )}
           </div>
+
+          <WelcomeStatusBlock orgId={org.id} createdAt={org.createdAt ?? null} />
 
           {!editing && digits && (
             <div className="flex gap-2">

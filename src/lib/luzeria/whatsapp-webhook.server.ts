@@ -9,8 +9,9 @@
 // - de qualquer outra pessoa → SAIR/VOLTAR mexem na lista de envio; o resto
 //   é repassado pro Junior como alerta, pra ele poder responder do celular.
 import {
-  alertAdmin, isAdminPhone, isOptInText, isOptOutText, isOptedOut, phoneKey,
+  ACTIVATION_CAMPAIGNS, alertAdmin, isAdminPhone, isOptInText, isOptOutText, isOptedOut, pauseCampaign, phoneKey,
   sendTemplate, sendText, WA_TEMPLATES,
+  type ActivationKey,
 } from "./whatsapp.server";
 
 const STATUS_RANK: Record<string, number> = { sent: 0, delivered: 1, read: 2 };
@@ -81,6 +82,13 @@ async function handleInbound(msg: any, contactName: string | null) {
 
   if (isAdminPhone(from)) {
     await handleAdminReply(msg, text);
+    return;
+  }
+
+  // Toque num botão das campanhas de ativação (payload "act|<campanha>|<ação>|<org>").
+  const payload: string | undefined = msg.button?.payload ?? msg.interactive?.button_reply?.id;
+  if (payload?.startsWith("act|")) {
+    await handleActivationButton(payload, from, contactName);
     return;
   }
 
@@ -157,4 +165,33 @@ async function handleAdminReply(msg: any, text: string) {
   }
 
   await reply(`Essa solicitação não deixou WhatsApp. Responde pelo app, em Central de Ajuda.`);
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** "Já fiz" / "Preciso de ajuda" / "Agora não": pausa a campanha pra essa
+ * agência, responde (texto livre, dentro da janela de 24h — de graça) e, se
+ * pediu ajuda, avisa o Junior no WhatsApp pra ele responder arrastando. */
+async function handleActivationButton(payload: string, from: string, contactName: string | null) {
+  const [, key, action, orgId] = payload.split("|");
+  const campaign = ACTIVATION_CAMPAIGNS[key as ActivationKey];
+  if (!campaign || !UUID_RE.test(orgId ?? "") || !["done", "help", "later"].includes(action)) return;
+
+  const db = await admin();
+  const { data: org } = await db.from("orgs").select("id, name").eq("id", orgId).maybeSingle();
+  await db.from("whatsapp_messages").update({ org_id: orgId }).eq("phone", from).eq("kind", "inbound").is("org_id", null);
+  await pauseCampaign(orgId, key as ActivationKey, action as "done" | "help" | "later");
+
+  if (action === "done") {
+    await sendText(from, campaign.doneReply, { kind: "text", orgId });
+  } else if (action === "later") {
+    await sendText(from, "Tudo bem! 😊 Quando quiser, é só entrar em modocriador.com.br. Qualquer dúvida, é só chamar por aqui.", { kind: "text", orgId });
+  } else {
+    await sendText(from, "Claro! 🙋 Já avisei o Junior, do Modo Criador, e ele te responde por aqui em breve.", { kind: "text", orgId });
+    await alertAdmin({
+      label: `${contactName ?? `+${from}`} (${org?.name ?? "agência"})`,
+      message: `Pediu ajuda na mensagem de ${campaign.label}.`,
+      orgId, replyToPhone: from, force: true,
+    });
+  }
 }

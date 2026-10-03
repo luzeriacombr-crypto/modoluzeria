@@ -104,6 +104,8 @@ export type WaSendResult = { ok: true; wamid: string } | { ok: false; error: str
 
 type LogExtra = {
   kind: string;
+  /** Payloads dos botões de resposta rápida do modelo, na ordem (o toque volta no webhook). */
+  buttonPayloads?: string[];
   orgId?: string | null;
   campaignId?: string | null;
   supportThreadId?: string | null;
@@ -166,8 +168,14 @@ export async function sendTemplate(to: string, template: string | readonly strin
       template: {
         name,
         language: { code: LANG },
-        ...(safeParams.length > 0 && {
-          components: [{ type: "body", parameters: safeParams.map((text) => ({ type: "text", text })) }],
+        ...((safeParams.length > 0 || (extra.buttonPayloads?.length ?? 0) > 0) && {
+          components: [
+            ...(safeParams.length > 0 ? [{ type: "body", parameters: safeParams.map((text) => ({ type: "text", text })) }] : []),
+            ...(extra.buttonPayloads ?? []).map((payload, index) => ({
+              type: "button", sub_type: "quick_reply", index: String(index),
+              parameters: [{ type: "payload", payload }],
+            })),
+          ],
         }),
       },
     });
@@ -203,10 +211,12 @@ export async function alertAdmin(params: {
   orgId?: string | null;
   supportThreadId?: string | null;
   replyToPhone?: string | null;
+  /** Ignora a chave de alertas (usado quando a pessoa pediu ajuda tocando num botão). */
+  force?: boolean;
 }) {
   const adminPhone = process.env.WHATSAPP_ADMIN_PHONE;
   if (!whatsappConfigured() || !adminPhone) return;
-  if (!(await autoMessagesEnabled())) return;
+  if (!params.force && !(await autoMessagesEnabled())) return;
   const result = await sendTemplate(adminPhone, WA_TEMPLATES.supportAlert, [params.label, params.message], {
     kind: "support_alert",
     orgId: params.orgId,
@@ -215,6 +225,59 @@ export async function alertAdmin(params: {
     replyLabel: params.label,
   });
   if (!result.ok) console.error("[whatsapp] falha ao alertar o Junior:", result.error);
+}
+
+/** Campanhas de ativação com modelo de marketing próprio (texto fixo + 3
+ * botões). `preset` é a chave da campanha pronta no painel de Mensagens. */
+export const ACTIVATION_CAMPAIGNS = {
+  noClients: {
+    template: "ativacao_sem_clientes_v2", label: "sem clientes",
+    doneReply: "Que notícia boa! 🎉 Com os seus clientes dentro, o Modo Criador já pode organizar o calendário e as aprovações de cada um. Se precisar de qualquer coisa, é só chamar por aqui. Vamos juntos!",
+  },
+  fewClients: {
+    template: "ativacao_poucos_clientes_v2", label: "poucos clientes",
+    doneReply: "Show! 🚀 Agora sim: com todos os clientes no Modo Criador, o planejamento, o calendário e as aprovações ficam num lugar só. Qualquer dúvida, estou por aqui!",
+  },
+  noTeam: {
+    template: "ativacao_equipe_v2", label: "equipe",
+    doneReply: "Que máximo! 🙌 Agora cada pessoa do seu time recebe as tarefas dela e você acompanha tudo sem precisar cobrar um por um. Conta comigo pra qualquer coisa!",
+  },
+} as const;
+export type ActivationKey = keyof typeof ACTIVATION_CAMPAIGNS;
+
+export function activationKeyForTemplate(name: string): ActivationKey | null {
+  const hit = (Object.entries(ACTIVATION_CAMPAIGNS) as [ActivationKey, { template: string }][]).find(([, c]) => c.template === name);
+  return hit ? hit[0] : null;
+}
+
+/** Botões do modelo, na mesma ordem em que foram criados na Meta:
+ * Já fiz / Preciso de ajuda / Agora não. */
+export function activationButtonPayloads(key: ActivationKey, orgId: string) {
+  return (["done", "help", "later"] as const).map((action) => `act|${key}|${action}|${orgId}`);
+}
+
+export const ACTIVATION_SETTING_KEY = "whatsapp_activation_enabled";
+export async function activationAutoEnabled() {
+  return settingEnabled(ACTIVATION_SETTING_KEY);
+}
+
+const PAUSE_DAYS = { done: 30, help: 30, later: 15 } as const;
+
+export async function pauseCampaign(orgId: string, key: ActivationKey, reason: keyof typeof PAUSE_DAYS) {
+  const db = await admin();
+  await db.from("whatsapp_campaign_pauses").upsert({
+    org_id: orgId, campaign_key: key, reason,
+    until: new Date(Date.now() + PAUSE_DAYS[reason] * 86_400_000).toISOString(),
+  });
+}
+
+/** Agências (da lista) em pausa nessa campanha agora. */
+export async function pausedOrgIds(key: ActivationKey, orgIds: string[]): Promise<Set<string>> {
+  if (orgIds.length === 0) return new Set();
+  const db = await admin();
+  const { data } = await db.from("whatsapp_campaign_pauses").select("org_id")
+    .eq("campaign_key", key).gt("until", new Date().toISOString()).in("org_id", orgIds);
+  return new Set((data ?? []).map((r: any) => r.org_id as string));
 }
 
 export type WaPhoneHealth = { quality: "GREEN" | "YELLOW" | "RED" | "UNKNOWN"; limitTier: string | null };

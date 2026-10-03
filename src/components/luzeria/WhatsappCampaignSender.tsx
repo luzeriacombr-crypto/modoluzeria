@@ -30,9 +30,9 @@ const LIMIT_LABEL: Record<string, string> = {
 // "comunicado" genérico não serve pra esses textos longos). `extra` preenche
 // {{2}}, {{3}}… — "{clientes}" vira "2 clientes" por agência no envio.
 const PRESET_TEMPLATES: Record<string, { name: string; extra: string[] }> = {
-  noClients: { name: "ativacao_sem_clientes", extra: [] },
-  fewClients: { name: "ativacao_poucos_clientes", extra: ["{clientes}"] },
-  noTeam: { name: "ativacao_equipe", extra: [] },
+  noClients: { name: "ativacao_sem_clientes_v2", extra: [] },
+  fewClients: { name: "ativacao_poucos_clientes_v2", extra: ["{clientes}"] },
+  noTeam: { name: "ativacao_equipe_v2", extra: [] },
 };
 
 export function WhatsappCampaignSender({ selectedIds, defaultText, presetKey }: { selectedIds: string[]; defaultText: string; presetKey?: string | null }) {

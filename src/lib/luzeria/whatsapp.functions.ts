@@ -104,6 +104,9 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
       .forEach((p: any) => { if (!ownerNameByOrg.has(p.org_id)) ownerNameByOrg.set(p.org_id, p.name); });
     const optedOut = new Set((optOuts ?? []).map((r: any) => r.phone_key));
     const recent = data.ignoreCooldown ? new Set<string>() : await recentlyMessagedOrgIds(db, data.orgIds);
+    // Modelos de ativação (com botões): quem tocou em "Já fiz/Ajuda/Agora não" fica de fora.
+    const activationKey = wa.activationKeyForTemplate(template.name);
+    const paused = activationKey ? await wa.pausedOrgIds(activationKey, data.orgIds) : new Set<string>();
 
     const { data: campaign, error: campErr } = await db.from("whatsapp_campaigns").insert({
       template_name: template.name,
@@ -124,6 +127,7 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
       for (let org = queue.shift(); org; org = queue.shift()) {
         if (!wa.toWaDigits(org.whatsapp)) { skipped.push({ orgId: org.id, orgName: org.name, reason: "sem WhatsApp" }); continue; }
         if (optedOut.has(wa.phoneKey(org.whatsapp))) { skipped.push({ orgId: org.id, orgName: org.name, reason: "pediu pra sair" }); continue; }
+        if (paused.has(org.id)) { skipped.push({ orgId: org.id, orgName: org.name, reason: "pediu pausa nessa campanha" }); continue; }
         if (recent.has(org.id)) { skipped.push({ orgId: org.id, orgName: org.name, reason: `recebeu nos últimos ${CAMPAIGN_COOLDOWN_DAYS} dias` }); continue; }
         const firstName = ownerNameByOrg.get(org.id)?.trim().split(" ")[0] || "tudo bem";
         // "{clientes}" vira "2 clientes" por agência (usado pelo modelo ativacao_poucos_clientes).
@@ -132,6 +136,7 @@ export const sendWhatsappCampaign = createServerFn({ method: "POST" })
         const params = [firstName, ...extras].slice(0, template!.variableCount);
         const r = await wa.sendTemplate(org.whatsapp, template!.name, params, {
           kind: "campaign", orgId: org.id, campaignId: campaign.id,
+          ...(activationKey && { buttonPayloads: wa.activationButtonPayloads(activationKey, org.id) }),
         });
         if (r.ok) sent++;
         else failed.push({ orgId: org.id, orgName: org.name, reason: r.error });
@@ -173,29 +178,89 @@ export const getWhatsappCampaignStatus = createServerFn({ method: "GET" })
 
 /** Chaves liga/desliga das mensagens automáticas (ver whatsapp.server.ts):
  * "welcome" = boas-vindas no cadastro; "support" = alerta de suporte no
- * WhatsApp do Junior + cópia da resposta no WhatsApp da agência. */
+ * WhatsApp do Junior + cópia da resposta na agência; "activation" = mensagens
+ * de ativação 48h depois do cadastro (sem clientes / poucos / equipe). */
+const SETTING_BY_NAME = async () => {
+  const wa = await import("./whatsapp.server");
+  return { welcome: wa.WELCOME_SETTING_KEY, support: wa.AUTO_SETTING_KEY, activation: wa.ACTIVATION_SETTING_KEY } as const;
+};
+
 export const getWhatsappAutoSettings = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }) => {
     await assertPlatformAdmin(context);
-    const { autoMessagesEnabled, welcomeMessagesEnabled } = await import("./whatsapp.server");
-    return { welcome: await welcomeMessagesEnabled(), support: await autoMessagesEnabled() };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const keys = await SETTING_BY_NAME();
+    const { data } = await (supabaseAdmin as any).from("app_settings").select("key, value").in("key", Object.values(keys));
+    const on = (k: string) => (data ?? []).find((r: any) => r.key === k)?.value?.enabled === true;
+    return { welcome: on(keys.welcome), support: on(keys.support), activation: on(keys.activation) };
   });
 
 export const setWhatsappAutoSetting = createServerFn({ method: "POST" })
-  .inputValidator((d: { which: "welcome" | "support"; enabled: boolean }) =>
-    z.object({ which: z.enum(["welcome", "support"]), enabled: z.boolean() }).parse(d))
+  .inputValidator((d: { which: "welcome" | "support" | "activation"; enabled: boolean }) =>
+    z.object({ which: z.enum(["welcome", "support", "activation"]), enabled: z.boolean() }).parse(d))
   .middleware([requireActiveProfile])
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
-    const { AUTO_SETTING_KEY, WELCOME_SETTING_KEY } = await import("./whatsapp.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await (supabaseAdmin as any).from("app_settings").upsert({
-      key: data.which === "welcome" ? WELCOME_SETTING_KEY : AUTO_SETTING_KEY,
-      value: { enabled: data.enabled },
-      updated_at: new Date().toISOString(),
-      updated_by: context.userId,
+    const keys = await SETTING_BY_NAME();
+    const key = keys[data.which];
+    const db = supabaseAdmin as any;
+    // Guarda desde quando está ligado — o painel de agências usa isso pra
+    // marcar "não recebeu" só em quem se cadastrou depois.
+    const { data: prev } = await db.from("app_settings").select("value").eq("key", key).maybeSingle();
+    const since = data.enabled ? ((prev?.value as any)?.since ?? new Date().toISOString()) : (prev?.value as any)?.since ?? null;
+    const { error } = await db.from("app_settings").upsert({
+      key, value: { enabled: data.enabled, since }, updated_at: new Date().toISOString(), updated_by: context.userId,
     });
     if (error) throw new Error(error.message);
     return { which: data.which, enabled: data.enabled };
+  });
+
+export type WelcomeStatus = { status: "sent" | "delivered" | "read" | "failed"; at: string; error: string | null };
+
+/** Último envio de boas-vindas por agência (pro painel de Agências). `since`
+ * = quando a boas-vindas foi ligada: cadastro depois disso sem registro =
+ * "não recebeu". */
+export const getWhatsappWelcomeStatuses = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }): Promise<{ since: string; byOrg: Record<string, WelcomeStatus> }> => {
+    await assertPlatformAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
+    const wa = await import("./whatsapp.server");
+    const [{ data: rows }, { data: setting }] = await Promise.all([
+      db.from("whatsapp_messages").select("org_id, status, error, created_at")
+        .eq("kind", "welcome").eq("direction", "out").not("org_id", "is", null).order("created_at", { ascending: false }).limit(2000),
+      db.from("app_settings").select("value").eq("key", wa.WELCOME_SETTING_KEY).maybeSingle(),
+    ]);
+    const byOrg: Record<string, WelcomeStatus> = {};
+    // Mais recente primeiro; uma tentativa que entregou vale mais que uma que falhou antes.
+    (rows ?? []).forEach((r: any) => { if (!byOrg[r.org_id]) byOrg[r.org_id] = { status: r.status, at: r.created_at, error: r.error }; });
+    return { since: (setting?.value as any)?.since ?? "2026-10-03T00:00:00Z", byOrg };
+  });
+
+/** Reenvia a boas-vindas pra uma agência (ação manual do Junior — ignora a chave). */
+export const resendWhatsappWelcome = createServerFn({ method: "POST" })
+  .inputValidator((d: { orgId: string }) => z.object({ orgId: z.string().uuid() }).parse(d))
+  .middleware([requireActiveProfile])
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context);
+    const wa = await import("./whatsapp.server");
+    if (!wa.whatsappConfigured()) throw new Error("O WhatsApp ainda não está configurado.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
+    const { data: org } = await db.from("orgs").select("id, name, whatsapp").eq("id", data.orgId).maybeSingle();
+    if (!org?.whatsapp) throw new Error("Essa agência não tem WhatsApp cadastrado.");
+    if (await wa.isOptedOut(org.whatsapp)) throw new Error("Essa agência pediu pra não receber mais mensagens (respondeu SAIR).");
+    const [{ data: roles }, { data: profiles }] = await Promise.all([
+      db.from("user_roles").select("user_id").eq("role", "master"),
+      db.from("profiles").select("id, name, created_at").eq("org_id", org.id),
+    ]);
+    const masters = new Set((roles ?? []).map((r: any) => r.user_id));
+    const owner = (profiles ?? []).filter((p: any) => masters.has(p.id)).sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))[0];
+    const firstName = owner?.name?.trim().split(" ")[0] || "tudo bem";
+    const r = await wa.sendTemplate(org.whatsapp, wa.WA_TEMPLATES.welcome, [firstName, org.name], { kind: "welcome", orgId: org.id });
+    if (!r.ok) throw new Error(r.error);
+    return { ok: true };
   });

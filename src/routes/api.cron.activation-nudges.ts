@@ -23,7 +23,11 @@ export const Route = createFileRoute("/api/cron/activation-nudges")({
           runPaymentGraceEnforcement(),
           runTutorialNudge(),
         ]);
-        return new Response(JSON.stringify({ ok: true, nudges, inactivity, paymentGrace, tutorialNudge }), {
+        // WhatsApp de ativação (48h): isolado — uma falha aqui não derruba o resto da régua.
+        const whatsapp = await import("@/lib/luzeria/whatsapp-activation.server")
+          .then((m) => m.runWhatsappActivationNudges())
+          .catch((e) => ({ error: String(e?.message ?? e) }));
+        return new Response(JSON.stringify({ ok: true, nudges, inactivity, paymentGrace, tutorialNudge, whatsapp }), {
           headers: { "content-type": "application/json" },
         });
       },
