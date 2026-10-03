@@ -1414,8 +1414,8 @@ export const getInstagramConnectionSummary = createServerFn({ method: "GET" })
       .from("client_instagram_credentials").select("client_id").in("client_id", clientIds);
     const connectedIds = new Set(((creds ?? []) as any[]).map((c) => c.client_id));
     const clientsMissing = list.filter((c) => !connectedIds.has(c.id)).map((c) => ({ id: c.id, name: c.name, color: c.color }));
-    const clients: ConnectionSummaryClient[] = list.map((c) => ({ id: c.id, name: c.name, color: c.color, connected: connectedIds.has(c.id) }));
-    return { total: list.length, connected: list.length - clientsMissing.length, clientsMissing, clients };
+    const clientsOut: ConnectionSummaryClient[] = list.map((c) => ({ id: c.id, name: c.name, color: c.color, connected: connectedIds.has(c.id) }));
+    return { total: list.length, connected: list.length - clientsMissing.length, clientsMissing, clients: clientsOut };
   });
 
 /** Tudo que já foi publicado no Instagram pelo app, ou que está programado
