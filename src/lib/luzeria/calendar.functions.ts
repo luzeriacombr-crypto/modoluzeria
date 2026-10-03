@@ -269,26 +269,37 @@ function shiftLocalDateTime(date: string, time: string, minutesToAdd: number) {
 
 export const createCalendarEvent = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { title: string; date: string; time: string }) =>
+  .inputValidator((d: { title: string; date: string; time: string; durationMinutes?: number; allDay?: boolean; location?: string; description?: string }) =>
     z.object({
       title: z.string().trim().min(1).max(200),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       time: z.string().regex(/^\d{2}:\d{2}$/),
+      durationMinutes: z.number().int().min(15).max(24 * 60).optional(),
+      allDay: z.boolean().optional(),
+      location: z.string().trim().max(300).optional(),
+      description: z.string().trim().max(2000).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
     const accessToken = await getValidCalendarAccessToken(context.supabase, context.userId);
     if (!accessToken) throw new Error("Conecte sua Google Agenda antes de criar um compromisso.");
 
-    // 1h default duration — good enough for v1 (reuniões/gravações), no UI for a custom length yet.
-    const end = shiftLocalDateTime(data.date, data.time, 60);
+    // Duração padrão de 1h (reuniões/gravações); o prompt de gravação deixa escolher (ou dia inteiro).
+    const body: any = { summary: data.title };
+    if (data.allDay) {
+      const nextDay = shiftLocalDateTime(data.date, "00:00", 24 * 60);
+      body.start = { date: data.date };
+      body.end = { date: nextDay.date };
+    } else {
+      const end = shiftLocalDateTime(data.date, data.time, data.durationMinutes ?? 60);
+      body.start = { dateTime: `${data.date}T${data.time}:00-03:00` };
+      body.end = { dateTime: `${end.date}T${end.time}:00-03:00` };
+    }
+    if (data.location) body.location = data.location;
+    if (data.description) body.description = data.description;
     const res = await fetch(GCAL_EVENTS_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        summary: data.title,
-        start: { dateTime: `${data.date}T${data.time}:00-03:00` },
-        end: { dateTime: `${end.date}T${end.time}:00-03:00` },
-      }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const errJson: any = await res.json().catch(() => null);

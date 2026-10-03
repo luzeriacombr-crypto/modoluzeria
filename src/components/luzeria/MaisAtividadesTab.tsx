@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, MapPin, Link as LinkIcon, Calendar, User, Hash, Check, Clock, FolderInput, CheckSquare, X, Tags, Video, FileText, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { useApi } from "@/lib/luzeria/queries";
+import { useApi, useMe, clientsQO } from "@/lib/luzeria/queries";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { ACTIVITY_QUANTITY_LABEL, type ContentItem, type ContentType, type Profile } from "@/lib/luzeria/types";
 import { MoveItemModal, BulkMoveModal, BulkStatusModal } from "./ClientView";
 import { AvatarStack } from "./Avatar";
+import { AddToCalendarPrompt, type CalendarPromptDefaults } from "./AddToCalendarPrompt";
 
 type ActivityType = "gravacao" | "roteiro" | "sistema" | "outros";
 
@@ -40,6 +42,9 @@ interface Props {
 export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sistemas, outros, profiles, isAdmin, isAvulso }: Props) {
   const { addContentItem, addAssignee, deleteItem, deleteContentItems, setItemStatus, moveItemToMonth, moveContentItemsToMonth, setContentItemsStatus } = useApi();
   const { openItem } = useUI();
+  const me = useMe().data;
+  const { data: allClients = [] } = useQuery(clientsQO());
+  const [calendarPrompt, setCalendarPrompt] = useState<CalendarPromptDefaults | null>(null);
   const [openForm, setOpenForm] = useState<GroupKey | null>(null);
   const [movingItem, setMovingItem] = useState<ContentItem | null>(null);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>({
@@ -81,6 +86,7 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
 
   return (
     <div className="mt-4 space-y-6">
+      <AddToCalendarPrompt defaults={calendarPrompt} onClose={() => setCalendarPrompt(null)} />
       {totalItems === 0 && !isAdmin && (
         <div className="py-14 text-center text-sm text-foreground/40">Nenhuma atividade registrada neste mês.</div>
       )}
@@ -218,6 +224,14 @@ export function MaisAtividadesTab({ clientId, monthKey, gravacoes, roteiros, sis
                     const participle = key === "outras" ? "registrada" : cfg.gender === "f" ? "registrada" : "registrado";
                     toast.success(`${label} ${participle} com sucesso`);
                     setOpenForm(null);
+                    // Gravação com data: pergunta se quer colocar na Google Agenda (some se a agência desligou o recurso).
+                    if (type === "gravacao" && itemVals.dueDate && !(me?.disabledFeatures ?? []).includes("google_calendar")) {
+                      const clientName = allClients.find((c) => c.id === clientId)?.name;
+                      setCalendarPrompt({
+                        title: `Gravação${clientName ? ` — ${clientName}` : ""}${itemVals.title ? `: ${itemVals.title}` : ""}`,
+                        date: itemVals.dueDate, location: itemVals.location, notes: itemVals.notes,
+                      });
+                    }
                   } catch (e: any) {
                     toastFriendlyError(e, "Erro ao registrar. Tente novamente.");
                   }
