@@ -1061,3 +1061,65 @@ body { top: 0 !important; }
 @media (prefers-reduced-motion: reduce) {
   .lz-dash-blob1, .lz-dash-blob2, .lz-donut-spin, .lz-donut-glow { animation: none; }
 }
+
+
+/* Abas de Configurações em formato de divisória de pasta. A aba ativa usa a cor da página e cobre a linha de baixo,
+ * com as "orelhas" curvas nas laterais; as outras ficam num tom mais escuro. */
+.lz-ftab-row {
+  --lz-ftab-line: color-mix(in srgb, var(--foreground) 14%, transparent);
+  --lz-ftab-idle: color-mix(in srgb, var(--foreground) 6%, var(--color-background));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--lz-ftab-line);
+}
+.lz-ftab-row + .lz-ftab-row { margin-top: 6px; }
+.lz-ftab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid var(--lz-ftab-line);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--lz-ftab-idle);
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  transition: color 150ms, background-color 150ms;
+}
+.lz-ftab:hover { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 10%, var(--color-background)); }
+.lz-ftab[aria-selected="true"] {
+  z-index: 2;
+  margin-bottom: -1px;
+  padding-bottom: 10px;
+  color: var(--foreground);
+  background: var(--color-background);
+  box-shadow: inset 0 2px 0 rgb(var(--lz-brand-rgb));
+}
+.lz-ftab[aria-selected="true"] .lz-ftab-icon { color: var(--lz-accent-ink); }
+.lz-ftab[aria-selected="true"]::before,
+.lz-ftab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+.lz-ftab[aria-selected="true"]::before {
+  left: -11px;
+  border-bottom-right-radius: 10px;
+  box-shadow: 5px 5px 0 5px var(--color-background);
+}
+.lz-ftab[aria-selected="true"]::after {
+  right: -11px;
+  border-bottom-left-radius: 10px;
+  box-shadow: -5px 5px 0 5px var(--color-background);
+}

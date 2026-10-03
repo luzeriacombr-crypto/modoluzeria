@@ -200,30 +200,33 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               </select>
               <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/50" />
             </div>
-            {/* Abas em formato de pastinha (divisória de arquivo), quebrando em quantas linhas precisar:
-              * antes era uma barra única com rolagem que, com muitas abas, escondia as últimas. */}
-            <div className="hidden md:flex flex-wrap items-end gap-x-1.5 gap-y-2 mb-6" data-tour="settings-tabs" role="tablist">
-              {tabItems.map((t) => {
-                const active = isActive(t.id);
-                const FolderIcon = active ? FolderOpen : Folder;
-                return (
-                  <button key={t.id} role="tab" aria-selected={active} onClick={() => setTab(t.id as any)}
-                    className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase tracking-wider rounded-t-xl rounded-b-md border transition-colors"
-                    style={active ? {
-                      color: "var(--foreground)",
-                      background: "rgba(var(--lz-brand-rgb), 0.16)",
-                      borderColor: "rgba(var(--lz-brand-rgb), 0.55)",
-                    } : {
-                      color: "color-mix(in srgb, var(--foreground) 55%, transparent)",
-                      background: "color-mix(in srgb, var(--foreground) 4%, transparent)",
-                      borderColor: "color-mix(in srgb, var(--foreground) 10%, transparent)",
-                    }}>
-                    <FolderIcon size={14} style={active ? { color: "var(--lz-accent-ink)" } : undefined} />
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Abas em formato de divisória de pasta: a aba escolhida "abre" pra página (sem linha embaixo) e as outras
+              * ficam mais escuras. Com muitas abas, quebram em 2 linhas; a linha da aba atual desce pra ficar sempre
+              * colada na página, como nas pastas de arquivo (e nada fica escondido atrás de rolagem). */}
+            {(() => {
+              const perRow = tabItems.length > 6 ? Math.ceil(tabItems.length / 2) : tabItems.length;
+              const rows: typeof tabItems[] = [];
+              for (let i = 0; i < tabItems.length; i += perRow) rows.push(tabItems.slice(i, i + perRow));
+              rows.sort((a, b) => Number(a.some((t) => isActive(t.id))) - Number(b.some((t) => isActive(t.id))));
+              return (
+                <div className="hidden md:block mb-6" data-tour="settings-tabs" role="tablist">
+                  {rows.map((row, ri) => (
+                    <div key={ri} className="lz-ftab-row">
+                      {row.map((t) => {
+                        const active = isActive(t.id);
+                        const FolderIcon = active ? FolderOpen : Folder;
+                        return (
+                          <button key={t.id} role="tab" aria-selected={active} onClick={() => setTab(t.id as any)} className="lz-ftab">
+                            <FolderIcon size={14} className="lz-ftab-icon" />
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </>
         );
       })()}
