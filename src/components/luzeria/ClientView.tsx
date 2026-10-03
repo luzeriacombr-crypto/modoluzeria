@@ -341,14 +341,30 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         </div>
       )}
 
-      {/* Tabs — horizontally scrollable on its own (touch swipe), scrollbar
-       * hidden, so the rest of the page never shifts sideways on mobile
-       * when there are more tabs than fit the viewport width. Antes o
-       * mobile caía num <select> nativo sem estilo nenhum — essa é a tela
-       * mais acessada do app inteiro, então passou a usar a mesma barra de
-       * pills do desktop em vez de uma entrada feia só pra telas pequenas
-       * (achado da auditoria visual, 02/10). */}
-      <div className="flex items-center gap-2 mt-8 border-b border-foreground/6">
+      {/* Celular: caixa de seleção (pedido do Junior, 02/10 — voltou depois de eu ter trocado por abas);
+       * no computador, barra de abas com sublinhado. */}
+      {(() => {
+        const labelOf = (t: string) => t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t;
+        return (
+          <div className="mt-6 md:hidden flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <select id="client-tab-select" aria-label="Seção do cliente" value={tab}
+                onChange={(e) => setTab(e.target.value as any)}
+                className="w-full appearance-none rounded-xl border border-foreground/15 bg-card text-foreground text-[13px] font-bold uppercase tracking-wider pl-4 pr-10 py-3 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+                {tabs.map((t) => <option key={t} value={t}>{labelOf(t)}</option>)}
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/50" />
+            </div>
+            {isAdmin && (
+              <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas" aria-label="Personalizar abas"
+                className="shrink-0 p-2.5 rounded-xl border border-foreground/15 text-foreground/50 hover:text-foreground transition">
+                <Settings2 size={16} />
+              </button>
+            )}
+          </div>
+        );
+      })()}
+      <div className="hidden md:flex items-center gap-2 mt-8 border-b border-foreground/6">
         <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
           {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t as any)}
