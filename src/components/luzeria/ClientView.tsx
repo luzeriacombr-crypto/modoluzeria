@@ -233,6 +233,9 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // clientes; Pro+ sem teto específico. Precisa vir antes do "if (!client)"
   // abaixo — hook não pode ser condicional (Rules of Hooks).
   const { data: orgPlanStatus } = useQuery({ ...orgPlanStatusQO(), enabled: !!me });
+  // Também precisa vir antes do "if (!client)": estava depois e, ao abrir a página do cliente direto pela URL
+  // (cliente ainda não carregado), o número de hooks mudava entre renders e a página inteira quebrava.
+  const { data: aiConn } = useQuery({ queryKey: ["ai-connection"], queryFn: () => getAiConnection() });
 
   if (!client) return null;
 
@@ -266,7 +269,6 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
   // Dentro da cota calculada acima, ESSE cliente precisa estar marcado
   // (client.aiPlanningEnabled, escolhido na Ficha).
   const isLuzeriaOrgForAi = me?.orgId === LUZERIA_ORG_ID;
-  const { data: aiConn } = useQuery({ queryKey: ["ai-connection"], queryFn: () => getAiConnection() });
   const aiPlanningLimited = !isLuzeriaOrgForAi && !aiConn?.connected;
   const aiPlanningQuota = aiPlanningLimited ? 2 : Infinity;
   const aiPlanningUsed = clients.filter((c: any) => c.aiPlanningEnabled).length;
