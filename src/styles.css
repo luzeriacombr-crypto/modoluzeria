@@ -1067,7 +1067,7 @@ body { top: 0 !important; }
  * abrindo-se pra página; as outras ficam num tom mais escuro. */
 .lz-ftab-row {
   --lz-ftab-line: color-mix(in srgb, var(--foreground) 14%, transparent);
-  --lz-ftab-idle: color-mix(in srgb, var(--foreground) 6%, var(--color-background));
+  --lz-ftab-idle: color-mix(in srgb, var(--foreground) 6%, var(--background));
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -1094,13 +1094,13 @@ body { top: 0 !important; }
   color: color-mix(in srgb, var(--foreground) 55%, transparent);
   transition: color 150ms, background-color 150ms;
 }
-.lz-ftab:hover { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 10%, var(--color-background)); }
+.lz-ftab:hover { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 10%, var(--background)); }
 .lz-ftab[aria-selected="true"] {
   z-index: 2;
   margin-bottom: -1px;
   padding-bottom: 11px;
   color: var(--foreground);
-  background: var(--color-background);
+  background: var(--background);
 }
 .lz-ftab[aria-selected="true"] .lz-ftab-icon { color: var(--lz-accent-ink); }
 /* Traço de destaque no topo da aba atual (reto, sem acompanhar a curva do canto). */
