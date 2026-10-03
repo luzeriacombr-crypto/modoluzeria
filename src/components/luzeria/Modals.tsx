@@ -48,7 +48,7 @@ export function NewClientModal({ open, onClose, category }: { open: boolean; onC
 
   async function handleCreate() {
     // House: marca além da principal entra na assinatura — avisa antes.
-    if (house && !(await requestConfirm(`Cada marca além da principal soma R$ 79,90/mês à sua assinatura. Adicionar "${name.trim()}"?`))) return;
+    if (house && !(await requestConfirm(`Cada marca além da principal soma R$ 49,90/mês à sua assinatura (menos o desconto da sua oferta, se tiver). Adicionar "${name.trim()}"?`))) return;
     let client: { id: string };
     // Mexeu em pelo menos um campo do Volume mensal? Aí o que ficar em
     // branco conta como zero (não gera cards daquele tipo) — não faz

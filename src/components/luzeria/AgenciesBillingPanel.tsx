@@ -9,7 +9,7 @@ import { agencyPointsFromBillingRow, getAgencyLevel } from "@/lib/luzeria/agency
 import { TIER_COLOR, TIER_ICON, type AgencyTierName } from "@/components/luzeria/AgencyLevelIcons";
 import { getOrgNextInvoice, deleteOrg, updateOrgWhatsapp, resetOrgTrial, adminUpdateOrgPlan, adminUpdateOrgOwnerEmail, adminUpdateOrgName, adminUpdateOrgOwnerName, adminResendWelcomeEmail, sendOrgDeactivationNotice, LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
 import { approveReseller, revokeReseller, createResellerOrg } from "@/lib/luzeria/reseller.functions";
-import { CreateHouseModal, HouseInviteModal, ConvertToHouseModal } from "@/components/luzeria/HouseAdminModals";
+import { CreateHouseModal, HouseInviteModal, ConvertToHouseModal, HouseOfferModal } from "@/components/luzeria/HouseAdminModals";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
 import { BrazilAgenciesMap } from "@/components/luzeria/BrazilAgenciesMap";
 import { PlatformCostsPanel } from "@/components/luzeria/PlatformCostsPanel";
@@ -188,6 +188,7 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
   const [creatingHouse, setCreatingHouse] = useState(false);
   const [houseInviteOpen, setHouseInviteOpen] = useState(false);
   const [convertTarget, setConvertTarget] = useState<{ id: string; name: string } | null>(null);
+  const [offerTarget, setOfferTarget] = useState<{ id: string; name: string; freeMonths: number; discountPct: number; subscribed: boolean } | null>(null);
   const [infoPeriod, setInfoPeriod] = useState<"7d" | "30d" | "total">("7d");
   // Detalhe aberto por toque/clique nos cartões de receita e online (inline, sem balão flutuante).
   const [detail, setDetail] = useState<"receita" | "online" | "realista" | null>(null);
@@ -719,6 +720,15 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
                             {resettingId === o.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                           </button>
                         )}
+                        {o.accountType === "house" && (
+                          <button
+                            onClick={() => setOfferTarget({ id: o.id, name: o.name, freeMonths: (o as any).offerFreeMonths ?? 0, discountPct: (o as any).offerDiscountPct ?? 0, subscribed: o.hasAsaasSubscription })}
+                            title={`Oferta (meses grátis / desconto)${((o as any).offerFreeMonths || (o as any).offerDiscountPct) ? ` — atual: ${(o as any).offerFreeMonths} mês(es) grátis, ${(o as any).offerDiscountPct}% off` : ""}`}
+                            className="px-1.5 py-1 rounded text-[10px] font-bold uppercase text-foreground/40 hover:text-[#4A9EFF] hover:bg-foreground/5 transition"
+                          >
+                            Oferta
+                          </button>
+                        )}
                         {o.accountType !== "house" && o.id !== LUZERIA_ORG_ID && (
                           <button
                             onClick={() => setConvertTarget({ id: o.id, name: o.name })}
@@ -767,6 +777,7 @@ export function AgenciesBillingPanel({ onOpenActivationPreset }: { onOpenActivat
       {creatingHouse && <CreateHouseModal onClose={() => setCreatingHouse(false)} />}
       {houseInviteOpen && <HouseInviteModal onClose={() => setHouseInviteOpen(false)} />}
       {convertTarget && <ConvertToHouseModal org={convertTarget} onClose={() => setConvertTarget(null)} />}
+      {offerTarget && <HouseOfferModal org={offerTarget} onClose={() => setOfferTarget(null)} />}
     </div>
   );
 }

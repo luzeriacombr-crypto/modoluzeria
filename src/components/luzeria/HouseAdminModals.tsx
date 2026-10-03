@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import { Copy, Home, Link2, X } from "lucide-react";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import {
-  adminCreateHouse, adminCreateHouseInvite, adminListHouseInvites, adminListOrgClients, adminConvertToHouse,
+  adminCreateHouse, adminCreateHouseInvite, adminListHouseInvites, adminListOrgClients, adminConvertToHouse, adminSetHouseOffer,
 } from "@/lib/luzeria/house.functions";
 
 // A IA não é mais um plano: 2 marcas grátis pra testar e, depois, a pessoa
 // conecta a IA dela. O plano house_ia continua existindo só pra contas antigas.
 const HOUSE_PLANS = [
-  { id: "house", label: "House — R$ 149,00/mês" },
+  { id: "house", label: "House — R$ 79,00/mês (+ R$ 49,90 por marca extra)" },
 ] as const;
 type HousePlanId = (typeof HOUSE_PLANS)[number]["id"];
 
@@ -55,6 +55,30 @@ function PlanSelect({ value, onChange }: { value: HousePlanId; onChange: (v: Hou
   );
 }
 
+/** Oferta comercial: meses grátis (depois dos 7 dias de teste) e/ou desconto %. */
+function OfferFields({ freeMonths, discountPct, onFreeMonths, onDiscountPct, lockMonths }: {
+  freeMonths: number; discountPct: number; onFreeMonths: (n: number) => void; onDiscountPct: (n: number) => void; lockMonths?: boolean;
+}) {
+  const clamp = (v: string, max: number) => Math.min(max, Math.max(0, Math.round(Number(v) || 0)));
+  return (
+    <div className="rounded-lg border border-foreground/10 p-3 space-y-3">
+      <div className="text-[10px] uppercase tracking-wide text-foreground/40">Oferta (só você define)</div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Meses grátis">
+          <input type="number" min={0} max={36} value={freeMonths} disabled={lockMonths} onChange={(e) => onFreeMonths(clamp(e.target.value, 36))} className={inputCls} />
+        </Field>
+        <Field label="Desconto (%)">
+          <input type="number" min={0} max={99} value={discountPct} onChange={(e) => onDiscountPct(clamp(e.target.value, 99))} className={inputCls} />
+        </Field>
+      </div>
+      <p className="text-[11px] text-foreground/45">
+        {freeMonths > 0 ? `7 dias de teste + ${freeMonths} ${freeMonths === 1 ? "mês grátis" : "meses grátis"}; a cobrança só começa depois. ` : "7 dias de teste; depois começa a cobrança. "}
+        {discountPct > 0 ? `Desconto de ${discountPct}% fica valendo sobre o plano e as marcas extras.` : "Sem desconto."}
+      </p>
+    </div>
+  );
+}
+
 function PrimaryButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
   return (
     <button onClick={onClick} disabled={disabled}
@@ -71,6 +95,8 @@ export function CreateHouseModal({ onClose }: { onClose: () => void }) {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [planId, setPlanId] = useState<HousePlanId>("house");
+  const [freeMonths, setFreeMonths] = useState(0);
+  const [discountPct, setDiscountPct] = useState(0);
   const create = useMutation({
     mutationFn: useServerFn(adminCreateHouse),
     onSuccess: () => {
@@ -83,7 +109,7 @@ export function CreateHouseModal({ onClose }: { onClose: () => void }) {
 
   function submit() {
     if (!companyName.trim() || !ownerName.trim() || !ownerEmail.trim()) { toast.error("Preencha todos os campos."); return; }
-    create.mutate({ data: { companyName: companyName.trim(), ownerName: ownerName.trim(), ownerEmail: ownerEmail.trim(), planId } });
+    create.mutate({ data: { companyName: companyName.trim(), ownerName: ownerName.trim(), ownerEmail: ownerEmail.trim(), planId, freeMonths, discountPct } });
   }
 
   return (
@@ -105,6 +131,7 @@ export function CreateHouseModal({ onClose }: { onClose: () => void }) {
         <Field label="Plano">
           <PlanSelect value={planId} onChange={setPlanId} />
         </Field>
+        <OfferFields freeMonths={freeMonths} discountPct={discountPct} onFreeMonths={setFreeMonths} onDiscountPct={setDiscountPct} />
       </div>
       <PrimaryButton onClick={submit} disabled={create.isPending}>{create.isPending ? "Criando..." : "Criar house"}</PrimaryButton>
     </ModalShell>
@@ -115,6 +142,8 @@ export function HouseInviteModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [planId, setPlanId] = useState<HousePlanId>("house");
   const [note, setNote] = useState("");
+  const [freeMonths, setFreeMonths] = useState(0);
+  const [discountPct, setDiscountPct] = useState(0);
   const [created, setCreated] = useState<{ url: string; expiresAt: string } | null>(null);
   const listFn = useServerFn(adminListHouseInvites);
   const { data: invites = [] } = useQuery({ queryKey: ["house-invites"], queryFn: () => listFn() });
@@ -144,11 +173,12 @@ export function HouseInviteModal({ onClose }: { onClose: () => void }) {
         <Field label="Plano">
           <PlanSelect value={planId} onChange={setPlanId} />
         </Field>
+        <OfferFields freeMonths={freeMonths} discountPct={discountPct} onFreeMonths={setFreeMonths} onDiscountPct={setDiscountPct} />
         <Field label="Anotação (opcional, só você vê)">
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ex: Clínica Sorriso, falei com a Maria" className={inputCls} />
         </Field>
       </div>
-      <PrimaryButton onClick={() => create.mutate({ data: { planId, note: note.trim() || undefined } })} disabled={create.isPending}>
+      <PrimaryButton onClick={() => create.mutate({ data: { planId, note: note.trim() || undefined, freeMonths, discountPct } })} disabled={create.isPending}>
         {create.isPending ? "Gerando..." : "Gerar link"}
       </PrimaryButton>
 
@@ -173,6 +203,9 @@ export function HouseInviteModal({ onClose }: { onClose: () => void }) {
                 <li key={inv.id} className="flex items-center justify-between gap-2 text-xs bg-background rounded-md px-3 py-2">
                   <div className="min-w-0">
                     <div className="text-foreground/80 font-mono">{inv.code}</div>
+                    {(inv.freeMonths > 0 || inv.discountPct > 0) && (
+                      <div className="text-foreground/50">{[inv.freeMonths > 0 ? `${inv.freeMonths} ${inv.freeMonths === 1 ? "mês grátis" : "meses grátis"}` : "", inv.discountPct > 0 ? `${inv.discountPct}% de desconto` : ""].filter(Boolean).join(" · ")}</div>
+                    )}
                     {inv.note && <div className="text-foreground/40 truncate">{inv.note}</div>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -200,6 +233,8 @@ export function ConvertToHouseModal({ org, onClose }: { org: { id: string; name:
   });
   const [clientId, setClientId] = useState("");
   const [planId, setPlanId] = useState<HousePlanId>("house");
+  const [freeMonths, setFreeMonths] = useState(0);
+  const [discountPct, setDiscountPct] = useState(0);
   const convert = useMutation({
     mutationFn: useServerFn(adminConvertToHouse),
     onSuccess: () => {
@@ -227,15 +262,40 @@ export function ConvertToHouseModal({ org, onClose }: { org: { id: string; name:
         <Field label="Plano">
           <PlanSelect value={planId} onChange={setPlanId} />
         </Field>
+        <OfferFields freeMonths={freeMonths} discountPct={discountPct} onFreeMonths={setFreeMonths} onDiscountPct={setDiscountPct} />
         {extras > 0 && (
           <p className="text-[11px] text-foreground/50">
             Essa conta tem {clients.length} clientes ativos — os {extras} além da marca principal passam a contar como marcas adicionais
-            (R$ 79,90/mês cada). Arquive os que não fazem parte da House antes, se for o caso.
+            (R$ 49,90/mês cada). Arquive os que não fazem parte da House antes, se for o caso.
           </p>
         )}
       </div>
-      <PrimaryButton onClick={() => convert.mutate({ data: { orgId: org.id, clientId, planId } })} disabled={!clientId || convert.isPending}>
+      <PrimaryButton onClick={() => convert.mutate({ data: { orgId: org.id, clientId, planId, freeMonths, discountPct } })} disabled={!clientId || convert.isPending}>
         {convert.isPending ? "Convertendo..." : "Converter em house"}
+      </PrimaryButton>
+    </ModalShell>
+  );
+}
+
+/** Ajusta a oferta (meses grátis e desconto) de uma House que já existe. */
+export function HouseOfferModal({ org, onClose }: { org: { id: string; name: string; freeMonths: number; discountPct: number; subscribed: boolean }; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [freeMonths, setFreeMonths] = useState(org.freeMonths);
+  const [discountPct, setDiscountPct] = useState(org.discountPct);
+  const save = useMutation({
+    mutationFn: useServerFn(adminSetHouseOffer),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["orgs-billing"] }); toast.success("Oferta atualizada."); onClose(); },
+    onError: (e: any) => toastFriendlyError(e, "Erro ao atualizar a oferta."),
+  });
+  return (
+    <ModalShell title={`Oferta de ${org.name}`} icon={<Home size={18} />} onClose={onClose}>
+      <p className="text-xs text-foreground/45 mb-4">
+        O desconto vale sobre o plano e as marcas extras (e já acerta a assinatura no Asaas, se existir).
+        {org.subscribed ? " Meses grátis só mudam antes da primeira assinatura." : " Meses grátis estendem o teste: a cobrança começa só depois."}
+      </p>
+      <OfferFields freeMonths={freeMonths} discountPct={discountPct} onFreeMonths={setFreeMonths} onDiscountPct={setDiscountPct} lockMonths={org.subscribed} />
+      <PrimaryButton onClick={() => save.mutate({ data: { orgId: org.id, freeMonths, discountPct } })} disabled={save.isPending}>
+        {save.isPending ? "Salvando..." : "Salvar oferta"}
       </PrimaryButton>
     </ModalShell>
   );

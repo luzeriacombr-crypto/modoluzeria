@@ -13,6 +13,8 @@ import { HOUSE_APPROVAL_STATUS_LABEL, HOUSE_DEFAULT_GOALS } from "./house";
 
 const APP_URL = process.env.VITE_APP_URL ?? "https://www.modocriador.com.br";
 const HOUSE_TRIAL_DAYS = 7;
+const OFFER_MONTHS = z.number().int().min(0).max(36).optional();
+const OFFER_PCT = z.number().int().min(0).max(99).optional();
 const HOUSE_PLAN_IDS = ["house", "house_ia"] as const;
 
 async function assertPlatformAdmin(context: { supabase: any; userId: string; orgId: string }) {
@@ -100,11 +102,15 @@ async function applyHouseSetup(supabaseAdmin: any, orgId: string, clientId: stri
  * erro no meio, apaga a org (e com ela, em cascata, o que já foi criado). */
 async function provisionHouseOrg(supabaseAdmin: any, params: {
   companyName: string; planId: string; segment?: string | null; instagram?: string | null;
+  freeMonths?: number; discountPct?: number;
 }): Promise<{ orgId: string; clientId: string }> {
   const { data: plan } = await supabaseAdmin.from("plans").select("*").eq("id", params.planId).maybeSingle();
   if (!plan || plan.account_type !== "house") throw new Error("Plano House inválido.");
 
+  // Meses grátis da oferta entram depois dos 7 dias de teste: a cobrança só
+  // começa quando trial_ends_at chega.
   const trialEndsAt = new Date(Date.now() + HOUSE_TRIAL_DAYS * 86_400_000);
+  if (params.freeMonths) trialEndsAt.setUTCMonth(trialEndsAt.getUTCMonth() + params.freeMonths);
   const { data: org, error: orgErr } = await supabaseAdmin.from("orgs").insert({
     name: params.companyName.trim(),
     slug: `${slugify(params.companyName)}-${Date.now().toString(36)}`,
@@ -112,6 +118,8 @@ async function provisionHouseOrg(supabaseAdmin: any, params: {
     subscription_status: "trialing",
     trial_ends_at: trialEndsAt.toISOString(),
     account_type: "house",
+    billing_free_months: params.freeMonths ?? 0,
+    billing_discount_pct: params.discountPct ?? 0,
   }).select("id").single();
   if (orgErr) throw new Error(orgErr.message);
 
@@ -154,12 +162,13 @@ async function provisionHouseOrg(supabaseAdmin: any, params: {
 
 export const adminCreateHouse = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { companyName: string; ownerName: string; ownerEmail: string; planId: string }) =>
+  .inputValidator((d: { companyName: string; ownerName: string; ownerEmail: string; planId: string; freeMonths?: number; discountPct?: number }) =>
     z.object({
       companyName: z.string().trim().min(2).max(80),
       ownerName: z.string().trim().min(2).max(80),
       ownerEmail: z.string().trim().toLowerCase().email(),
       planId: z.enum(HOUSE_PLAN_IDS),
+      freeMonths: OFFER_MONTHS, discountPct: OFFER_PCT,
     }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
@@ -167,7 +176,7 @@ export const adminCreateHouse = createServerFn({ method: "POST" })
 
     if (await emailTaken(supabaseAdmin, data.ownerEmail)) throw new Error("Já existe uma conta com esse e-mail.");
 
-    const { orgId } = await provisionHouseOrg(supabaseAdmin, { companyName: data.companyName, planId: data.planId });
+    const { orgId } = await provisionHouseOrg(supabaseAdmin, { companyName: data.companyName, planId: data.planId, freeMonths: data.freeMonths, discountPct: data.discountPct });
     try {
       const { error: earErr } = await supabaseAdmin.from("email_role_assignments").insert({
         email: data.ownerEmail, role: "master", name: data.ownerName, org_id: orgId,
@@ -204,14 +213,15 @@ export const adminCreateHouse = createServerFn({ method: "POST" })
 
 export const adminCreateHouseInvite = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { planId: string; note?: string }) =>
-    z.object({ planId: z.enum(HOUSE_PLAN_IDS), note: z.string().trim().max(200).optional() }).parse(d))
+  .inputValidator((d: { planId: string; note?: string; freeMonths?: number; discountPct?: number }) =>
+    z.object({ planId: z.enum(HOUSE_PLAN_IDS), note: z.string().trim().max(200).optional(), freeMonths: OFFER_MONTHS, discountPct: OFFER_PCT }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const code = generateInviteCode();
     const { data: row, error } = await (supabaseAdmin as any).from("house_invites").insert({
       code, plan_id: data.planId, note: data.note || null, created_by: context.userId,
+      free_months: data.freeMonths ?? 0, discount_pct: data.discountPct ?? 0,
     }).select("code, expires_at").single();
     if (error) throw new Error(error.message);
     return { code: row.code as string, expiresAt: row.expires_at as string, url: `${APP_URL}/house/criar?c=${row.code}` };
@@ -222,7 +232,7 @@ export const adminListHouseInvites = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertPlatformAdmin(context);
     const { data, error } = await (context.supabase as any).from("house_invites")
-      .select("id, code, plan_id, note, created_at, expires_at, used_at, used_by_org_id, orgs:used_by_org_id(name)")
+      .select("id, code, plan_id, note, free_months, discount_pct, created_at, expires_at, used_at, used_by_org_id, orgs:used_by_org_id(name)")
       .order("created_at", { ascending: false }).limit(50);
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((r) => ({
@@ -231,6 +241,8 @@ export const adminListHouseInvites = createServerFn({ method: "GET" })
       url: `${APP_URL}/house/criar?c=${r.code}`,
       planId: r.plan_id as string,
       note: (r.note ?? null) as string | null,
+      freeMonths: (r.free_months ?? 0) as number,
+      discountPct: (r.discount_pct ?? 0) as number,
       createdAt: r.created_at as string,
       expiresAt: r.expires_at as string,
       usedAt: (r.used_at ?? null) as string | null,
@@ -259,8 +271,8 @@ export const adminListOrgClients = createServerFn({ method: "GET" })
  * cobrança), os módulos escondidos só somem da tela. */
 export const adminConvertToHouse = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { orgId: string; clientId: string; planId: string }) =>
-    z.object({ orgId: z.string().uuid(), clientId: z.string().uuid(), planId: z.enum(HOUSE_PLAN_IDS) }).parse(d))
+  .inputValidator((d: { orgId: string; clientId: string; planId: string; freeMonths?: number; discountPct?: number }) =>
+    z.object({ orgId: z.string().uuid(), clientId: z.string().uuid(), planId: z.enum(HOUSE_PLAN_IDS), freeMonths: OFFER_MONTHS, discountPct: OFFER_PCT }).parse(d))
   .handler(async ({ data, context }) => {
     await assertPlatformAdmin(context);
     const { LUZERIA_ORG_ID, syncHouseSubscriptionValue } = await import("./api.functions");
@@ -278,17 +290,53 @@ export const adminConvertToHouse = createServerFn({ method: "POST" })
     if ((plan as any)?.features?.ai_planning) {
       await supabaseAdmin.from("clients").update({ ai_planning_enabled: true }).eq("id", data.clientId);
     }
+    if (data.freeMonths || data.discountPct) {
+      await applyOffer(supabaseAdmin, data.orgId, data.freeMonths ?? 0, data.discountPct ?? 0);
+    }
     await syncHouseSubscriptionValue(data.orgId);
     return { ok: true };
   });
+
+/** Ajusta a oferta de uma House que já existe (meses grátis e/ou desconto).
+ * Meses grátis só estendem o teste enquanto a conta ainda não assinou. */
+export const adminSetHouseOffer = createServerFn({ method: "POST" })
+  .middleware([requireActiveProfile])
+  .inputValidator((d: { orgId: string; freeMonths: number; discountPct: number }) =>
+    z.object({ orgId: z.string().uuid(), freeMonths: OFFER_MONTHS.unwrap(), discountPct: OFFER_PCT.unwrap() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertPlatformAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { syncHouseSubscriptionValue } = await import("./api.functions");
+    await applyOffer(supabaseAdmin, data.orgId, data.freeMonths, data.discountPct);
+    await syncHouseSubscriptionValue(data.orgId);
+    return { ok: true };
+  });
+
+async function applyOffer(supabaseAdmin: any, orgId: string, freeMonths: number, discountPct: number) {
+  const { data: org } = await supabaseAdmin.from("orgs")
+    .select("account_type, subscription_status, trial_ends_at, billing_free_months, asaas_subscription_id").eq("id", orgId).maybeSingle();
+  if (org?.account_type !== "house") throw new Error("Essa conta não é uma House.");
+  const patch: Record<string, unknown> = { billing_discount_pct: discountPct };
+  if (org.subscription_status === "trialing" && org.trial_ends_at) {
+    // Troca a oferta anterior pela nova: tira os meses antigos e soma os novos.
+    const end = new Date(org.trial_ends_at);
+    end.setUTCMonth(end.getUTCMonth() + (freeMonths - (org.billing_free_months ?? 0)));
+    patch.trial_ends_at = end.toISOString();
+    patch.billing_free_months = freeMonths;
+  } else if (freeMonths !== (org.billing_free_months ?? 0)) {
+    throw new Error("Meses grátis só podem ser alterados antes da primeira assinatura. O desconto foi o único ajuste possível nessa conta.");
+  }
+  const { error } = await supabaseAdmin.from("orgs").update(patch).eq("id", orgId);
+  if (error) throw new Error(error.message);
+}
 
 /* ============== /house/criar (público, com código) ============== */
 
 async function findUsableInvite(supabaseAdmin: any, code: string) {
   const { data } = await supabaseAdmin.from("house_invites")
-    .select("id, plan_id, expires_at, used_at").eq("code", code.trim().toUpperCase()).maybeSingle();
+    .select("id, plan_id, free_months, discount_pct, expires_at, used_at").eq("code", code.trim().toUpperCase()).maybeSingle();
   if (!data || data.used_at || new Date(data.expires_at).getTime() < Date.now()) return null;
-  return data as { id: string; plan_id: string };
+  return data as { id: string; plan_id: string; free_months: number; discount_pct: number };
 }
 
 export const getHouseInvite = createServerFn({ method: "GET" })
@@ -298,7 +346,7 @@ export const getHouseInvite = createServerFn({ method: "GET" })
     const invite = await findUsableInvite(supabaseAdmin, data.code);
     if (!invite) return { valid: false as const };
     const { data: plan } = await supabaseAdmin.from("plans").select("name").eq("id", invite.plan_id).maybeSingle();
-    return { valid: true as const, planName: (plan as any)?.name ?? "House" };
+    return { valid: true as const, planName: (plan as any)?.name ?? "House", freeMonths: invite.free_months ?? 0, discountPct: invite.discount_pct ?? 0 };
   });
 
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
@@ -335,7 +383,7 @@ export const createHouseFromInvite = createServerFn({ method: "POST" })
     const { data: claimed } = await (supabaseAdmin as any).from("house_invites")
       .update({ used_at: new Date().toISOString() })
       .eq("code", code).is("used_at", null).gt("expires_at", new Date().toISOString())
-      .select("id, plan_id").maybeSingle();
+      .select("id, plan_id, free_months, discount_pct").maybeSingle();
     if (!claimed) throw new Error("Esse convite não é válido, já foi usado ou venceu. Peça um novo link pra Luzeria.");
 
     let orgId: string | null = null;
@@ -343,6 +391,7 @@ export const createHouseFromInvite = createServerFn({ method: "POST" })
     try {
       const provisioned = await provisionHouseOrg(supabaseAdmin, {
         companyName: data.companyName, planId: claimed.plan_id, segment: data.segment, instagram: data.instagram,
+        freeMonths: claimed.free_months ?? 0, discountPct: claimed.discount_pct ?? 0,
       });
       orgId = provisioned.orgId;
 

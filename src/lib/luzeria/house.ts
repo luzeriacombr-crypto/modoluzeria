@@ -77,4 +77,10 @@ export function houseMonthlyCents(planPriceCents: number, extraBrandCents: numbe
   return planPriceCents + Math.max(0, activeBrands - 1) * extraBrandCents;
 }
 
-export const HOUSE_EXTRA_BRAND_CENTS_DEFAULT = 7990;
+export const HOUSE_EXTRA_BRAND_CENTS_DEFAULT = 4990;
+
+/** Aplica o desconto percentual da oferta (0 a 100) ao valor mensal. */
+export function applyHouseDiscount(cents: number, discountPct: number): number {
+  const pct = Math.min(100, Math.max(0, Math.round(discountPct)));
+  return Math.round((cents * (100 - pct)) / 100);
+}

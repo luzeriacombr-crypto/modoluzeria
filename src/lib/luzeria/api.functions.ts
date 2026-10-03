@@ -4,7 +4,7 @@ import { requireActiveProfile, assertNotDemoReadOnly, assertClientActive } from 
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS, BRAND_ADVANCED_COLOR_KEYS } from "./types";
-import { withHouseHiddenFeatures, houseMonthlyCents, HOUSE_EXTRA_BRAND_CENTS_DEFAULT, type AccountType } from "./house";
+import { withHouseHiddenFeatures, houseMonthlyCents, applyHouseDiscount, HOUSE_EXTRA_BRAND_CENTS_DEFAULT, type AccountType } from "./house";
 
 /** Fixed id of the original Luzeria Estúdio org — also hardcoded in migrations
  * and in the admin-auth-operations edge function (they can't share a TS import). */
@@ -786,9 +786,12 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
     // Tipo de conta em consulta à parte, tolerante a falha — a coluna chega
     // numa migration e o deploy do código pode vir antes dela.
     const accountTypeByOrg = new Map<string, string>();
+    const offerByOrg = new Map<string, { freeMonths: number; discountPct: number }>();
     {
       const { data: atRows, error: atErr } = await (supabaseAdmin as any).from("orgs").select("id, account_type");
       if (!atErr) (atRows ?? []).forEach((r: any) => accountTypeByOrg.set(r.id, r.account_type));
+      const { data: offerRows, error: offerErr } = await (supabaseAdmin as any).from("orgs").select("id, billing_free_months, billing_discount_pct");
+      if (!offerErr) (offerRows ?? []).forEach((r: any) => offerByOrg.set(r.id, { freeMonths: r.billing_free_months ?? 0, discountPct: r.billing_discount_pct ?? 0 }));
     }
 
     return (orgs ?? []).map((o: any) => {
@@ -814,6 +817,8 @@ export const listOrgsBilling = createServerFn({ method: "GET" })
         maxCollaboratorsOverride: (o.max_collaborators_override as number | null) ?? null,
         isReseller: !!o.is_reseller,
         accountType: (accountTypeByOrg.get(o.id) === "house" ? "house" : "agency") as "agency" | "house",
+        offerFreeMonths: offerByOrg.get(o.id)?.freeMonths ?? 0,
+        offerDiscountPct: offerByOrg.get(o.id)?.discountPct ?? 0,
         resellerOrgId: o.reseller_org_id as string | null,
         resellerOrgName: o.reseller_org_id ? (resellerNameById.get(o.reseller_org_id) ?? null) : null,
         resoldCount: o.is_reseller ? (resoldCountByReseller.get(o.id) ?? 0) : 0,
@@ -1429,7 +1434,8 @@ export async function orgMonthlyPriceCents(
   const { count } = await supabase.from("clients").select("id", { count: "exact", head: true })
     .eq("org_id", orgId).eq("archived", false).neq("category", "Ex-clientes");
   const extra = Number(plan.features?.extra_brand_cents ?? HOUSE_EXTRA_BRAND_CENTS_DEFAULT);
-  return houseMonthlyCents(plan.price_cents, extra, count ?? 0);
+  const { data: offer } = await supabase.from("orgs").select("billing_discount_pct").eq("id", orgId).maybeSingle();
+  return applyHouseDiscount(houseMonthlyCents(plan.price_cents, extra, count ?? 0), Number(offer?.billing_discount_pct ?? 0));
 }
 
 /** House: depois de criar/arquivar/excluir uma marca, acerta o valor da

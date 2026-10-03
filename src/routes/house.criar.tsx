@@ -40,7 +40,7 @@ function CreateHousePage() {
   const { c: code } = Route.useSearch();
   const checkInvite = useServerFn(getHouseInvite);
   const create = useServerFn(createHouseFromInvite);
-  const [invite, setInvite] = useState<{ state: "loading" | "valid" | "invalid"; planName?: string }>({ state: "loading" });
+  const [invite, setInvite] = useState<{ state: "loading" | "valid" | "invalid"; planName?: string; freeMonths?: number; discountPct?: number }>({ state: "loading" });
 
   const [companyName, setCompanyName] = useState("");
   const [segment, setSegment] = useState("");
@@ -55,7 +55,7 @@ function CreateHousePage() {
   useEffect(() => {
     if (!code) { setInvite({ state: "invalid" }); return; }
     checkInvite({ data: { code } })
-      .then((r) => setInvite(r.valid ? { state: "valid", planName: r.planName } : { state: "invalid" }))
+      .then((r) => setInvite(r.valid ? { state: "valid", planName: r.planName, freeMonths: r.freeMonths, discountPct: r.discountPct } : { state: "invalid" }))
       .catch(() => setInvite({ state: "invalid" }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
@@ -111,7 +111,11 @@ function CreateHousePage() {
           <form onSubmit={submit} className="space-y-4">
             <div>
               <h1 className="text-white text-xl font-bold">Criar sua House</h1>
-              <p className="text-white/55 text-sm mt-1">Plano {invite.planName} · 7 dias de teste.</p>
+              <p className="text-white/55 text-sm mt-1">
+                Plano {invite.planName} · 7 dias de teste
+                {invite.freeMonths ? ` + ${invite.freeMonths} ${invite.freeMonths === 1 ? "mês grátis" : "meses grátis"}` : ""}
+                {invite.discountPct ? ` · ${invite.discountPct}% de desconto` : ""}.
+              </p>
             </div>
 
             <fieldset className="space-y-2.5">
