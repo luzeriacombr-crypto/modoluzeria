@@ -13,6 +13,17 @@ const LABEL: Record<string, { text: string; color: string; hint: string }> = {
   none: { text: "WhatsApp: não enviada", color: "#E5484D", hint: "Essa agência se cadastrou depois que a boas-vindas foi ligada e não recebeu." },
 };
 
+/** Erros da Meta em português claro (o texto original fica de fora, só no log). */
+function friendlyError(error: string | null): string | null {
+  if (!error) return null;
+  if (/undeliverable|131026/i.test(error)) return "O número não recebeu: pode não ter WhatsApp ou estar digitado errado.";
+  if (/131047|re-engagement/i.test(error)) return "Passou da janela de 24h pra texto livre.";
+  if (/opt|131050/i.test(error)) return "A pessoa pediu pra não receber mensagens.";
+  if (/does not exist|132001/i.test(error)) return "O modelo da mensagem ainda não está aprovado na Meta.";
+  if (/not registered|133010/i.test(error)) return "O número do Modo Criador ainda não estava registrado.";
+  return error;
+}
+
 /** Estado da boas-vindas no WhatsApp de uma agência (compartilha a mesma
  * consulta entre todas as linhas da lista). Só aparece pra quem se cadastrou
  * depois que a boas-vindas foi ligada ou que já tem tentativa registrada. */
@@ -35,7 +46,7 @@ export function WelcomeBadge({ orgId, createdAt }: { orgId: string; createdAt: s
   const l = LABEL[info.key] ?? LABEL.sent;
   return (
     <span
-      title={`${l.hint}${info.error ? ` (${info.error})` : ""}`}
+      title={`${l.hint}${info.error ? ` ${friendlyError(info.error)}` : ""}`}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0"
       style={{ backgroundColor: `${l.color}22`, color: l.color }}
     >
@@ -63,7 +74,7 @@ export function WelcomeStatusBlock({ orgId, createdAt }: { orgId: string; create
           <>
             <span className="font-semibold" style={{ color: l.color }}>{l.text.replace("WhatsApp: ", "")}</span>
             {info.at && <span className="text-foreground/40 text-[11px]">{new Date(info.at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
-            {info.error && <span className="text-[11px] text-red-500">{info.error}</span>}
+            {info.error && <span className="text-[11px] text-red-500">{friendlyError(info.error)}</span>}
           </>
         ) : (
           <span className="text-foreground/40">Sem registro (cadastro anterior à boas-vindas automática).</span>

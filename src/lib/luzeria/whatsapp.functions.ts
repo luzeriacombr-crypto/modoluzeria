@@ -232,12 +232,15 @@ export const getWhatsappWelcomeStatuses = createServerFn({ method: "GET" })
     const [{ data: rows }, { data: setting }] = await Promise.all([
       db.from("whatsapp_messages").select("org_id, status, error, created_at")
         .eq("kind", "welcome").eq("direction", "out").not("org_id", "is", null).order("created_at", { ascending: false }).limit(2000),
-      db.from("app_settings").select("value").eq("key", wa.WELCOME_SETTING_KEY).maybeSingle(),
+      db.from("app_settings").select("value, updated_at").eq("key", wa.WELCOME_SETTING_KEY).maybeSingle(),
     ]);
     const byOrg: Record<string, WelcomeStatus> = {};
     // Mais recente primeiro; uma tentativa que entregou vale mais que uma que falhou antes.
     (rows ?? []).forEach((r: any) => { if (!byOrg[r.org_id]) byOrg[r.org_id] = { status: r.status, at: r.created_at, error: r.error }; });
-    return { since: (setting?.value as any)?.since ?? "2026-10-03T00:00:00Z", byOrg };
+    // Sem `since` gravado (chave ligada antes desse campo existir), vale o
+    // horário da última mudança da chave — e nunca a meia-noite, que marcaria
+    // como "não enviada" quem se cadastrou antes de a boas-vindas ser ligada.
+    return { since: (setting?.value as any)?.since ?? setting?.updated_at ?? new Date().toISOString(), byOrg };
   });
 
 /** Reenvia a boas-vindas pra uma agência (ação manual do Junior — ignora a chave). */
