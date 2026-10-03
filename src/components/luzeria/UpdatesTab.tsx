@@ -6,7 +6,8 @@ import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
 import { Plus, Trash2, ArrowRight, Megaphone, Bell, Search } from "lucide-react";
 import { platformUpdatesQO, useApi, useMe } from "@/lib/luzeria/queries";
 import { requestConfirm } from "@/lib/luzeria/confirm-store";
-import { PLATFORM_UPDATE_CATEGORIES, type PlatformUpdate } from "@/lib/luzeria/platform-updates.functions";
+import { LUZERIA_ORG_ID } from "@/lib/luzeria/api.functions";
+import { PLATFORM_UPDATE_CATEGORIES, UPDATE_AUDIENCE_LABEL, type PlatformUpdate, type UpdateAudience } from "@/lib/luzeria/platform-updates.functions";
 
 /** "Setembro de 2026", com inicial maiúscula — chave de agrupamento da
  * linha do tempo (mesma ordem de `updates`, que já vem por published_at
@@ -168,7 +169,10 @@ export function UpdatesTab() {
                 {group.items.map((u) => (
                   <div key={u.id} className="bg-card rounded-2xl p-5 group relative border border-foreground/6 hover:border-foreground/15 transition-colors">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-foreground/35">{u.category}</span>
+                      <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-foreground/35">
+                        {u.category}
+                        {u.audience !== "all" && me?.orgId === LUZERIA_ORG_ID && <span className="ml-2 normal-case tracking-normal font-bold" style={{ color: "var(--lz-accent-ink)" }}>· {UPDATE_AUDIENCE_LABEL[u.audience]}</span>}
+                      </span>
                       <span className="text-[11px] text-foreground/35 whitespace-nowrap">
                         {new Date(u.publishedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                       </span>
@@ -206,6 +210,7 @@ function NewUpdateForm({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>(PLATFORM_UPDATE_CATEGORIES[0]);
+  const [audience, setAudience] = useState<UpdateAudience>("all");
   const [linkPath, setLinkPath] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
 
@@ -216,6 +221,7 @@ function NewUpdateForm({ onClose }: { onClose: () => void }) {
         title: title.trim(),
         description: description.trim(),
         category,
+        audience,
         linkPath: linkPath.trim() || undefined,
         linkLabel: linkLabel.trim() || undefined,
       },
@@ -232,6 +238,12 @@ function NewUpdateForm({ onClose }: { onClose: () => void }) {
         className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
       >
         {PLATFORM_UPDATE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+      <select
+        value={audience} onChange={(e) => setAudience(e.target.value as UpdateAudience)} aria-label="Quem recebe"
+        className="w-full bg-background border border-foreground/10 rounded-md px-3 py-2 text-sm text-foreground outline-none focus:border-[rgb(var(--lz-brand-rgb))]"
+      >
+        {(Object.keys(UPDATE_AUDIENCE_LABEL) as UpdateAudience[]).map((a) => <option key={a} value={a}>Quem recebe: {UPDATE_AUDIENCE_LABEL[a]}</option>)}
       </select>
       <input
         value={title} onChange={(e) => setTitle(e.target.value)}
@@ -275,10 +287,15 @@ function NotifyBatchPanel({ unnotified }: { unnotified: PlatformUpdate[] }) {
   const api = useApi();
   const [headlineId, setHeadlineId] = useState(unnotified[0]?.id ?? "");
   const headline = unnotified.find((u) => u.id === headlineId) ?? unnotified[0];
-  const otherCount = unnotified.length - 1;
-  const preview = headline
-    ? (otherCount > 0 ? `${headline.title} e outras ${otherCount} novidade${otherCount === 1 ? "" : "s"}... Clica aqui!` : `${headline.title} Clica aqui!`)
-    : "";
+  const previewFor = (aud: "agency" | "house") => {
+    const mine = unnotified.filter((u) => u.audience === "all" || u.audience === aud);
+    if (mine.length === 0) return null;
+    const head = mine.find((u) => u.id === headline?.id) ?? mine[0];
+    const other = mine.length - 1;
+    return other > 0 ? `${head.title} e outras ${other} novidade${other === 1 ? "" : "s"}... Clica aqui!` : `${head.title} Clica aqui!`;
+  };
+  const previewAgency = previewFor("agency");
+  const previewHouse = previewFor("house");
 
   function send() {
     if (!headline) return;
@@ -305,7 +322,8 @@ function NotifyBatchPanel({ unnotified }: { unnotified: PlatformUpdate[] }) {
       </div>
       <div className="rounded-md px-3 py-2.5 text-xs text-foreground/70" style={{ background: "rgba(var(--lz-brand-light-rgb),0.08)" }}>
         <span className="text-foreground/40 uppercase text-[10px] font-bold tracking-wider block mb-1">Prévia da notificação</span>
-        {preview}
+        {previewAgency && <div><b className="text-foreground/50">Agências:</b> {previewAgency}</div>}
+        {previewHouse && <div className="mt-1"><b className="text-foreground/50">Houses:</b> {previewHouse}</div>}
       </div>
       <div className="flex justify-end">
         <button
@@ -313,7 +331,7 @@ function NotifyBatchPanel({ unnotified }: { unnotified: PlatformUpdate[] }) {
           disabled={!headline || api.sendPlatformUpdateNotification.isPending}
           className="lz-btn-primary text-xs px-4 py-2 rounded-md disabled:opacity-50"
         >
-          {api.sendPlatformUpdateNotification.isPending ? "Enviando…" : "Notificar todo mundo"}
+          {api.sendPlatformUpdateNotification.isPending ? "Enviando…" : "Notificar (cada público recebe o seu)"}
         </button>
       </div>
     </div>

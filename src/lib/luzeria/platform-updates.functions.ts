@@ -4,6 +4,7 @@ import { requireActiveProfile } from "./require-active";
 import { LUZERIA_ORG_ID } from "./api.functions";
 
 export const PLATFORM_UPDATE_CATEGORIES = [
+  "Redes sociais",
   "Roteiros e Planejamento",
   "Cliente e Preview",
   "Equipe",
@@ -16,8 +17,12 @@ export const PLATFORM_UPDATE_CATEGORIES = [
   "Correções e Melhorias",
 ] as const;
 
+export type UpdateAudience = "all" | "agency" | "house";
+export const UPDATE_AUDIENCE_LABEL: Record<UpdateAudience, string> = { all: "Todos", agency: "Só agências", house: "Só houses" };
+
 export type PlatformUpdate = {
   id: string;
+  audience: UpdateAudience;
   title: string;
   description: string;
   category: string;
@@ -30,13 +35,22 @@ export type PlatformUpdate = {
 export const listPlatformUpdates = createServerFn({ method: "GET" })
   .middleware([requireActiveProfile])
   .handler(async ({ context }): Promise<PlatformUpdate[]> => {
-    const { data, error } = await (context.supabase as any)
+    // Cada conta vê o que é pra todos + o que é do tipo dela (agência ou house);
+    // a conta da própria Luzeria (quem publica) vê tudo.
+    const db = context.supabase as any;
+    let q = db
       .from("platform_updates")
-      .select("id, title, description, category, link_path, link_label, published_at, notified_at")
+      .select("id, title, description, category, link_path, link_label, published_at, notified_at, audience")
       .order("published_at", { ascending: false });
+    if (context.orgId !== LUZERIA_ORG_ID) {
+      const { data: org } = await db.from("orgs").select("account_type").eq("id", context.orgId).maybeSingle();
+      q = q.in("audience", ["all", org?.account_type === "house" ? "house" : "agency"]);
+    }
+    const { data, error } = await q;
     if (error) throw new Error(error.message);
     return (data ?? []).map((r: any) => ({
       id: r.id,
+      audience: (r.audience ?? "all") as UpdateAudience,
       title: r.title,
       description: r.description,
       category: r.category,
@@ -49,11 +63,12 @@ export const listPlatformUpdates = createServerFn({ method: "GET" })
 
 export const createPlatformUpdate = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
-  .inputValidator((d: { title: string; description: string; category: string; linkPath?: string; linkLabel?: string; publishedAt?: string }) =>
+  .inputValidator((d: { title: string; description: string; category: string; audience?: UpdateAudience; linkPath?: string; linkLabel?: string; publishedAt?: string }) =>
     z.object({
       title: z.string().trim().min(1).max(120),
       description: z.string().trim().min(1).max(1000),
       category: z.string().trim().min(1).max(60),
+      audience: z.enum(["all", "agency", "house"]).optional(),
       linkPath: z.string().trim().max(300).optional(),
       linkLabel: z.string().trim().max(60).optional(),
       publishedAt: z.string().optional(),
@@ -62,10 +77,12 @@ export const createPlatformUpdate = createServerFn({ method: "POST" })
     if (context.orgId !== LUZERIA_ORG_ID) throw new Error("Forbidden");
     const { data: isMaster } = await context.supabase.rpc("is_master", { _user_id: context.userId });
     if (!isMaster) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("platform_updates").insert({
+    // audience ainda não está nos tipos gerados do Supabase.
+    const { error } = await (context.supabase as any).from("platform_updates").insert({
       title: data.title,
       description: data.description,
       category: data.category,
+      audience: data.audience ?? "all",
       link_path: data.linkPath || null,
       link_label: data.linkLabel || null,
       published_at: data.publishedAt || new Date().toISOString(),
@@ -102,29 +119,38 @@ export const sendPlatformUpdateNotification = createServerFn({ method: "POST" })
 
     const db = context.supabase as any;
     const { data: pending } = await db
-      .from("platform_updates").select("id, title").is("notified_at", null);
-    const headline = (pending ?? []).find((u: any) => u.id === data.headlineId);
+      .from("platform_updates").select("id, title, audience").is("notified_at", null);
+    const all = (pending ?? []) as { id: string; title: string; audience: UpdateAudience }[];
+    const headline = all.find((u) => u.id === data.headlineId);
     if (!headline) throw new Error("Essa novidade não está mais na lista de não-avisadas.");
-    const otherCount = (pending ?? []).length - 1;
 
-    const message = otherCount > 0
-      ? `${headline.title} e outras ${otherCount} novidade${otherCount === 1 ? "" : "s"}... Clica aqui!`
-      : `${headline.title} Clica aqui!`;
-
+    // Cada público recebe um aviso só com as novidades dele: o destaque escolhido
+    // (se for do público) + "e outras N". Quem não tem nenhuma novidade não recebe nada.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: activeProfiles, error: profilesErr } = await supabaseAdmin
-      .from("profiles").select("id").eq("active", true);
+    const { data: activeProfiles, error: profilesErr } = await (supabaseAdmin as any)
+      .from("profiles").select("id, orgs!inner(account_type)").eq("active", true);
     if (profilesErr) throw new Error(profilesErr.message);
 
-    const rows = (activeProfiles ?? []).map((p: any) => ({
-      user_id: p.id, type: "platform_update", message,
-    }));
+    const rows: { user_id: string; type: string; message: string }[] = [];
+    for (const aud of ["agency", "house"] as const) {
+      const mine = all.filter((u) => u.audience === "all" || u.audience === aud);
+      if (mine.length === 0) continue;
+      const head = mine.find((u) => u.id === headline.id) ?? mine[0];
+      const otherCount = mine.length - 1;
+      const message = otherCount > 0
+        ? `${head.title} e outras ${otherCount} novidade${otherCount === 1 ? "" : "s"}... Clica aqui!`
+        : `${head.title} Clica aqui!`;
+      for (const p of activeProfiles ?? []) {
+        const isHouseProfile = (p as any).orgs?.account_type === "house";
+        if ((aud === "house") === isHouseProfile) rows.push({ user_id: p.id, type: "platform_update", message });
+      }
+    }
     if (rows.length > 0) {
       const { error: insErr } = await (supabaseAdmin as any).from("notifications").insert(rows);
       if (insErr) throw new Error(insErr.message);
     }
 
-    const idsToMark = (pending ?? []).map((u: any) => u.id);
+    const idsToMark = all.map((u) => u.id);
     await db.from("platform_updates").update({ notified_at: new Date().toISOString() }).in("id", idsToMark);
 
     return { ok: true, notifiedUsers: rows.length, totalUpdates: idsToMark.length };
