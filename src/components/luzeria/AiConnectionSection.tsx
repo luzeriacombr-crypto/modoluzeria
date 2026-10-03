@@ -70,6 +70,21 @@ export function AiConnectionSection() {
         )}
       </div>
 
+      <div className="rounded-xl border border-foreground/10 p-4">
+        <div className="text-[10px] uppercase font-bold tracking-wider text-foreground/45 mb-2">Onde a sua IA é usada</div>
+        <ul className="space-y-2 text-sm text-foreground/75">
+          <li className="flex gap-2"><Sparkles size={14} className="mt-0.5 shrink-0 text-foreground/50" />
+            <span><strong className="text-foreground">Planejamentos gerados por IA</strong> — ideias e roteiros de conteúdo de cada cliente.</span>
+          </li>
+          <li className="flex gap-2"><Sparkles size={14} className="mt-0.5 shrink-0 text-foreground/50" />
+            <span><strong className="text-foreground">Nativo App</strong>, nosso aplicativo de criações de arte — lê publicações de um cliente e monta o acervo de modelos no estilo dele.</span>
+          </li>
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-foreground/45">
+          Com a sua chave conectada, os dois usos valem pra qualquer cliente e o custo é da sua conta de IA. Sem chave, os 2 primeiros clientes (ou marcas) são grátis nos dois usos; no Nativo, o teste grátis faz até 3 acervos por cliente.
+        </p>
+      </div>
+
       {isMaster && !data?.unlimited && (
         <div className="space-y-2">
           <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground/45">Chave de API (Claude / Anthropic)</label>

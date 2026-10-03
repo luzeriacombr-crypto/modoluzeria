@@ -36,3 +36,16 @@ export async function resolveAi(orgId: string, clientId?: string | null) {
 export async function requireOwnAi(orgId: string) {
   return resolveAi(orgId, null);
 }
+
+/** Só consulta (não ocupa vaga): como a IA está liberada pra esse cliente. */
+export async function peekAi(orgId: string, clientId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db: any = supabaseAdmin;
+  const { data: cred } = await db.from("org_ai_credentials").select("key_last4").eq("org_id", orgId).maybeSingle();
+  if (cred) return { own: true, keyLast4: String(cred.key_last4 ?? ""), allowed: true, freeUsed: 0, freeLimit: AI_FREE_CLIENTS, house: false };
+  if (await isLuzeriaOrg(orgId)) return { own: false, keyLast4: "", allowed: true, freeUsed: 0, freeLimit: AI_FREE_CLIENTS, house: true };
+  const { data: c } = await db.from("clients").select("ai_planning_enabled").eq("id", clientId).eq("org_id", orgId).maybeSingle();
+  const { count } = await db.from("clients").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("ai_planning_enabled", true);
+  const used = count ?? 0;
+  return { own: false, keyLast4: "", allowed: !!c?.ai_planning_enabled || used < AI_FREE_CLIENTS, freeUsed: used, freeLimit: AI_FREE_CLIENTS, house: false };
+}

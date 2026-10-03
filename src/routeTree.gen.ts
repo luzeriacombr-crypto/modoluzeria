@@ -49,6 +49,7 @@ import { Route as CampanhaTokenRouteImport } from './routes/campanha.$token'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AssinarCompletarRouteImport } from './routes/assinar_.completar'
 import { Route as ApiPublicDriveFileRouteImport } from './routes/api.public-drive-file'
+import { Route as ApiNativoAcervoRouteImport } from './routes/api.nativo-acervo'
 import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedSelecaoDeFotosRouteImport } from './routes/_authenticated/selecao-de-fotos'
@@ -305,6 +306,11 @@ const AssinarCompletarRoute = AssinarCompletarRouteImport.update({
 const ApiPublicDriveFileRoute = ApiPublicDriveFileRouteImport.update({
   id: '/api/public-drive-file',
   path: '/api/public-drive-file',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNativoAcervoRoute = ApiNativoAcervoRouteImport.update({
+  id: '/api/nativo-acervo',
+  path: '/api/nativo-acervo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMcpRoute = ApiMcpRouteImport.update({
@@ -634,6 +640,7 @@ export interface FileRoutesByFullPath {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/nativo-acervo': typeof ApiNativoAcervoRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -727,6 +734,7 @@ export interface FileRoutesByTo {
   '/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/nativo-acervo': typeof ApiNativoAcervoRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar/completar': typeof AssinarCompletarRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -822,6 +830,7 @@ export interface FileRoutesById {
   '/_authenticated/selecao-de-fotos': typeof AuthenticatedSelecaoDeFotosRoute
   '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/api/nativo-acervo': typeof ApiNativoAcervoRoute
   '/api/public-drive-file': typeof ApiPublicDriveFileRoute
   '/assinar_/completar': typeof AssinarCompletarRoute
   '/blog_/$slug': typeof BlogSlugRoute
@@ -917,6 +926,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/api/mcp'
+    | '/api/nativo-acervo'
     | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
@@ -1010,6 +1020,7 @@ export interface FileRouteTypes {
     | '/selecao-de-fotos'
     | '/vendas'
     | '/api/mcp'
+    | '/api/nativo-acervo'
     | '/api/public-drive-file'
     | '/assinar/completar'
     | '/blog/$slug'
@@ -1104,6 +1115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/selecao-de-fotos'
     | '/_authenticated/vendas'
     | '/api/mcp'
+    | '/api/nativo-acervo'
     | '/api/public-drive-file'
     | '/assinar_/completar'
     | '/blog_/$slug'
@@ -1176,6 +1188,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   ApiMcpRoute: typeof ApiMcpRoute
+  ApiNativoAcervoRoute: typeof ApiNativoAcervoRoute
   ApiPublicDriveFileRoute: typeof ApiPublicDriveFileRoute
   AssinarCompletarRoute: typeof AssinarCompletarRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1495,6 +1508,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public-drive-file'
       fullPath: '/api/public-drive-file'
       preLoaderRoute: typeof ApiPublicDriveFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/nativo-acervo': {
+      id: '/api/nativo-acervo'
+      path: '/api/nativo-acervo'
+      fullPath: '/api/nativo-acervo'
+      preLoaderRoute: typeof ApiNativoAcervoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/mcp': {
@@ -1965,6 +1985,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   ApiMcpRoute: ApiMcpRoute,
+  ApiNativoAcervoRoute: ApiNativoAcervoRoute,
   ApiPublicDriveFileRoute: ApiPublicDriveFileRoute,
   AssinarCompletarRoute: AssinarCompletarRoute,
   BlogSlugRoute: BlogSlugRoute,
