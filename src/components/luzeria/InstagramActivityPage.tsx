@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useGoToItem } from "@/lib/luzeria/go-to-item";
@@ -97,22 +98,7 @@ export function InstagramActivityPage() {
       {/* Calendário virou aba daqui — só importa mesmo no contexto de "o que
        * vai publicar e quando", não precisa mais de item próprio na barra
        * lateral (feedback de usabilidade, call com Alexsander Felix). */}
-      <div className="inline-flex items-center gap-1 rounded-full bg-card p-1 border border-foreground/10 mb-6">
-        <button
-          onClick={() => setTab("atividade")}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition"
-          style={tab === "atividade" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
-        >
-          Atividade
-        </button>
-        <button
-          onClick={() => setTab("calendario")}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition"
-          style={tab === "calendario" ? { background: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" } : { color: "color-mix(in srgb, var(--foreground) 60%, transparent)" }}
-        >
-          <CalendarDays size={13} /> Calendário
-        </button>
-      </div>
+      <FolderTabs size="sm" activeId={tab} onChange={(id) => setTab(id as any)} items={[{ id: "atividade", label: "Atividade" }, { id: "calendario", label: "Calendário" }]} />
 
       {tab === "calendario" && <CalendarioContent />}
 

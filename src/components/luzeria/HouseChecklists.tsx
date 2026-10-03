@@ -3,6 +3,7 @@
 // a equipe marca no "Meu dia". Aqui fica também o histórico: o que foi
 // feito, por quem, e o que passou do prazo (aviso das 21h).
 import { useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -30,21 +31,9 @@ export function HouseChecklists() {
       <p className="text-sm text-foreground/50 mt-1">
         Tarefas recorrentes da função. A equipe marca no <strong className="text-foreground/70">Meu dia</strong>; o que não for feito no prazo vira aviso às 21h.
       </p>
-      <div className="flex items-center gap-1 mt-5 mb-4">
-        <TabPill active={tab === "itens"} onClick={() => setTab("itens")} icon={<ListChecks size={13} />} label="Itens" />
-        <TabPill active={tab === "historico"} onClick={() => setTab("historico")} icon={<History size={13} />} label="Histórico" />
-      </div>
+      <FolderTabs size="sm" className="mt-5" activeId={tab} onChange={(id) => setTab(id as any)} items={[{ id: "itens", label: "Itens" }, { id: "historico", label: "Histórico" }]} />
       {tab === "itens" ? <ItemsSection canEdit={isAdmin} /> : <HistorySection />}
     </div>
-  );
-}
-
-function TabPill({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <button onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${active ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/55 hover:text-foreground hover:bg-foreground/5"}`}>
-      {icon}{label}
-    </button>
   );
 }
 

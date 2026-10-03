@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
@@ -103,21 +104,7 @@ export function AjudaPage({ initialTab }: { initialTab?: string } = {}) {
           navegações empilhadas. `overflow-x-auto` é o mesmo padrão já usado
           na barra de abas de Configurações pro mesmo problema (muitas
           abas, tela estreita) — rola direto em vez de quebrar linha. */}
-      <div className="flex items-center gap-1 border-b border-foreground/10 mt-6 mb-6 overflow-x-auto overflow-y-hidden">
-        {tabs.map((t) => {
-          const active = tab === t.id;
-          return (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
-              style={{
-                color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
-                borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
-              }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      <FolderTabs className="mt-6" activeId={tab} onChange={(id) => setTab(id as any)} items={tabs.map((t) => ({ id: t.id, label: t.label }))} />
 
       {tab === "faq" && (
         <div className="space-y-8">

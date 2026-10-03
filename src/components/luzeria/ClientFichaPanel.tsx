@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -213,14 +214,7 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
         className="@[640px]:hidden w-full rounded-xl border border-foreground/15 bg-card text-foreground text-[13px] font-bold uppercase tracking-wider px-4 py-3">
         {FICHA_TABS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
       </select>
-      <div role="tablist" aria-label="Seções da ficha" className="hidden @[640px]:flex gap-1.5 rounded-xl border border-foreground/8 bg-card p-1 overflow-x-auto">
-        {FICHA_TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={activeTab === t.id} onClick={() => setFichaTab(t.id)}
-            className={`flex-1 whitespace-nowrap text-xs font-bold px-4 py-2.5 rounded-lg transition-colors ${activeTab === t.id ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/60 hover:text-foreground"}`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <FolderTabs size="sm" className="hidden @[640px]:block" activeId={activeTab} onChange={(id) => setFichaTab(id as any)} items={FICHA_TABS} />
 
       {activeTab === "geral" && isHouseBrand && <div id="house-briefing" className="scroll-mt-4"><HouseBrandBriefing clientId={clientId} /></div>}
       {activeTab === "geral" && (

@@ -21,6 +21,7 @@ import { ClientDocsTab } from "./ClientDocsTab";
 import { ClientReferenceLibraryTab } from "./ClientReferenceLibraryTab";
 import { CampanhasTab } from "./CampanhasTab";
 import { Modal } from "./Modals";
+import { FolderTabs } from "./FolderTabs";
 import type { Client } from "@/lib/luzeria/types";
 import { isHouse } from "@/lib/luzeria/house";
 
@@ -364,24 +365,15 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
           </div>
         );
       })()}
-      <div className="hidden md:flex items-center gap-2 mt-8 border-b border-foreground/6">
-        <div className="flex items-center gap-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar flex-1 min-w-0">
-          {tabs.map((t) => (
-            <button key={t} onClick={() => setTab(t as any)}
-              className="relative py-3 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap"
-              style={{ color: tab === t ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)" }}>
-              {t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t}
-              {tab === t && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px]" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
-            </button>
-          ))}
-        </div>
-        {isAdmin && (
-          <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas"
-            className="shrink-0 p-1.5 mb-1 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition">
+      {/* Abas do cliente em formato de pastinha (componente FolderTabs); a engrenagem de personalizar fica no fim. */}
+      <FolderTabs className="hidden md:block mt-8" activeId={tab} onChange={(id) => setTab(id as any)} maxPerRow={8}
+        items={tabs.map((t) => ({ id: t, label: t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t }))}
+        trailing={isAdmin ? (
+          <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas" aria-label="Personalizar abas"
+            className="shrink-0 p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition">
             <Settings2 size={15} />
           </button>
-        )}
-      </div>
+        ) : null} />
       {customizingTabs && (
         <CustomizeTabsModal
           client={client}
@@ -798,13 +790,12 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         })()}
         {tab === "mais" && (
           <div className="mt-2">
-            <div className="flex items-center gap-2 mb-5">
-              <MaisSubTabPill active={maisSubTab === "atividades"} onClick={() => setMaisSubTab("atividades")}>Atividades</MaisSubTabPill>
-              <MaisSubTabPill active={maisSubTab === "campanhas"} onClick={() => setMaisSubTab("campanhas")}>Campanhas</MaisSubTabPill>
-              {showBibliotecaSubTab && (
-                <MaisSubTabPill active={maisSubTab === "biblioteca"} onClick={() => setMaisSubTab("biblioteca")}>Biblioteca</MaisSubTabPill>
-              )}
-            </div>
+            <FolderTabs size="sm" activeId={maisSubTab} onChange={(id) => setMaisSubTab(id as MaisSubTab)}
+              items={[
+                { id: "atividades", label: "Atividades" },
+                { id: "campanhas", label: "Campanhas" },
+                ...(showBibliotecaSubTab ? [{ id: "biblioteca", label: "Biblioteca" }] : []),
+              ]} />
             {maisSubTab === "atividades" && month && (
               <MaisAtividadesTab
                 clientId={clientId}
@@ -1019,19 +1010,6 @@ export function BulkStatusModal({ type, count, isAvulso, onClose, onApply }: {
           })}
       </div>
     </Modal>
-  );
-}
-
-function MaisSubTabPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button onClick={onClick}
-      className="rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors"
-      style={{
-        backgroundColor: active ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 6%, transparent)",
-        color: active ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 60%, transparent)",
-      }}>
-      {children}
-    </button>
   );
 }
 

@@ -3,6 +3,7 @@
 // pelo gestor e progresso de leitura da equipe. Com scope="modelo", a
 // Luzeria edita o playbook modelo que é copiado pra cada House nova.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
@@ -78,14 +79,7 @@ export function HousePlaybook({ scope, pageId, onSelectPage }: {
           </h1>
         </div>
         {scope === "org" && me?.role === "master" && (
-          <div className="inline-flex items-center gap-1 bg-card rounded-full p-1 border border-foreground/[0.06]">
-            {(["conteudo", "progresso"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${tab === t ? "bg-[rgb(var(--lz-brand-rgb))] text-black" : "text-foreground/55 hover:text-foreground"}`}>
-                {t === "conteudo" ? "Conteúdo" : "Progresso da equipe"}
-              </button>
-            ))}
-          </div>
+          <FolderTabs size="sm" className="!mb-0" activeId={tab} onChange={(id) => setTab(id as any)} items={[{ id: "conteudo", label: "Conteúdo" }, { id: "progresso", label: "Progresso da equipe" }]} />
         )}
       </div>
 

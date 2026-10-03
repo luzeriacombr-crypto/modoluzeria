@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { useQuery } from "@tanstack/react-query";
 import {
   Download, Filter, ChevronDown, Clock, AlertOctagon, RotateCcw, Star,
@@ -170,18 +171,7 @@ export function ReportsTab() {
       {isLoading && <p className="text-foreground/50 text-sm">Carregando…</p>}
 
       {/* Sub-tabs */}
-      <div className="mb-6 flex items-center gap-1 overflow-x-auto pb-1">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors"
-            style={{
-              backgroundColor: tab === t.id ? "rgb(var(--lz-brand-rgb))" : "color-mix(in srgb, var(--foreground) 4%, transparent)",
-              color: tab === t.id ? "#0D0D0D" : "color-mix(in srgb, var(--foreground) 70%, transparent)",
-            }}>
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
+      <FolderTabs size="sm" activeId={tab} onChange={(id) => setTab(id as any)} icons={false} items={TABS.map((t) => ({ id: t.id, label: t.label }))} />
 
       {report && tab === "produtividade" && (
         <>

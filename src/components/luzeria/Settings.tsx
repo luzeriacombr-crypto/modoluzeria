@@ -12,9 +12,10 @@ import { OPTIONAL_FEATURE_KEYS, OPTIONAL_FEATURE_LABEL, hasSetorPermission, hasP
 import { toast } from "sonner";
 import { isHouse, term, HOUSE_HIDDEN_FEATURES } from "@/lib/luzeria/house";
 import { CleaningView } from "./CleaningView";
+import { FolderTabs } from "./FolderTabs";
 import { HouseChecklists } from "./HouseChecklists";
 import { toastFriendlyError } from "@/lib/luzeria/friendly-error";
-import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw, Folder, FolderOpen } from "lucide-react";
+import { UserPlus, X, Settings as SettingsIcon, Star, Building2, Loader2, Plus, Trash2, Archive, PlayCircle, ChevronDown, Users, UserCog, Rocket, Zap, Crown, FileDigit, ArrowRight, LayoutGrid, FileText, CheckCircle2, Tags, HelpCircle, Moon, Sun, ImagePlus, Palette, Eye, Sparkles, SlidersHorizontal, RotateCcw } from "lucide-react";
 import { TeamMemberCard } from "./TeamMemberCard";
 import { ContentStatusesSection } from "./ContentStatusesSection";
 import { ClientCategoriesSection } from "./ClientCategoriesSection";
@@ -203,33 +204,9 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
               </select>
               <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/50" />
             </div>
-            {/* Abas em formato de divisória de pasta: a aba escolhida "abre" pra página (sem linha embaixo) e as outras
-              * ficam mais escuras. Com muitas abas, quebram em 2 linhas; a linha da aba atual desce pra ficar sempre
-              * colada na página, como nas pastas de arquivo (e nada fica escondido atrás de rolagem). */}
-            {(() => {
-              const perRow = tabItems.length > 6 ? Math.ceil(tabItems.length / 2) : tabItems.length;
-              const rows: typeof tabItems[] = [];
-              for (let i = 0; i < tabItems.length; i += perRow) rows.push(tabItems.slice(i, i + perRow));
-              rows.sort((a, b) => Number(a.some((t) => isActive(t.id))) - Number(b.some((t) => isActive(t.id))));
-              return (
-                <div className="hidden md:block mb-6" data-tour="settings-tabs" role="tablist">
-                  {rows.map((row, ri) => (
-                    <div key={ri} className="lz-ftab-row">
-                      {row.map((t) => {
-                        const active = isActive(t.id);
-                        const FolderIcon = active ? FolderOpen : Folder;
-                        return (
-                          <button key={t.id} role="tab" aria-selected={active} onClick={() => setTab(t.id as any)} className="lz-ftab">
-                            <FolderIcon size={14} className="lz-ftab-icon" />
-                            {t.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+            {/* Abas em formato de divisória de pasta (componente FolderTabs); no celular, a caixa de seleção acima. */}
+            <FolderTabs items={tabItems} activeId={tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id ?? ""}
+              onChange={(id) => setTab(id as any)} maxPerRow={6} className="hidden md:block" data-tour="settings-tabs" />
           </>
         );
       })()}
@@ -274,10 +251,8 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             <Navigate to="/financeiro" search={{ aba: tab === "orcamentos" ? "orcamentos" : "entradas" }} replace />
           )}
           {isMaster && (
-            <div className="flex items-center gap-1 mb-6 -mt-2 flex-wrap">
-              <SubTabPill active={tab === "cobranca"} onClick={() => setTab("cobranca")} label="Meu plano" />
-              {!isHouse(me) && <SubTabPill active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} label="Indique e ganhe" />}
-            </div>
+            <FolderTabs size="sm" activeId={tab === "indicacoes" ? "indicacoes" : "cobranca"} onChange={(id) => setTab(id as any)}
+              items={[{ id: "cobranca", label: "Meu plano" }, ...(!isHouse(me) ? [{ id: "indicacoes", label: "Indique e ganhe" }] : [])]} />
           )}
 
           {tab === "afiliados" ? (
@@ -352,15 +327,12 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
        tab === "team" || tab === "report" || tab === "rotina" ? (
         <>
       {(allowedTabs.includes("report") || allowedTabs.includes("rotina")) && (
-        <div className="flex items-center gap-1 mb-6 -mt-2">
-          {[
-            { id: "team" as const, label: "Equipe" },
-            ...(allowedTabs.includes("rotina") ? [{ id: "rotina" as const, label: isHouse(me) ? "Checklists" : "Rotina" }] : []),
-            ...(allowedTabs.includes("report") ? [{ id: "report" as const, label: "Relatório" }] : []),
-          ].map((s) => (
-            <SubTabPill key={s.id} active={tab === s.id} onClick={() => setTab(s.id)} label={s.label} />
-          ))}
-        </div>
+        <FolderTabs size="sm" activeId={tab} onChange={(id) => setTab(id as any)}
+          items={[
+            { id: "team", label: "Equipe" },
+            ...(allowedTabs.includes("rotina") ? [{ id: "rotina", label: isHouse(me) ? "Checklists" : "Rotina" }] : []),
+            ...(allowedTabs.includes("report") ? [{ id: "report", label: "Relatório" }] : []),
+          ]} />
       )}
       {tab === "report" ? <ReportsTab /> : tab === "rotina" ? (
         // As telas de Rotina/Checklists já trazem o próprio espaçamento de página; compensa pra não dobrar a margem aqui dentro.
@@ -1633,19 +1605,6 @@ function BillingSection() {
   );
 }
 
-function SubTabPill({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button onClick={onClick}
-      className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide transition-colors"
-      style={{
-        backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.15)" : "transparent",
-        color: active ? "var(--lz-accent-ink)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
-      }}>
-      {label}
-    </button>
-  );
-}
-
 function ClienteTab({ initialSub, canJourney, isAdmin }: {
   initialSub: "overview" | "jornada"; canJourney: boolean; isAdmin: boolean;
 }) {
@@ -1660,9 +1619,7 @@ function ClienteTab({ initialSub, canJourney, isAdmin }: {
   );
   return (
     <div>
-      <div className="flex items-center gap-1 mb-6 -mt-2">
-        {subs.map((s) => <SubTabPill key={s.id} active={sub === s.id} onClick={() => setSub(s.id)} label={s.label} />)}
-      </div>
+      <FolderTabs size="sm" activeId={sub} onChange={(id) => setSub(id as any)} items={subs} />
       {sub === "overview" ? <ClientOperationsOverview /> :
        sub === "jornada" ? <JourneyStagesTab /> : null}
     </div>

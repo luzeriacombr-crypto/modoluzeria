@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { FolderTabs } from "./FolderTabs";
 import { Loader2 } from "lucide-react";
 import { useMe } from "@/lib/luzeria/queries";
 import { hasPermission } from "@/lib/luzeria/types";
@@ -52,21 +53,7 @@ export function FinancePage({ tab, onTabChange }: { tab: FinanceTab; onTabChange
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden lz-no-print">
-            {tabs.map((t) => {
-              const active = t.id === current.id;
-              return (
-                <button key={t.id} onClick={() => onTabChange(t.id)}
-                  className="shrink-0 whitespace-nowrap px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors -mb-px border-b-2"
-                  style={{
-                    color: active ? "var(--foreground)" : "color-mix(in srgb, var(--foreground) 50%, transparent)",
-                    borderColor: active ? "rgb(var(--lz-brand-rgb))" : "transparent",
-                  }}>
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
+          <FolderTabs activeId={current.id} onChange={(id) => onTabChange(id as any)} items={tabs.map((t) => ({ id: t.id, label: t.label }))} />
           {current.id === "entradas" ? <ClientPaymentsPanel /> :
            current.id === "resultado" ? <MonthResultPanel /> :
            current.id === "margem" ? <ClientMarginPanel /> : (
