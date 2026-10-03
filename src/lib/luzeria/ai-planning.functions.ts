@@ -407,6 +407,22 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
     // vira mais de uma chamada — ver CHUNK_SIZE abaixo). Só o pedaço final
     // (quantos itens pedir, quais temas já foram usados, se pesquisa
     // concorrente) muda de uma chamada pra outra.
+    // Datas comemorativas e aniversários cadastrados pro cliente que caem no
+    // mês planejado (o próximo): a IA encaixa as que fazem sentido.
+    let datesText = "";
+    try {
+      const nowSp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+      const [ny, nm] = nowSp.split("-").map(Number);
+      const targetKey = nm === 12 ? `${ny + 1}-01` : `${ny}-${String(nm + 1).padStart(2, "0")}`;
+      const { datesInMonthForPlanning } = await import("./commemorative.functions");
+      const monthDates = await datesInMonthForPlanning(context.supabase, data.clientId, targetKey);
+      if (monthDates.length) {
+        datesText = `\n\nDatas importantes desse cliente no mês planejado (cadastradas pela equipe; use as que combinam com o negócio dele e proponha conteúdo pra cada uma, com a data de publicação sugerida):\n${monthDates.map((d) => `- ${d.date.slice(8, 10)}/${d.date.slice(5, 7)}: ${d.title}${d.note ? ` (${d.note})` : ""}`).join("\n")}`;
+      }
+    } catch (e) {
+      console.error("Datas do mês pro planejamento:", e);
+    }
+
     const baseInstructionParts = [
       "Você é um estrategista de conteúdo de uma agência de social media, ajudando a montar uma PRÉVIA (rascunho pra revisão, não versão final) de planejamento de conteúdo do próximo mês pra um cliente.",
       "",
@@ -418,6 +434,7 @@ export const generateMonthlyPlanPreview = createServerFn({ method: "POST" })
       contentBriefingText ? `\n\nBriefing/sistema de conteúdo específico desse cliente (siga isso à risca, é o manual de como criar pra ele):\n${safeTruncate(contentBriefingText, 8000)}` : "",
       recentRoteirosText ? `\n\nRoteiros recentes já escritos pra esse cliente (use pra aprender o padrão e o tom exatos já usados, não repita os mesmos temas):\n${safeTruncate(recentRoteirosText, 8000)}` : "",
       knowledgeText,
+      datesText,
       data.extraContext ? `\n\nContexto informado agora, específico pra ESSE planejamento (reunião recente, transcrição, briefing pontual do mês — prioridade alta, é a informação mais atual que existe, siga isso de perto):\n${safeTruncate(data.extraContext, 50000)}` : "",
       "",
       "Inclua pelo menos 1-2 sugestões respondendo direto uma pergunta frequente e real que o público do nicho desse cliente costuma ter (formato: a pessoa olha pra câmera e responde a pergunta, tipo os exemplos reais de roteiro na base de conhecimento acima, se houver) e pelo menos 1 sugestão em formato de lista rápida (Top 5/Top 10 em contagem regressiva, Esse ou Aquele, Troque isso por isso) quando fizer sentido pro nicho, são formatos rápidos de gravar e com bom histórico de alcance. Se já tiver essa informação no briefing/histórico/base de conhecimento, use direto. Só use web_search pra isso (no máximo 1 busca rápida) se REALMENTE não tiver nenhuma pista sobre o nicho; nunca gaste várias buscas só pra achar pergunta frequente, isso é secundário à pesquisa de concorrentes.",

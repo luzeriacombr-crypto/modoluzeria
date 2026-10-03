@@ -19,6 +19,7 @@ import { CADENCE_LABEL, checklistDueLabel } from "@/lib/luzeria/house-checklists
 import { statusLabel, getStatusMeta } from "@/lib/luzeria/types";
 import { Avatar } from "./Avatar";
 import { HouseStoryIdeas } from "./HouseStoryIdeas";
+import { UpcomingDatesCard } from "./CommemorativeDatesPanel";
 import { HouseBrandSwitcher, HouseBrandSelect } from "./HouseBrandSwitcher";
 import { useHouseBrand } from "@/lib/luzeria/house-brand-store";
 
@@ -56,6 +57,7 @@ export function HouseMyDay() {
             <ChecklistCard day={day} />
           </div>
           <div className="space-y-4">
+            <UpcomingDatesCard brandId={brandParam} />
             <UnassignedCard />
             <UpcomingCard day={day} />
           </div>

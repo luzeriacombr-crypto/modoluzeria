@@ -10,6 +10,7 @@ import { getStatusIcon } from "./icons";
 import { useUI } from "@/lib/luzeria/ui-store";
 import { Avatar } from "./Avatar";
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
+import { UpcomingDatesCard } from "./CommemorativeDatesPanel";
 import { useNavigate } from "@tanstack/react-router";
 import { useGoToItem } from "@/lib/luzeria/go-to-item";
 import { Sparkles, List, CalendarDays, CalendarClock, Clock, Check, X, AtSign, MessageCircle, Instagram, ChevronDown, ChevronUp, ChevronRight, Plus, ChevronLeft, Film, Image as ImageIcon, Wallet, Video, FileText, Send, Video as VideoIcon, MapPin, Users, SlidersHorizontal, Eye, EyeOff, Lock, RotateCcw, Crown, Medal, Flame, GripVertical } from "lucide-react";
@@ -56,6 +57,7 @@ function SectionHeader({ icon, iconBg, iconColor, label, count, open, onToggle }
 const MY_TASKS_BLOCKS: { id: string; label: string; hint: string; locked?: boolean }[] = [
   { id: "daily", label: "Rotina do dia", hint: "Stories e tarefas de rotina que caem hoje", locked: true },
   { id: "kpis", label: "Resumo", hint: "Atrasadas, hoje e próximos 7 dias (também filtram a lista)" },
+  { id: "dates", label: "Datas chegando", hint: "Datas comemorativas e aniversários dos clientes que estão perto" },
   { id: "month", label: "Seu mês", hint: "Atividades e estatísticas de trabalho" },
   { id: "agenda", label: "Agenda do Google", hint: "Seus compromissos dos próximos dias" },
   { id: "pubs", label: "Publicações de hoje", hint: "O que vai ao ar hoje no Instagram" },
@@ -444,6 +446,7 @@ export function MyTasks() {
   const [showCustomize, setShowCustomize] = useState(false);
 
   const blocks: Record<string, React.ReactNode> = {
+    dates: <UpcomingDatesCard className="mb-6" />,
     kpis: <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="my-kpis">
         {([
@@ -702,6 +705,7 @@ export function MyTasks() {
   const isBlockShown = (id: string) => !!blocks[id] && (!layout.hidden.includes(id) || LOCKED_BLOCKS.has(id));
   const availableBlocks = new Set<string>([
     "kpis", "daily", "pubs", "mentions", "month", "list", "productivity",
+    ...(isMeView ? ["dates"] : []),
     ...(googleCalendarEnabled && isMeView ? ["agenda"] : []),
     ...(isAdmin && whatsappRemindersEnabled ? ["whatsapp"] : []),
     ...(canFinanceiro ? ["payments"] : []),

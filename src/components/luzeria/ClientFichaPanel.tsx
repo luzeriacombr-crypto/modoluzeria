@@ -25,6 +25,7 @@ import { TikTokConnectSection } from "./TikTokSections";
 import { LinkedInConnectSection } from "./LinkedInSections";
 import { term, isHouse } from "@/lib/luzeria/house";
 import { HouseBrandBriefing } from "./HouseBrandBriefing";
+import { CommemorativeDatesPanel } from "./CommemorativeDatesPanel";
 import { ClientProfileBriefing } from "./ClientProfileBriefing";
 import { useDrivePicker } from "@/lib/luzeria/use-drive-picker";
 
@@ -246,6 +247,9 @@ export function ClientFichaContent({ clientId }: { clientId: string }) {
             </p>
           </FichaCard>
         )}
+        <FichaCard label={isHouseBrand ? "Datas importantes da marca" : "Datas importantes"} wide>
+          <CommemorativeDatesPanel clientId={client.id} />
+        </FichaCard>
         {isAdmin && (
           <FichaCard label="Onboarding do cliente">
             <OnboardingBlock clientId={client.id} />
