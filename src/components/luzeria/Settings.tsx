@@ -186,8 +186,17 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
           (id === "cobranca" && (tab === "afiliados" || tab === "revenda" || tab === "indicacoes" || tab === "pagamentos" || tab === "orcamentos"));
         return (
           <>
-            {/* Mesma barra de abas (rolável na horizontal) em qualquer tamanho de tela — antes o celular caía num <select> nativo sem estilo (auditoria visual, 02/10). */}
-            <div className="flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar" data-tour="settings-tabs">
+            {/* Celular: caixa de seleção (pedido do Junior, 02/10); no computador, a barra de abas. */}
+            <div className="relative mb-6 md:hidden" data-tour="settings-tabs-mobile">
+              <select id="settings-tab-select" aria-label="Seção de Configurações"
+                value={tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id}
+                onChange={(e) => setTab(e.target.value as any)}
+                className="w-full appearance-none rounded-xl border border-foreground/15 bg-card text-foreground text-[13px] font-bold uppercase tracking-wider pl-4 pr-10 py-3 outline-none focus:border-[rgb(var(--lz-brand-rgb))]">
+                {tabItems.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/50" />
+            </div>
+            <div className="hidden md:flex items-center gap-1 border-b border-foreground/10 mb-6 overflow-x-auto overflow-y-hidden lz-no-scrollbar" data-tour="settings-tabs">
               {tabItems.map((t) => {
                 const active = isActive(t.id);
                 return (
