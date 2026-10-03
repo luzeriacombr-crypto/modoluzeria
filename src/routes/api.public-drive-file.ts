@@ -36,20 +36,26 @@ export const Route = createFileRoute("/api/public-drive-file")({
 
         return withDriveOrg(orgId as string, async () => {
           const accessToken = await getAccessToken();
+          // Range: o <video> do navegador pede o vídeo em pedaços (e precisa
+          // disso pra tocar rápido, pular no tempo e funcionar no Safari/iPhone).
+          const range = request.headers.get("range");
           const driveRes = await fetch(
             `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`,
-            { headers: { Authorization: `Bearer ${accessToken}` } },
+            { headers: { Authorization: `Bearer ${accessToken}`, ...(range ? { Range: range } : {}) } },
           );
-          if (!driveRes.ok || !driveRes.body) {
-            return new Response("Erro ao baixar do Drive.", { status: 502 });
+          if ((!driveRes.ok && driveRes.status !== 206) || !driveRes.body) {
+            return new Response("Erro ao baixar do Drive.", { status: driveRes.status === 416 ? 416 : 502 });
           }
           const headers = new Headers();
           const contentType = driveRes.headers.get("content-type");
           const contentLength = driveRes.headers.get("content-length");
+          const contentRange = driveRes.headers.get("content-range");
           if (contentType) headers.set("content-type", contentType);
           if (contentLength) headers.set("content-length", contentLength);
+          if (contentRange) headers.set("content-range", contentRange);
+          headers.set("accept-ranges", "bytes");
           headers.set("cache-control", "private, max-age=300");
-          return new Response(driveRes.body, { status: 200, headers });
+          return new Response(driveRes.body, { status: driveRes.status === 206 ? 206 : 200, headers });
         });
       },
     },

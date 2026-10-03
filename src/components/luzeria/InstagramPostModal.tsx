@@ -91,7 +91,19 @@ function FileThumb({ file, mode, fallback }: { file: IGModalFile; mode: ThumbMod
 
 const SCALE = 0.65; // controls appear at 65% size
 
-function VideoPlayer({ fileId }: { fileId: string }) {
+function VideoPlayer({ fileId, publicToken }: { fileId: string; publicToken?: string | null }) {
+  // Link público: toca pelo nosso servidor (não depende do cliente ter acesso
+  // ao arquivo no Google Drive — a tela "Você precisa ter acesso" não aparece mais).
+  if (publicToken) {
+    return (
+      <video
+        key={fileId}
+        src={`/api/public-drive-file?token=${encodeURIComponent(publicToken)}&fileId=${encodeURIComponent(fileId)}`}
+        controls autoPlay playsInline
+        className="absolute inset-0 w-full h-full bg-black object-contain"
+      />
+    );
+  }
   return (
     <div className="absolute inset-0 bg-black" style={{ overflow: "hidden" }}>
       <iframe
@@ -316,7 +328,7 @@ export function InstagramPostModal({
             {/* Video player — só reels (slide único), não entra na trilha arrastável */}
             {playingVideo && current?.driveFileId ? (
               <div className="absolute inset-0">
-                <VideoPlayer fileId={current.driveFileId} />
+                <VideoPlayer fileId={current.driveFileId} publicToken={isPublic ? (mode as { kind: "public"; token: string }).token : null} />
               </div>
             ) : total > 0 ? (
               <div

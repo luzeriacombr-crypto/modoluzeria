@@ -482,12 +482,11 @@ function PublicStoryViewer({ token, client, stories, index, onClose, onNavigate 
         <div className="absolute inset-0 grid place-items-center bg-[#0D0D0D]">
           {file ? (
             isVideo ? (
-              <iframe
+              <video
                 key={file.driveFileId}
-                src={`https://drive.google.com/file/d/${file.driveFileId}/preview`}
-                allow="autoplay"
-                allowFullScreen
-                className="w-full h-full border-0"
+                src={`/api/public-drive-file?token=${encodeURIComponent(token)}&fileId=${encodeURIComponent(file.driveFileId)}`}
+                controls autoPlay playsInline
+                className="w-full h-full bg-black object-contain"
               />
             ) : (
               <img key={file.driveFileId} src={file.thumbUrl ?? undefined} alt="" className="max-w-full max-h-full object-contain" />
