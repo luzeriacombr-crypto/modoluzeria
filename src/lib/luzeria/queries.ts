@@ -85,6 +85,7 @@ import {
   getPublicInstagramInsightsInfo,
 } from "./instagram.functions";
 import { publishToFacebook, setFacebookAutoPublish } from "./facebook.functions";
+import { getTikTokConnectionSummary } from "./tiktok.functions";
 import {
   getCalendarItems, getGoogleCalendarAuthUrl, disconnectGoogleCalendar,
   getMyCalendarConnection, getUpcomingCalendarEvents, createCalendarEvent,
@@ -147,6 +148,9 @@ export const instagramActivityQO = () =>
 
 export const instagramConnectionSummaryQO = () =>
   queryOptions({ queryKey: ["instagram-connection-summary"], queryFn: () => getInstagramConnectionSummary() });
+
+export const tiktokConnectionSummaryQO = () =>
+  queryOptions({ queryKey: ["tiktok-connection-summary"], queryFn: () => getTikTokConnectionSummary() });
 
 export const hasUsedInstagramPublishQO = () =>
   queryOptions({ queryKey: ["has-used-instagram-publish"], queryFn: () => hasUsedInstagramPublish(), staleTime: 60_000 });

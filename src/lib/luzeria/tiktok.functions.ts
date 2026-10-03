@@ -139,6 +139,28 @@ export const getTikTokConnectionStatus = createServerFn({ method: "GET" })
     return { connected: true, displayName: row.display_name as string | null, avatarUrl: row.avatar_url as string | null, connectedAt: row.connected_at as string };
   });
 
+/** Mesmo resumo do getInstagramConnectionSummary, pro card "TikTok" da aba
+ * Integrações: todos os clientes ativos e quais já têm o TikTok conectado.
+ * A lista de clientes vem pelo supabase de quem está logado (RLS limita à
+ * agência); as credenciais só pelo service role, filtradas por esses ids. */
+export const getTikTokConnectionSummary = createServerFn({ method: "GET" })
+  .middleware([requireActiveProfile])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data: clientRows } = await context.supabase
+      .from("clients").select("id, name, color")
+      .eq("org_id", context.orgId).eq("archived", false).neq("category", "Ex-clientes").order("name");
+    const list = (clientRows ?? []) as { id: string; name: string; color: string }[];
+    if (list.length === 0) return { total: 0, connected: 0, clients: [] as { id: string; name: string; color: string; connected: boolean }[] };
+    const db = await admin();
+    const { data: creds } = await db
+      .from("client_tiktok_credentials").select("client_id").in("client_id", list.map((c) => c.id));
+    const connectedIds = new Set(((creds ?? []) as any[]).map((c) => c.client_id));
+    const clients = list.map((c) => ({ id: c.id, name: c.name, color: c.color, connected: connectedIds.has(c.id) }));
+    return { total: list.length, connected: clients.filter((c) => c.connected).length, clients };
+  });
+
 export const getTikTokConnectUrl = createServerFn({ method: "POST" })
   .middleware([requireActiveProfile])
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))

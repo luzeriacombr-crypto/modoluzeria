@@ -1394,6 +1394,8 @@ export const hasUsedInstagramPublish = createServerFn({ method: "GET" })
     return (data ?? []).length > 0;
   });
 
+export type ConnectionSummaryClient = { id: string; name: string; color: string; connected: boolean };
+
 /** Quantos clientes ativos já têm o Instagram conectado, e quais ainda
  * faltam — pro card "Instagram" da aba Integrações e pro item novo do
  * checklist "Primeiros passos". */
@@ -1406,13 +1408,14 @@ export const getInstagramConnectionSummary = createServerFn({ method: "GET" })
       .from("clients").select("id, name, color")
       .eq("archived", false).neq("category", "Ex-clientes").order("name");
     const list = (clients ?? []) as any[];
-    if (list.length === 0) return { total: 0, connected: 0, clientsMissing: [] as { id: string; name: string; color: string }[] };
+    if (list.length === 0) return { total: 0, connected: 0, clientsMissing: [] as { id: string; name: string; color: string }[], clients: [] as ConnectionSummaryClient[] };
     const clientIds = list.map((c) => c.id);
     const { data: creds } = await context.supabase
       .from("client_instagram_credentials").select("client_id").in("client_id", clientIds);
     const connectedIds = new Set(((creds ?? []) as any[]).map((c) => c.client_id));
     const clientsMissing = list.filter((c) => !connectedIds.has(c.id)).map((c) => ({ id: c.id, name: c.name, color: c.color }));
-    return { total: list.length, connected: list.length - clientsMissing.length, clientsMissing };
+    const clients: ConnectionSummaryClient[] = list.map((c) => ({ id: c.id, name: c.name, color: c.color, connected: connectedIds.has(c.id) }));
+    return { total: list.length, connected: list.length - clientsMissing.length, clientsMissing, clients };
   });
 
 /** Tudo que já foi publicado no Instagram pelo app, ou que está programado

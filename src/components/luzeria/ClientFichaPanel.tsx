@@ -770,7 +770,7 @@ function FichaCard({ label, children, id, wide }: { label: string; children: Rea
   );
 }
 
-function InstagramSection({ clientId }: { clientId: string }) {
+export function InstagramSection({ clientId }: { clientId: string }) {
   const getConnStatus = useServerFn(getInstagramConnectionStatus);
   const getConnectUrl = useServerFn(getInstagramConnectUrl);
   const disconnect = useServerFn(disconnectInstagram);
