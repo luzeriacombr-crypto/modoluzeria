@@ -206,7 +206,7 @@ export function SettingsPage({ tab: tabParam, onTabChange }: { tab?: string; onT
             </div>
             {/* Abas em formato de divisória de pasta (componente FolderTabs); no celular, a caixa de seleção acima. */}
             <FolderTabs items={tabItems} activeId={tabItems.find((t) => isActive(t.id))?.id ?? tabItems[0]?.id ?? ""}
-              onChange={(id) => setTab(id as any)} className="hidden md:block" data-tour="settings-tabs" />
+              onChange={(id) => setTab(id as any)} maxPerRow={6} className="hidden md:block" data-tour="settings-tabs" />
           </>
         );
       })()}

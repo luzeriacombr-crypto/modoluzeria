@@ -366,7 +366,7 @@ export function ClientView({ clientId, tab: tabParam, onTabChange }: {
         );
       })()}
       {/* Abas do cliente em formato de pastinha (componente FolderTabs); a engrenagem de personalizar fica no fim. */}
-      <FolderTabs className="hidden md:block mt-8" activeId={tab} onChange={(id) => setTab(id as any)}
+      <FolderTabs className="hidden md:block mt-8" activeId={tab} onChange={(id) => setTab(id as any)} maxPerRow={8}
         items={tabs.map((t) => ({ id: t, label: t === "feed" ? "Preview de Feed" : t === "ficha" ? "Ficha do Cliente" : t === "mais" ? "Mais" : t === "docs" ? "Roteiros & Planejamento" : TAB_CONFIG[t as keyof typeof TAB_CONFIG]?.label ?? t }))}
         trailing={isAdmin ? (
           <button onClick={() => setCustomizingTabs(true)} title="Personalizar abas" aria-label="Personalizar abas"
