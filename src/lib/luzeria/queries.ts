@@ -594,7 +594,14 @@ export const driveThumbnailQO = (fileId: string | null | undefined, enabled = tr
 export const gridThumbnailsQO = (itemIds: string[]) =>
   queryOptions({
     queryKey: ["grid-thumbs", [...itemIds].sort()],
-    queryFn: () => getGridThumbnails({ data: { itemIds } }),
+    // Em pedaços: é um GET com os ids na URL e, com muitos itens (Instagram > Atividade chega a
+    // 150+), a URL passava de 15 KB, a Vercel devolvia 500 e nenhuma miniatura aparecia.
+    queryFn: async () => {
+      const chunks: string[][] = [];
+      for (let i = 0; i < itemIds.length; i += 40) chunks.push(itemIds.slice(i, i + 40));
+      const parts = await Promise.all(chunks.map((ids) => getGridThumbnails({ data: { itemIds: ids } })));
+      return Object.assign({}, ...parts) as Awaited<ReturnType<typeof getGridThumbnails>>;
+    },
     enabled: itemIds.length > 0,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
