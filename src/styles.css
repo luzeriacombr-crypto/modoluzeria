@@ -1132,8 +1132,9 @@ body { top: 0 !important; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .lz-tab-in { animation: lz-tab-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-  .lz-ftab { transition: color 180ms, background-color 180ms, padding 180ms, transform 180ms; }
-  .lz-ftab:not([aria-selected="true"]):hover { transform: translateY(-2px); }
+  .lz-ftab { transition: color 180ms, background-color 180ms, padding 180ms, margin 180ms; }
+  /* Ao passar o mouse a aba cresce pra cima, mantendo a base colada na linha (nada de vão preto embaixo). */
+  .lz-ftab:not([aria-selected="true"]):hover { padding-top: 13px; margin-top: -3px; }
   .lz-ftab[aria-selected="true"]::before { animation: lz-ftab-line 380ms cubic-bezier(0.16, 1, 0.3, 1) both; }
   .lz-ftab[aria-selected="true"] .lz-ftab-icon { animation: lz-ftab-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 }
