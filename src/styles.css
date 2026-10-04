@@ -1162,3 +1162,30 @@ body { top: 0 !important; }
 /* Aperta as abas pra caber numa linha só (FolderTabs): primeiro espaçamento menor, depois sem os ícones de pasta. */
 .lz-ftabs--compact .lz-ftab { padding-left: 11px; padding-right: 11px; letter-spacing: 0.03em; font-size: 11px; gap: 5px; }
 .lz-ftabs--noicon .lz-ftab-icon { display: none; }
+
+/* Menu lateral: ao passar o mouse, um brilho desliza da esquerda, o ícone dá um pulinho e o texto avança. */
+.lz-nav { position: relative; isolation: isolate; }
+.lz-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  transform: scaleX(0);
+  transform-origin: left;
+  pointer-events: none;
+}
+.lz-nav-icon, .lz-nav-label { display: inline-flex; }
+@media (prefers-reduced-motion: no-preference) {
+  .lz-nav::before { transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .lz-nav-icon { transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), color 180ms; }
+  .lz-nav-label { transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .lz-nav:hover:not(:disabled)::before { transform: scaleX(1); }
+  .lz-nav:hover:not(:disabled) .lz-nav-icon { transform: translateX(2px) scale(1.15); color: rgb(var(--lz-brand-rgb)); }
+  .lz-nav:hover:not(:disabled) .lz-nav-label { transform: translateX(3px); }
+  .lz-nav:active:not(:disabled) .lz-nav-icon { transform: scale(0.92); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lz-nav:hover:not(:disabled)::before { transform: scaleX(1); }
+}

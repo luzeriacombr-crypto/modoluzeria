@@ -747,15 +747,15 @@ function NavButton({ icon, label, active, onClick, badge, disabled, title }: {
 }) {
   return (
     <button onClick={disabled ? undefined : onClick} disabled={disabled} title={title}
-      className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
+      className="lz-nav w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative disabled:opacity-40 disabled:cursor-not-allowed"
       style={{
         backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
         color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
       }}>
       {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       <span className="flex items-center gap-2.5">
-        <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
-        {label}
+        <span className={`lz-nav-icon ${active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}`}>{icon}</span>
+        <span className="lz-nav-label">{label}</span>
       </span>
       {badge !== undefined && badge > 0 && (
         <span className="text-[10px] font-bold px-1.5 rounded" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))", color: "#0D0D0D" }}>{badge}</span>
@@ -771,15 +771,15 @@ function NavGroup({ icon, label, active, children }: {
   return (
     <div>
       <button onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
+        className="lz-nav w-full flex items-center justify-between gap-2 pl-3 pr-2 py-2 rounded-md transition-colors text-sm relative"
         style={{
           backgroundColor: active ? "rgba(var(--lz-brand-light-rgb),0.12)" : "transparent",
           color: active ? "#FFFFFF" : "rgba(255,255,255,0.7)",
         }}>
         {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
         <span className="flex items-center gap-2.5">
-          <span className={active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}>{icon}</span>
-          {label}
+          <span className={`lz-nav-icon ${active ? "text-[rgb(var(--lz-brand-rgb))]" : "text-white/60"}`}>{icon}</span>
+          <span className="lz-nav-label">{label}</span>
         </span>
         {open ? <ChevronDown size={14} className="text-white/40" /> : <ChevronRight size={14} className="text-white/40" />}
       </button>
@@ -791,9 +791,9 @@ function NavGroup({ icon, label, active, children }: {
 function NavSubButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors truncate"
+      className="lz-nav w-full text-left px-2.5 py-1.5 rounded-md text-xs transition-colors truncate"
       style={{ color: active ? "rgb(var(--lz-brand-rgb))" : "rgba(255,255,255,0.6)" }}>
-      {label}
+      <span className="lz-nav-label inline-block">{label}</span>
     </button>
   );
 }
@@ -1017,7 +1017,7 @@ function ClientRow({ client, active, onOpenCustomFields, canManage, categories }
       {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r" style={{ backgroundColor: "rgb(var(--lz-brand-rgb))" }} />}
       {/* Hover wash — a separate layer since an active row's background above
        * is a gradient (can't just toggle backgroundColor on hover). */}
-      <div className="absolute inset-0 bg-white/[0.045] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      <div className="absolute inset-0 bg-white/[0.06] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out pointer-events-none" />
       <Link
         to="/cliente/$clientId"
         params={{ clientId: client.id }}
