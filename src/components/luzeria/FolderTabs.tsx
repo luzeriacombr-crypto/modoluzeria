@@ -37,7 +37,7 @@ export function FolderTabs({
     const compute = () => {
       const levels = Array.from(measure.children).map((row) => Array.from(row.firstElementChild!.children).map((c) => (c as HTMLElement).getBoundingClientRect().width));
       if (levels.length !== 3 || levels.some((w) => w.length !== items.length || w.some((x) => x === 0))) return;
-      const avail = wrap.clientWidth - ROW_PADDING - (trailing ? 44 : 0);
+      const avail = wrap.clientWidth - ROW_PADDING - (trailing ? 44 : 0) - 16; // folga: arredondamento e fonte que carrega depois
       const sum = (widths: number[], a: number, b: number) => widths.slice(a, b).reduce((t, w) => t + w, 0) + GAP * Math.max(0, b - a - 1);
       // 1) tudo em uma linha, apertando um pouco se precisar (espaçamento menor, depois sem ícones)
       for (let lv = 0; lv < 3; lv++) {
@@ -56,7 +56,10 @@ export function FolderTabs({
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(wrap);
-    return () => ro.disconnect();
+    // A fonte (Inter) pode terminar de carregar depois da 1ª medição e deixar as abas mais largas: mede de novo.
+    let alive = true;
+    document.fonts?.ready.then(() => { if (alive) compute(); });
+    return () => { alive = false; ro.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey, size, !!trailing]);
 
@@ -102,7 +105,7 @@ export function FolderTabs({
       ) : (
         <div role="tablist">
           {rows.map((row, ri) => (
-            <div key={ri} className="lz-ftab-row">
+            <div key={ri} className="lz-ftab-row" style={rows.length === 1 ? { flexWrap: "nowrap" } : undefined}>
               {row.map((t) => tabButton(t, t.id === activeId, () => onChange(t.id)))}
               {ri === lastRow && trailing ? <div className="lz-ftab-trailing">{trailing}</div> : null}
             </div>
