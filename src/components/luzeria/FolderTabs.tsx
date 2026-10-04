@@ -28,33 +28,48 @@ export function FolderTabs({
   const wrapRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<Layout>({ kind: "rows", rows: [items], level: 0 });
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const itemsKey = items.map((i) => `${i.id}:${i.label}:${i.badge ?? ""}`).join("|");
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     const measure = measureRef.current;
     if (!wrap || !measure) return;
-    const compute = () => {
+    // Estados em ordem de preferência: 0-2 = uma linha (normal, apertado, sem ícones), 3 = duas linhas, 4 = caixa de seleção.
+    const rankOf = (l: Layout) => (l.kind === "select" ? 4 : l.rows.length === 2 ? 3 : l.level);
+    const compute = (force = false) => {
       const levels = Array.from(measure.children).map((row) => Array.from(row.firstElementChild!.children).map((c) => (c as HTMLElement).getBoundingClientRect().width));
       if (levels.length !== 3 || levels.some((w) => w.length !== items.length || w.some((x) => x === 0))) return;
       const avail = wrap.clientWidth - ROW_PADDING - (trailing ? 44 : 0) - 16; // folga: arredondamento e fonte que carrega depois
       const sum = (widths: number[], a: number, b: number) => widths.slice(a, b).reduce((t, w) => t + w, 0) + GAP * Math.max(0, b - a - 1);
-      // 1) tudo em uma linha, apertando um pouco se precisar (espaçamento menor, depois sem ícones)
-      for (let lv = 0; lv < 3; lv++) {
-        if (sum(levels[lv], 0, items.length) <= avail) { setLayout({ kind: "rows", rows: [items], level: lv as 0 | 1 | 2 }); return; }
-      }
-      // 2) no máximo duas linhas (tamanho normal)
       const w0 = levels[0];
       let best = -1, bestMax = Infinity;
       for (let k = 1; k < items.length; k++) {
         const m = Math.max(sum(w0, 0, k), sum(w0, k, items.length));
         if (m < bestMax) { bestMax = m; best = k; }
       }
-      if (best > 0 && bestMax <= avail) setLayout({ kind: "rows", rows: [items.slice(0, best), items.slice(best)], level: 0 });
-      else setLayout({ kind: "select" }); // 3) tela estreita: caixa de seleção
+      const cur = rankOf(layoutRef.current);
+      // Histerese: pra VOLTAR a um estado mais folgado, exige 28px a mais. Sem isso, mudar a altura da página
+      // faz a barra de rolagem aparecer/sumir, a largura oscila e a tela fica "tremendo".
+      const need = (r: number) => (r < cur ? 28 : 0);
+      let next: Layout = { kind: "select" };
+      for (let r = 0; r < 5; r++) {
+        if (r < 3 && sum(levels[r], 0, items.length) + need(r) <= avail) { next = { kind: "rows", rows: [items], level: r as 0 | 1 | 2 }; break; }
+        if (r === 3 && best > 0 && bestMax + need(r) <= avail) { next = { kind: "rows", rows: [items.slice(0, best), items.slice(best)], level: 0 }; break; }
+      }
+      const prev = layoutRef.current;
+      const same = rankOf(prev) === rankOf(next) && (next.kind !== "rows" || (prev.kind === "rows" && prev.rows[0].length === next.rows[0].length));
+      if (force || !same) setLayout(next);
     };
-    compute();
-    const ro = new ResizeObserver(compute);
+    compute(true);
+    let lastW = wrap.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const w = wrap.clientWidth;
+      if (Math.abs(w - lastW) < 1) return; // mudou só a altura (ex.: 1 linha -> 2): não precisa medir de novo
+      lastW = w;
+      compute();
+    });
     ro.observe(wrap);
     // A fonte (Inter) pode terminar de carregar depois da 1ª medição e deixar as abas mais largas: mede de novo.
     let alive = true;
