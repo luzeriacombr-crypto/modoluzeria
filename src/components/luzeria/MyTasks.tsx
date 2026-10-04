@@ -319,7 +319,10 @@ export function MyTasks() {
   // de data comemorativa ficou "Pronto para publicar" dias sem ninguém
   // notar, e perdeu a data — porque sumia daqui e ficava perdido no meio
   // do quadro do cliente.
-  const tasks = allTasks.filter((t: any) => t.status !== "FINALIZADO" && t.status !== "CONCLUIDO");
+  // Minhas demandas mostra só o mês corrente (pedido do Junior, 03/10): itens abertos de meses antigos ficavam
+  // acumulando aqui (a Jordânia chegava a 219) e escondiam o que realmente é de agora.
+  const currentMonthKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; })();
+  const tasks = allTasks.filter((t: any) => t.status !== "FINALIZADO" && t.status !== "CONCLUIDO" && t.monthKey === currentMonthKey);
   const { selectMonth, openItem, flash, openFicha, openStageComposer } = useUI();
   const navigate = useNavigate();
   const goToItem = useGoToItem();
