@@ -30,6 +30,10 @@ export function FolderTabs({
   const [layout, setLayout] = useState<Layout>({ kind: "rows", rows: [items], level: 0 });
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
+  const computeRef = useRef<(force?: boolean) => void>(() => {});
+  // Quando uma linha se mostra estourada de verdade, vira um "piso": não volta pra um estado mais largo
+  // enquanto a largura da área não crescer de fato.
+  const floorRef = useRef({ rank: 0, width: 0 });
   const itemsKey = items.map((i) => `${i.id}:${i.label}:${i.badge ?? ""}`).join("|");
 
   useLayoutEffect(() => {
@@ -50,11 +54,12 @@ export function FolderTabs({
         if (m < bestMax) { bestMax = m; best = k; }
       }
       const cur = rankOf(layoutRef.current);
+      const floor = wrap.clientWidth >= floorRef.current.width + 28 ? 0 : floorRef.current.rank;
       // Histerese: pra VOLTAR a um estado mais folgado, exige 28px a mais. Sem isso, mudar a altura da página
       // faz a barra de rolagem aparecer/sumir, a largura oscila e a tela fica "tremendo".
       const need = (r: number) => (r < cur ? 28 : 0);
       let next: Layout = { kind: "select" };
-      for (let r = 0; r < 5; r++) {
+      for (let r = floor; r < 5; r++) {
         if (r < 3 && sum(levels[r], 0, items.length) + need(r) <= avail) { next = { kind: "rows", rows: [items], level: r as 0 | 1 | 2 }; break; }
         if (r === 3 && best > 0 && bestMax + need(r) <= avail) { next = { kind: "rows", rows: [items.slice(0, best), items.slice(best)], level: 0 }; break; }
       }
@@ -62,6 +67,7 @@ export function FolderTabs({
       const same = rankOf(prev) === rankOf(next) && (next.kind !== "rows" || (prev.kind === "rows" && prev.rows[0].length === next.rows[0].length));
       if (force || !same) setLayout(next);
     };
+    computeRef.current = compute;
     compute(true);
     let lastW = wrap.clientWidth;
     const ro = new ResizeObserver(() => {
@@ -77,6 +83,17 @@ export function FolderTabs({
     return () => { alive = false; ro.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey, size, !!trailing]);
+
+  // Rede de segurança: se, depois de desenhar, alguma linha ainda passa da largura (medição errada, fonte diferente...),
+  // desce um degrau (mais apertado -> sem ícones -> duas linhas -> caixa de seleção) em vez de deixar a aba estourar.
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || layout.kind !== "rows") return;
+    const overflowing = Array.from(wrap.querySelectorAll<HTMLElement>('[role="tablist"] .lz-ftab-row')).some((r) => r.scrollWidth > r.clientWidth + 1);
+    if (!overflowing) return;
+    floorRef.current = { rank: Math.min(4, (layout.rows.length === 2 ? 3 : layout.level) + 1), width: wrap.clientWidth };
+    computeRef.current(true);
+  });
 
   const tabButton = (t: FolderTabItem, active: boolean, onClick?: () => void) => {
     const Icon = active ? FolderOpen : Folder;
@@ -120,7 +137,7 @@ export function FolderTabs({
       ) : (
         <div role="tablist">
           {rows.map((row, ri) => (
-            <div key={ri} className="lz-ftab-row" style={rows.length === 1 ? { flexWrap: "nowrap" } : undefined}>
+            <div key={ri} className="lz-ftab-row" style={{ flexWrap: "nowrap" }}>
               {row.map((t) => tabButton(t, t.id === activeId, () => onChange(t.id)))}
               {ri === lastRow && trailing ? <div className="lz-ftab-trailing">{trailing}</div> : null}
             </div>
