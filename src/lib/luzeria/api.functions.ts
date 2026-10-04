@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireActiveProfile, assertNotDemoReadOnly, assertClientActive } from "./require-active";
+import { queryInChunks } from "./query-chunks";
 import { z } from "zod";
 import type { Client, ContentItem, ContentType, MonthData, Profile, Role, Status, WorkSchedule } from "./types";
 import { isActivityType, getStatusMeta, SETOR_PERMISSION_KEYS, BRAND_ADVANCED_COLOR_KEYS } from "./types";
@@ -3228,10 +3229,12 @@ export const listMyTasks = createServerFn({ method: "GET" })
       .from("item_assignees").select("item_id").eq("user_id", targetUser);
     const itemIds = (assigns ?? []).map((a) => a.item_id);
     if (itemIds.length === 0) return [];
-    const { data: items } = await context.supabase
+    // Só o que ainda está aberto interessa pra lista (finalizados/concluídos nem voltam do banco).
+    const items = await queryInChunks<any>(itemIds, (chunk) => context.supabase
       .from("content_items")
       .select("id, type, idx, title, status, due_date, month_id, months!inner(client_id, key, clients!months_client_id_fkey!inner(id, name, color, category, notify_stories_in_tasks))")
-      .in("id", itemIds);
+      .in("id", chunk)
+      .not("status", "in", "(FINALIZADO,CONCLUIDO)") as any);
     return (items ?? [])
       // Stories only show up here for clients that opted in — otherwise
       // high-frequency Stories work would clutter everyone's task list.
@@ -3273,10 +3276,10 @@ export const getProductivity = createServerFn({ method: "GET" })
     if (itemIds.length === 0) {
       return { weeks: [0, 0, 0, 0], items: [[], [], [], []] as string[][], total: 0, history: [] };
     }
-    const { data: done } = await context.supabase
+    const done = await queryInChunks<any>(itemIds, (chunk) => context.supabase
       .from("content_items").select("id, title, updated_at")
-      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
-      .gte("updated_at", start).lt("updated_at", end);
+      .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
+      .gte("updated_at", start).lt("updated_at", end) as any);
     const weeks = [0, 0, 0, 0];
     const items: string[][] = [[], [], [], []];
     (done ?? []).forEach((it: any) => {
@@ -3286,10 +3289,10 @@ export const getProductivity = createServerFn({ method: "GET" })
     });
     // 6-month history
     const histStart = new Date(Date.UTC(y, m - 6, 1)).toISOString();
-    const { data: hist } = await context.supabase
+    const hist = await queryInChunks<any>(itemIds, (chunk) => context.supabase
       .from("content_items").select("updated_at")
-      .in("id", itemIds).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
-      .gte("updated_at", histStart).lt("updated_at", end);
+      .in("id", chunk).in("status", ["PRONTO_PARA_PUBLICAR", "FINALIZADO", "CONCLUIDO"])
+      .gte("updated_at", histStart).lt("updated_at", end) as any);
     const history: { key: string; count: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(Date.UTC(y, m - 1 - i, 1));

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireActiveProfile, assertNotDemoReadOnly } from "./require-active";
 import { z } from "zod";
 import { isDoneStatus } from "./types";
+import { queryInChunks } from "./query-chunks";
 import type {
   ChecklistItem, MemberGoalProgress, ClientOnboarding, RecurringTemplate, ActivityEntry,
   StatusDurationStat, Status, AppSettings, WeekItem, WorkloadSummary, TimelineEntry,
@@ -130,10 +131,10 @@ export const getGoalProgress = createServerFn({ method: "GET" })
     const ids = (assigns ?? []).map((a) => a.item_id);
     let postsDone = 0, gravacaoDone = 0, outrosDone = 0;
     if (ids.length) {
-      const { data: done } = await context.supabase
+      const done = await queryInChunks<any>(ids, (chunk) => context.supabase
         .from("content_items").select("type, status, activity_quantity")
-        .in("id", ids)
-        .gte("updated_at", start).lt("updated_at", end);
+        .in("id", chunk)
+        .gte("updated_at", start).lt("updated_at", end) as any);
       // Atividades (gravação, outros) terminam em CONCLUIDO, não em
       // PRONTO_PARA_PUBLICAR/FINALIZADO como posts — isDoneStatus() já
       // cobre os três, evitando que elas fiquem perpetuamente em 0.
@@ -647,11 +648,11 @@ export const getReportExtras = createServerFn({ method: "GET" })
     const itemIds = pool.map((it) => it.id);
     let statusDur: StatusDurationStat[] = [];
     if (itemIds.length) {
-      const { data: tx } = await context.supabase
+      const tx = await queryInChunks<any>(itemIds, (chunk) => context.supabase
         .from("status_transitions" as any)
         .select("from_status, duration_ms")
-        .in("item_id", itemIds)
-        .not("duration_ms", "is", null);
+        .in("item_id", chunk)
+        .not("duration_ms", "is", null) as any);
       const agg = new Map<string, { sum: number; n: number }>();
       ((tx ?? []) as any[]).forEach((t: any) => {
         if (!t.from_status || !t.duration_ms) return;
@@ -735,11 +736,11 @@ export const getMemberStatusDuration = createServerFn({ method: "GET" })
       .from("item_assignees").select("item_id").eq("user_id", data.userId);
     const itemIds = (assigns ?? []).map((a) => a.item_id);
     if (!itemIds.length) return [];
-    const { data: tx } = await context.supabase
+    const tx = await queryInChunks<any>(itemIds, (chunk) => context.supabase
       .from("status_transitions" as any)
       .select("from_status, duration_ms")
-      .in("item_id", itemIds)
-      .not("duration_ms", "is", null);
+      .in("item_id", chunk)
+      .not("duration_ms", "is", null) as any);
     const agg = new Map<string, { sum: number; n: number }>();
     ((tx ?? []) as any[]).forEach((t: any) => {
       if (!t.from_status || !t.duration_ms) return;
@@ -877,11 +878,11 @@ export const getMyWeek = createServerFn({ method: "GET" })
       .from("item_assignees").select("item_id").eq("user_id", targetUser);
     const ids = (assigns ?? []).map((a) => a.item_id);
     if (!ids.length) return [];
-    const { data: items } = await context.supabase
+    const items = await queryInChunks<any>(ids, (chunk) => context.supabase
       .from("content_items")
       .select("id, type, idx, title, status, due_date, months!inner(key, clients!months_client_id_fkey!inner(id, name, color))")
-      .in("id", ids)
-      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)");
+      .in("id", chunk)
+      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)") as any);
     return ((items ?? []) as any[]).map((it) => ({
       id: it.id, type: it.type, idx: it.idx, title: it.title, status: it.status,
       clientId: it.months.clients.id,
@@ -905,11 +906,11 @@ export const getWorkload = createServerFn({ method: "GET" })
       .from("item_assignees").select("item_id").eq("user_id", data.userId);
     const ids = (assigns ?? []).map((a) => a.item_id);
     if (!ids.length) return { userId: data.userId, openCount: 0, oldest: [] };
-    const { data: items } = await context.supabase
+    const items = await queryInChunks<any>(ids, (chunk) => context.supabase
       .from("content_items")
       .select("id, title, updated_at, last_status_change_at, months!inner(clients!months_client_id_fkey!inner(name))")
-      .in("id", ids)
-      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)");
+      .in("id", chunk)
+      .not("status", "in", "(PRONTO_PARA_PUBLICAR,FINALIZADO,CONCLUIDO)") as any);
     const arr = ((items ?? []) as any[]).map((it) => {
       const ref = it.last_status_change_at ?? it.updated_at;
       const days = Math.max(0, Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000));
