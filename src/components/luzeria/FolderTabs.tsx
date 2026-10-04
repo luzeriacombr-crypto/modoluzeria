@@ -75,25 +75,30 @@ export function FolderTabs({
       if (Math.abs(w - lastW) < 1) return; // mudou só a altura (ex.: 1 linha -> 2): não precisa medir de novo
       lastW = w;
       compute();
+      // Se a medição não mudou o layout mas a linha ainda estoura, o guard desce um degrau.
+      requestAnimationFrame(() => guardRef.current());
     });
     ro.observe(wrap);
     // A fonte (Inter) pode terminar de carregar depois da 1ª medição e deixar as abas mais largas: mede de novo.
     let alive = true;
-    document.fonts?.ready.then(() => { if (alive) compute(); });
+    document.fonts?.ready.then(() => { if (alive) { compute(); requestAnimationFrame(() => guardRef.current()); } });
     return () => { alive = false; ro.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey, size, !!trailing]);
 
   // Rede de segurança: se, depois de desenhar, alguma linha ainda passa da largura (medição errada, fonte diferente...),
   // desce um degrau (mais apertado -> sem ícones -> duas linhas -> caixa de seleção) em vez de deixar a aba estourar.
-  useLayoutEffect(() => {
+  const guardRef = useRef<() => void>(() => {});
+  guardRef.current = () => {
     const wrap = wrapRef.current;
-    if (!wrap || layout.kind !== "rows") return;
+    const cur = layoutRef.current;
+    if (!wrap || cur.kind !== "rows") return;
     const overflowing = Array.from(wrap.querySelectorAll<HTMLElement>('[role="tablist"] .lz-ftab-row')).some((r) => r.scrollWidth > r.clientWidth + 1);
     if (!overflowing) return;
-    floorRef.current = { rank: Math.min(4, (layout.rows.length === 2 ? 3 : layout.level) + 1), width: wrap.clientWidth };
+    floorRef.current = { rank: Math.min(4, (cur.rows.length === 2 ? 3 : cur.level) + 1), width: wrap.clientWidth };
     computeRef.current(true);
-  });
+  };
+  useLayoutEffect(() => { guardRef.current(); });
 
   const tabButton = (t: FolderTabItem, active: boolean, onClick?: () => void) => {
     const Icon = active ? FolderOpen : Folder;
